@@ -1,3 +1,13 @@
 packages:
   - packages/*
   - playgrounds/*
+
+# pnpm 10+ 默认不执行依赖的 build 脚本，需要 postinstall 的包在此显式放行。
+allowBuilds:
+  esbuild: true
+
+# chokidar@4.0.3（2024-12 发布，tsup 的依赖）未附带 provenance 而更早的 4.0.1 有，
+# 会触发 pnpm `trustPolicy: no-downgrade` 的 ERR_PNPM_TRUST_DOWNGRADE。
+# 该版本发布已久且被广泛使用，按 pnpm 官方文档示例精确排除这一个版本，信任检查对其他包继续生效。
+trustPolicyExclude:
+  - 'chokidar@4.0.3'
