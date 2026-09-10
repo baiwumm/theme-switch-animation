@@ -24,3 +24,13 @@ export {
   isDirectionalAnimationType,
 } from './masks'
 export type { MaskGeometry, Point, RectProvider, Size } from './masks'
+
+export {
+  DURATION_VAR,
+  EASING_VAR,
+  buildAnimationCSS,
+  getAnimationName,
+  injectAnimationStyle,
+  removeAnimationStyle,
+} from './styles'
+export type { BuildAnimationCSSParams } from './styles'
