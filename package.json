@@ -1,0 +1,61 @@
+{
+  "name": "theme-switch-animation",
+  "version": "0.0.0",
+  "description": "Theme switch animation library built on the View Transitions API. Works with React 18+, Vue 3+, Next.js and Nuxt 3+.",
+  "type": "module",
+  "packageManager": "pnpm@11.24.0",
+  "engines": {
+    "node": ">=18",
+    "pnpm": ">=9"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.mjs"
+    },
+    "./react": {
+      "types": "./dist/react.d.ts",
+      "import": "./dist/react.mjs"
+    },
+    "./vue": {
+      "types": "./dist/vue.d.ts",
+      "import": "./dist/vue.mjs"
+    },
+    "./nuxt": {
+      "types": "./dist/nuxt.d.ts",
+      "import": "./dist/nuxt.mjs"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "sideEffects": false,
+  "peerDependencies": {
+    "react": ">=18",
+    "vue": ">=3",
+    "@nuxt/kit": ">=3"
+  },
+  "peerDependenciesMeta": {
+    "react": {
+      "optional": true
+    },
+    "vue": {
+      "optional": true
+    },
+    "@nuxt/kit": {
+      "optional": true
+    }
+  },
+  "scripts": {},
+  "keywords": [
+    "theme",
+    "dark-mode",
+    "view-transitions",
+    "animation",
+    "react",
+    "vue",
+    "nextjs",
+    "nuxt"
+  ],
+  "license": "MIT"
+}
