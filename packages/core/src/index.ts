@@ -10,3 +10,17 @@ export type {
   ResolvedAnimationOptions,
   ThemeAnimationOptions,
 } from './types'
+
+export {
+  BAR_MASK_IMAGE,
+  BAR_START_PX,
+  CIRCLE_MASK_IMAGE,
+  CIRCLE_SIZE_FACTOR,
+  getCircleMaskGeometry,
+  getDirectionalMaskGeometry,
+  getMaskGeometry,
+  getMaxRadiusToCorners,
+  getTriggerCenter,
+  isDirectionalAnimationType,
+} from './masks'
+export type { MaskGeometry, Point, RectProvider, Size } from './masks'
