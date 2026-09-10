@@ -11,7 +11,8 @@
 
 ## 开发
 
-要求 Node >= 18、pnpm >= 9。
+发布产物面向 Node >= 18、pnpm >= 9 的消费环境（见 `package.json` 的 `engines`）。
+参与开发（跑测试与构建）需要 **Node >= 22.13** 与 pnpm 11（由 `packageManager` 字段钉住，`corepack enable` 即可）。
 
 ```bash
 pnpm install
