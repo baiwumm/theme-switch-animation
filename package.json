@@ -31,9 +31,9 @@
   ],
   "sideEffects": false,
   "peerDependencies": {
+    "@nuxt/kit": ">=3",
     "react": ">=18",
-    "vue": ">=3",
-    "@nuxt/kit": ">=3"
+    "vue": ">=3"
   },
   "peerDependenciesMeta": {
     "react": {
@@ -46,7 +46,10 @@
       "optional": true
     }
   },
-  "scripts": {},
+  "scripts": {
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit"
+  },
   "keywords": [
     "theme",
     "dark-mode",
@@ -57,5 +60,11 @@
     "nextjs",
     "nuxt"
   ],
-  "license": "MIT"
+  "license": "MIT",
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "eslint": "^10.10.0",
+    "typescript": "^5.9.3",
+    "typescript-eslint": "^8.70.0"
+  }
 }
