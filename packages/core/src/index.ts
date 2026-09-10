@@ -34,3 +34,17 @@ export {
   removeAnimationStyle,
 } from './styles'
 export type { BuildAnimationCSSParams } from './styles'
+
+export {
+  getViewportSize,
+  prefersReducedMotion,
+  runThemeTransition,
+  shouldSkipTransition,
+  supportsViewTransition,
+} from './orchestrate'
+export type {
+  DomUpdate,
+  RunThemeTransitionParams,
+  RunThemeTransitionResult,
+  ViewTransitionLike,
+} from './orchestrate'
