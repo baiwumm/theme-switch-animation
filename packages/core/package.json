@@ -1,0 +1,10 @@
+{
+  "name": "@theme-switch-animation/core",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Framework-agnostic core of theme-switch-animation (not published).",
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "sideEffects": false
+}
