@@ -67,13 +67,14 @@ export function useThemeAnimation<T extends HTMLElement = HTMLButtonElement>(
 
   const toggleTheme = useCallback(() => {
     const resolved = resolveAnimationOptions(optionsRef.current)
-    // 以 <html> 上的 class 为准取反：快速连点或页面上存在多个触发器时不会因闭包过期而失步
-    const next = !hasThemeClass(document, resolved.darkClassName)
 
     runThemeTransition({
       trigger: triggerRef.current,
       options: resolved,
       domUpdate: () => {
+        // 在转场回调内以 <html> 上的 class 为准取反：读取时刻即变更时刻，
+        // 快速连点（上一个回调已翻转 class）与同页多实例都不会因时序失步
+        const next = !hasThemeClass(document, resolved.darkClassName)
         applyThemeClass(document, next, resolved.darkClassName)
         writeStoredTheme(document, next)
         flushSync(() => {
