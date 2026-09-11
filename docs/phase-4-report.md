@@ -150,3 +150,50 @@ f9aeffb feat(nuxt): 添加 Nuxt 模块（addImportsDir 自动导入）与 runtim
 73e90de fix(nuxt): playground 每按钮独立 useThemeAnimation 实例（修复五按钮均为 CIRCLE）；runtime 产物改无扩展名 specifier 消除 unimport 解析警告、剥离 sourceMappingURL；新增动画类型独立性验收脚本
 ```
 累计待推送 6 个 commit（Phase 4 主体 4 + 本附录 1 + Phase 4 汇报 1）。
+
+---
+
+## 附录二（第二轮真机反馈，2026-09-11）
+
+**反馈**：dev 正常启动可用，但终端报 `ERROR Pre-transform error: Failed to resolve import "#app-manifest" from .../nuxt/dist/app/composables/manifest.js`。
+
+### 结论：该报错是上游 Nuxt/Vite 的 dev 期问题，与我们的模块无关
+
+**对照实验（关键证据）**：把 playground 的 `modules` 改成只留 `@nuxtjs/color-mode`（**完全不含我们的模块**），清空 `.nuxt` 后重复跑 `nuxt dev` 两次：
+
+| 运行 | 模块 | app-manifest 报错 |
+|---|---|---|
+| 第一次 | 无我们的模块 | 0 |
+| 第二次 | 无我们的模块 | **10** |
+| 有模块（多次） | 含我们的模块 | 0 或 10（不确定） |
+
+同一个裸 Nuxt 项目、同一台机器，两次运行结果不同 → **非确定性**，触发点与项目内容无关。`#app-manifest` 是 `@nuxt/vite-builder` 注册的虚拟别名（指向 `mocked-exports/empty`），报错出现在 Vite 依赖优化/预热阶段重转换 Nuxt 自身 app 文件时，属 Nuxt 3.21.11 + Vite 7.3.6 在本环境（Windows + pnpm）的竞态。
+
+**是否影响使用：不影响。** 实测在报错出现（10 条）的同时：dev 页面 200、五个按钮各自播放正确动画类型、受控切换三源一致——报错是 Vite 预转换阶段的日志噪声，不阻塞编译与运行。若要消除噪声，可 `experimental: { appManifest: false }`（会关掉多 App/增量部署相关能力，不建议）或等待 Nuxt 上游修复；本仓库选择如实记录、不改动上游行为。
+
+**更正说明**：我在排查过程中一度把该报错归因于模块里的 `addImports()`（依据是当时几组对照），后续用更严格的对照（固定端口、等预热完成、实际请求页面后再统计、每配置跑两次）证明原结论是**测量假象**。特此更正——附录一里"不要用 addImports，因为它会引发 app-manifest 报错"的表述不成立，不作为技术依据保留（模块仍不使用 addImports，原因是下文第二条）。
+
+### 同时修复的两个真问题
+
+**问题一：`ThemeAnimationType` 作类型使用时不可用（TS2749 / TS1362）**
+`ThemeAnimationType` 在源码里既是常量对象（值）又是同名类型（`declare const` + `type` 声明合并）。Nuxt 自动导入对扫描到的**值**只生成 `const X: typeof import(...)['X']`（仅值含义）→ 用 `animationType: ThemeAnimationType` 作类型报 TS2749；改用 `addImports({ type: true })` 补类型又会变成仅类型含义 → `ThemeAnimationType.LTR` 报 TS1362。两种机制互相覆盖，无法同时满足。
+
+**修复**：用 `addTypeTemplate` 注入一个**全局类型别名**（`type ThemeAnimationType = import('theme-switch-animation/vue').ThemeAnimationType`）。TS 的值/类型命名空间独立，全局 `type` 与自动导入的全局 `const` 自然合并——两种用法同时可用（`nuxt typecheck` 0 错误）。这也顺带修好了 playground 的 `defineProps<{ animationType: ThemeAnimationType }>`。
+
+**问题二：runtime d.ts 的转发语句导致类型扫描不全**
+`addImportsDir` 的类型扫描只识别文件内**显式的 export 声明**，对 `export {...} from` 转发语句里带 `type` 修饰的名字会漏掉（`UseThemeAnimationOptions` 等曾无法自动导入）。
+**修复**：`scripts/copy-nuxt-runtime.mjs` 现在把 tsup 产物的声明**内联**成自包含 `composables/index.d.ts`（逐条 `export interface/type/declare const/function`），并把实现 `index.mjs` 直接放在同一目录（不再用 `internal/` 转发）。产物收敛为 2 个文件（不再随包携带类型块），`npm pack` 18 个文件。
+
+### 本轮验证
+
+- `nuxt prepare` / `nuxt typecheck`：**0 错误**（含 `ThemeAnimationType` 的值/类型双用法）
+- 强证据探针：故意注入 2 处类型错误 → `nuxt typecheck` **恰好报出 2 条**，其余 0 → 5 个类型 + 双含义 `ThemeAnimationType` 均为真实强类型
+- `nuxt build`（production）+ §9-3 两组、动画类型独立性 5 项：全部通过
+- dev：`unimport failed to resolve` 与 `Failed to load source map` 均为 **0**；app-manifest 报错按上游非确定性出现，但不影响页面 200 与功能（见上）
+- 全量：lint / typecheck / 129 单测 / build / 四 playground / `npm pack` 全绿
+
+**本附录 commit**：
+```
+6b72d50 fix(nuxt): 自包含 runtime 声明 + addTypeTemplate 补 ThemeAnimationType 同名类型（值/类型双用法），去掉 addImports 与 internal 转发
+```
+累计待推送 8 个 commit。
