@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>theme-switch-animation · Vue playground</title>
+    <script>
+      // 非受控模式的推荐做法：首帧前根据 localStorage 同步挂上暗色类，避免刷新闪烁（FOUC）。
+      // 没有这段脚本也能工作，只是存储为 dark 时首帧会先亮后暗。
+      try {
+        if (localStorage.getItem('theme-switch-animation') === 'dark') {
+          document.documentElement.classList.add('dark')
+        }
+      } catch (e) {}
+    </script>
+  </head>
+  <body>
+    <div id="app"></div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

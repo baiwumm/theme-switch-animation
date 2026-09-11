@@ -1,0 +1,21 @@
+{
+  "name": "@theme-switch-animation/playground-vue",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "pnpm -w run build && vite",
+    "build": "vite build",
+    "preview": "pnpm -w run build && vite preview",
+    "typecheck": "vue-tsc --noEmit"
+  },
+  "dependencies": {
+    "theme-switch-animation": "workspace:*",
+    "vue": "^3.5.42"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-vue": "^6.0.8",
+    "vite": "^8.3.0",
+    "vue-tsc": "^3.3.11"
+  }
+}
