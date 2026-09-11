@@ -24,11 +24,16 @@ export default defineConfig({
   format: ['esm'],
   outDir: 'dist',
   outExtension: () => ({ js: '.mjs' }),
-  dts: true,
+  // 私有 workspace 包不会随根包发布，类型必须内联进各入口的 d.ts。
+  // tsup 把 resolve 数组当作 resolveOnly 过滤器：被内联包内部的相对导入（core/index.ts → './types'）
+  // 也要能通过过滤，否则会被留成指向不存在文件的 `from './types'`。
+  dts: { resolve: [/^@theme-switch-animation\//, /^\.\.?\//] },
   clean: true,
   sourcemap: true,
   splitting: false,
-  treeshake: true,
+  // 关闭 rollup 的二次摇树：它会剥掉入口顶部的 'use client' 指令（React / Next 客户端边界必需）。
+  // esbuild 自身的 ESM 摇树仍然生效，且包已声明 sideEffects: false，由消费方打包器做最终摇树。
+  treeshake: false,
   target: 'es2020',
   // 框架运行时保持 external（optional peerDependencies）；workspace 内部包（core）被打进各入口。
   external: ['react', 'react-dom', 'vue', '@nuxt/kit', '@nuxt/schema'],
