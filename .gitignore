@@ -1,6 +1,8 @@
 node_modules/
 dist/
 coverage/
+.next/
+next-env.d.ts
 *.log
 .DS_Store
 *.tsbuildinfo

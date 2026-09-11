@@ -1,0 +1,23 @@
+{
+  "name": "@theme-switch-animation/playground-next",
+  "version": "0.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "pnpm -w run build && next dev",
+    "build": "pnpm -w run build && next build",
+    "start": "next start",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "next": "^16.3.4",
+    "next-themes": "^0.4.6",
+    "react": "^19.3.0",
+    "react-dom": "^19.3.0",
+    "theme-switch-animation": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "^24.13.4",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0"
+  }
+}
