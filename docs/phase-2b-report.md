@@ -91,3 +91,25 @@ c7bdbba feat(react): 支持受控模式（isDark+onChange、§5.2 契约告警�
 ```
 
 仍按约定未 push（`origin/main` 在 `98183e7`，累计待推送 24 个 commit）。
+
+---
+
+## 附录（真机反馈修复，2026-09-11）
+
+**问题**：真机验证功能正常，但 dev 控制台出现 `Uncaught Error: Hydration failed because the server rendered text didn't match the client.`
+
+**根因**：next-themes 的 SSR 约定。其 Provider 用 `useState(() => getTheme(...))` 初始化——服务端返回 `undefined`，而客户端**水合渲染期间**初始化器会同步读 localStorage（存了 dark 时首帧即 `'dark'`）。playground 的按钮文案直接渲染 `isDark`（镜像 `resolvedTheme`），存了 dark 的浏览器上服务端渲染 `☀️ 切到暗色`、客户端水合渲染 `🌙 切到亮色`，文本不一致即报错。这是 next-themes 官方文档列明的场景，属于 playground 接线问题（未按官方模式加 mounted 守卫），**库本身无涉**——hook 渲染阶段只镜像 props。
+
+**修复**（`da7d80e`）：按 next-themes 官方模式加 `useMounted()` 守卫——挂载前渲染中性文案（按钮 `🌗 切换主题`、状态行 `…`），挂载后再渲染真实主题状态。任何存储状态下服务端与客户端首帧输出一致，构造上消除水合不一致。
+
+**验收自动化（§9-5，`a3ef72f`）**：新增 CDP 脚本 `cdp-hydration.mjs`（dark / light 两种存储分别加载，捕获 window 'error' 与 console.error）与 `cdp-darkcycle.mjs`（dark 存储加载 → 挂载后必须显示 🌙 + dark class，点击后受控切回 light）；`cdp-consistency.mjs` 增加挂载断言（按钮文案不得停留在中性占位）；公共连接逻辑抽取到 `cdp-lib.mjs`，脚本支持 `ACCEPTANCE_URL` / `ACCEPTANCE_CDP_PORT` 环境变量。production 构建实测：hydration 错误 0、dark 场景正向断言通过、连点一致性通过、四档节流 0 超时（复测一致）。
+
+**环境备注**：排查期间发现两件事——(1) 无头浏览器 + `next dev` 组合下水合无法完成（HMR WebSocket 连接受限），验收脚本建议对 `next start` 生产构建运行（脚本头注释已注明）；(2) 用户此前启动的 3002 dev server 经多次 HMR 后模块图陈旧（`resolvedTheme` 恒为 undefined 的假象），已终止并可用 `pnpm --filter @theme-switch-animation/playground-next dev` 重启，浏览器标签页刷新即可。
+
+**本附录 commit**：
+```
+a3ef72f test: 验收脚本抽取公共 CDP 连接并接入 hydration 检查与 dark 挂载断言（§9-5）
+da7d80e fix(playground): next 主题文案改经 mounted 守卫渲染，修复 next-themes 水合文本不一致
+756582e docs: 添加 Phase 2b 执行汇报（主体）
+```
+累计待推送 27 个 commit。
