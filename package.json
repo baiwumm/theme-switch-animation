@@ -48,6 +48,7 @@
   },
   "scripts": {
     "build": "tsup",
+    "postbuild": "node scripts/copy-nuxt-runtime.mjs",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:acceptance": "node scripts/cdp-consistency.mjs && node scripts/cdp-darkcycle.mjs && node scripts/cdp-hydration.mjs && node scripts/cdp-measure.mjs && node scripts/cdp-vue-rapid.mjs",
