@@ -14,6 +14,18 @@ const ANIMATION_TYPES = [
 ] as const
 
 /**
+ * next-themes 的 SSR 约定：`resolvedTheme` 在服务端为 undefined，而客户端水合渲染期间
+ * Provider 的 useState 初始化器会同步读 localStorage（存了 dark 时首帧即 'dark'），
+ * 因此任何直接渲染 resolvedTheme 的文本都会造成服务端/客户端不一致（hydration 报错）。
+ * 官方模式：挂载前渲染与主题无关的中性文案。
+ */
+function useMounted() {
+  const [mounted, setMounted] = useState(false)
+  useEffect(() => setMounted(true), [])
+  return mounted
+}
+
+/**
  * 受控模式 × next-themes（需求 §6.1）：
  * 库不碰 localStorage、不自行改 class；转场回调内调用 onChange 触发 setTheme，
  * 并经 §5.4 协议等待 next-themes 真实写入 <html> class 后再截图。
@@ -29,6 +41,7 @@ function ThemeButton({
   hint: string
   pos: string
 }) {
+  const mounted = useMounted()
   const { resolvedTheme, setTheme } = useTheme()
   const { ref, toggleTheme, isDark } = useThemeAnimation({
     animationType,
@@ -41,13 +54,14 @@ function ThemeButton({
     <button ref={ref} className={`switch-button ${pos}`} onClick={toggleTheme}>
       <strong>{label}</strong>
       <span className="hint">{hint}</span>
-      <span className="state">{isDark ? '🌙 切到亮色' : '☀️ 切到暗色'}</span>
+      <span className="state">{mounted ? (isDark ? '🌙 切到亮色' : '☀️ 切到暗色') : '🌗 切换主题'}</span>
     </button>
   )
 }
 
 /** 全局指示器：直接监听 html class，验证 resolvedTheme / isDark / html class 三者一致（§9-2） */
 function useHtmlIsDark() {
+  const mounted = useMounted()
   const [isDark, setIsDark] = useState(false)
   const { resolvedTheme } = useTheme()
   useEffect(() => {
@@ -60,17 +74,17 @@ function useHtmlIsDark() {
   useEffect(() => {
     setIsDark(resolvedTheme === 'dark')
   }, [resolvedTheme])
-  return { isDark, resolvedTheme }
+  return { mounted, isDark, resolvedTheme }
 }
 
 export function ThemeSwitcher() {
-  const { isDark, resolvedTheme } = useHtmlIsDark()
+  const { mounted, isDark, resolvedTheme } = useHtmlIsDark()
   return (
     <main>
       <h1>theme-switch-animation · Next playground</h1>
       <p className="status">
-        受控模式 × next-themes（resolvedTheme: <b>{resolvedTheme ?? '…'}</b>，html class:{' '}
-        <b>{isDark ? 'dark' : 'light'}</b>）
+        受控模式 × next-themes（resolvedTheme: <b>{mounted ? (resolvedTheme ?? '—') : '…'}</b>，html class:{' '}
+        <b>{mounted ? (isDark ? 'dark' : 'light') : '…'}</b>）
       </p>
       <p>
         五个按钮各自是独立的受控 <code>useThemeAnimation</code> 实例：库不写 localStorage、不改 class，
