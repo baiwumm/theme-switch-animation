@@ -1,0 +1,23 @@
+{
+  "name": "@theme-switch-animation/react",
+  "version": "0.0.0",
+  "private": true,
+  "description": "React adapter of theme-switch-animation. Bundled into the root package as `theme-switch-animation/react`.",
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "sideEffects": false,
+  "peerDependencies": {
+    "react": ">=18",
+    "react-dom": ">=18"
+  },
+  "dependencies": {
+    "@theme-switch-animation/core": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "react": "^19.3.0",
+    "react-dom": "^19.3.0"
+  }
+}
