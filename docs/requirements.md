@@ -2,8 +2,8 @@
 
 | 项目 | 内容 |
 |---|---|
-| 版本 | v1.2（含 3 项微调，见 §10 修订记录） |
-| 日期 | 2026-09-10 |
+| 版本 | v1.3（措辞澄清，见 §10 修订记录） |
+| 日期 | 2026-09-11 |
 | 状态 | 已评审通过，待开发指令 |
 | 仓库 / npm 包名 | `theme-switch-animation`（npm 已确认未注册） |
 | 支持框架 | React 18+、Vue 3+、Next.js（App Router）、Nuxt 3+ |
@@ -45,6 +45,7 @@ theme-switch-animation/                  # 仓库名 = 包名
 │   │       ├── masks.ts                # 5 种蒙版生成（circle SVG、四向 gradient 条）
 │   │       ├── styles.ts               # 样式注入/清理，CSS 变量化声明
 │   │       ├── orchestrate.ts          # startViewTransition 编排 + 降级判断
+│   │       ├── uncontrolled.ts         # 非受控状态：localStorage 读写 + darkClassName 同步（v1.3 补，React / Vue 适配层共用）
 │   │       └── controlled-sync.ts      # 受控模式同步协议（§5.4）
 │   ├── react/                          # useThemeAnimation（flushSync）
 │   ├── vue/                            # useThemeAnimation（nextTick / flush:'sync'）
@@ -95,7 +96,7 @@ theme-switch-animation/                  # 仓库名 = 包名
 - **Nuxt 需要独立 `/nuxt` 子路径**：模块入口 `dist/nuxt.mjs`，旁边保留 `dist/nuxt-runtime/composables/` 目录（`addImportsDir` 指向目录，不是单文件）。
 - `ThemeAnimationType` 用 `const` 对象 + `as const`，不用 TS `enum`（Nuxt 自动导入扫描命名导出，`const` 对象对打包和 `isolatedModules` 更稳）。
 - 技术栈：pnpm workspace + tsup（构建）+ vitest（单测）+ Playwright（e2e）+ changesets（版本发布）。
-- `engines` 字段（v1.2 新增）：明确 Node >= 18、pnpm >= 9，便于贡献者了解最低环境要求。
+- `engines` 字段（v1.2 新增，v1.3 澄清）：面向**发布产物的消费环境**——`engines.node >= 18`、`engines.pnpm >= 9`（构建产物为 es2020 ESM，Node 18 消费者可正常使用）。**参与本仓库开发**（跑测试与构建）需要 Node >= 22.13，这是 pnpm 11 / vitest 5 / jsdom 30 工具链的最低要求，在 README 开发段注明，不写进 `engines`。
 
 ## 5. API 设计
 
@@ -240,7 +241,7 @@ export type { ThemeAnimationOptions, ... } from '@theme-switch-animation/core'
 ## 7. 实现要点
 
 - **CIRCLE**：`getBoundingClientRect` 取触发元素中心，`Math.hypot` 算到视口四角最大距离定蒙版终值；SVG data-URI 圆形蒙版从 `mask-size: 0` 长到 `2.1 × maxRadius`（留余量防角落锯齿）。
-- **LTR / RTL / TTB / BTT**：`linear-gradient(white, white)` 实心条蒙版，起始 4px 细条，`mask-position` 钉在对应边（LTR `0% 0%`、RTL `100% 0%`、TTB `0% 0%` 竖条、BTT `0% 100%` 竖条），keyframes 从起始尺寸长到 `100% 100%`。
+- **LTR / RTL / TTB / BTT**：`linear-gradient(white, white)` 实心条蒙版，起始 4px 细条，`mask-position` 钉在对应边（LTR `0% 0%`、RTL `100% 0%`、TTB `0% 0%`、BTT `0% 100%`），蒙版条沿对应方向从起始边缘生长到 `100% 100%`（keyframes 只改 `mask-size`，被钉住的边由百分比 `mask-position` 固定不动）。
 - **Safari 兼容**：只用 mask 动画，不碰 view-transition 伪元素上的 clip-path 和 WAAPI；`will-change: mask-size, mask-position`。
 - **duration / easing 变量化注入**：注入的临时 `<style>` 中动画声明一律写
   `animation: <name> var(--theme-switch-duration, 400ms) var(--theme-switch-easing, ease-in-out) both;`
@@ -274,6 +275,12 @@ export type { ThemeAnimationOptions, ... } from '@theme-switch-animation/core'
 11. **发布清单**：`npm pack` 内容 = dist（含 nuxt-runtime 目录）+ LICENSE + README；四个子路径（`.` / `./react` / `./vue` / `./nuxt`）exports 均可解析。
 
 ## 10. 修订记录
+
+### v1.3（2026-09-11）
+
+1. **engines 措辞澄清**（§4）：`engines.node >= 18` / `pnpm >= 9` 面向发布产物的消费环境；参与开发需 Node >= 22.13（pnpm 11 / vitest 5 / jsdom 30 工具链最低要求），README 注明，不写进 `engines`。
+2. **§7 四向擦除措辞修正**：删除"横条 / 竖条"表述，统一为"蒙版条沿对应方向从起始边缘生长"。原文 TTB / BTT 标注"竖条"与钉扎位置矛盾（竖条钉在顶边生长的效果是 LTR），实现按物理正确几何：LTR / RTL 起始 `4px 100%`、TTB / BTT 起始 `100% 4px`，钉扎位置与原文一致，单测已固化。
+3. **§4 core 文件树补充 `uncontrolled.ts`**：非受控状态助手（localStorage 读写、`darkClassName` 同步）随 Phase 2a 交付，放在 core 供 React / Vue 适配层共用，不在适配层重复实现。
 
 ### v1.2（2026-09-10）
 
