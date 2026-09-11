@@ -12,8 +12,9 @@ export interface ViewTransitionLike {
   skipTransition?: () => void
 }
 
-/** 转场回调：适配层在其中同步更新 DOM（React `flushSync` / Vue `await nextTick()`），可返回 Promise 让浏览器等待 */
-export type DomUpdate = () => void | Promise<void>
+/** 转场回调：适配层在其中同步更新 DOM（React `flushSync` / Vue `await nextTick()`）。
+ * 允许返回任意 Promise（如受控模式的 `waitForThemeSync`），浏览器只等它结算，返回值被忽略 */
+export type DomUpdate = () => void | Promise<unknown>
 
 type DocumentWithViewTransition = Document & {
   startViewTransition: (update: DomUpdate) => ViewTransitionLike
@@ -97,7 +98,7 @@ export function runThemeTransition(params: RunThemeTransitionParams): RunThemeTr
   const resolved = resolveAnimationOptions(params.options)
 
   if (!supportsViewTransition(doc) || prefersReducedMotion(doc.defaultView)) {
-    return { animated: false, finished: Promise.resolve(domUpdate()) }
+    return { animated: false, finished: Promise.resolve(domUpdate()).then(() => undefined) }
   }
 
   const viewport = getViewportSize(doc)

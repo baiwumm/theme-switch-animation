@@ -29,7 +29,7 @@ function installFakeViewTransition(options: { manualFinish?: boolean } = {}) {
     calls.push({ update, finish })
     let done: Promise<void>
     try {
-      done = Promise.resolve(update())
+      done = Promise.resolve(update()).then(() => undefined)
     } catch (error) {
       done = Promise.reject(error)
     }

@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { act, cleanup, fireEvent, render } from '@testing-library/react'
-import { afterEach, beforeEach, describe, expect, it } from 'vitest'
+import { useLayoutEffect, useState } from 'react'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import type { ViewTransitionLike } from '@theme-switch-animation/core'
 import { removeAnimationStyle } from '@theme-switch-animation/core'
@@ -181,6 +182,156 @@ describe('useThemeAnimation（非受控模式）', () => {
       fireEvent.click(getToggle(b))
       expect(html().classList.contains('dark')).toBe(false)
       expect(localStorage.getItem(THEME_STORAGE_KEY)).toBe('light')
+    })
+  })
+
+  describe('受控模式（§5.2 / §5.4）', () => {
+    /**
+     * 模拟 next-themes 的外部主题系统：状态在 React 侧，class 由 useLayoutEffect 异步写入
+     * （对应 next-themes 的 passive effect），库自身不写 class、不碰 localStorage。
+     */
+    function ControlledToggle({
+      animationType = ThemeAnimationType.LTR,
+      onChangeSpy,
+    }: {
+      animationType?: ThemeAnimationType
+      onChangeSpy?: (next: boolean) => void
+    }) {
+      const [dark, setDark] = useState(false)
+      useLayoutEffect(() => {
+        document.documentElement.classList.toggle('dark', dark)
+      }, [dark])
+      const { ref, toggleTheme, isDark } = useThemeAnimation({
+        animationType,
+        darkClassName: 'dark',
+        isDark: dark,
+        onChange: (next) => {
+          onChangeSpy?.(next)
+          setDark(next)
+        },
+      })
+      return (
+        <button ref={ref} onClick={toggleTheme} data-testid="toggle">
+          {isDark ? '🌙' : '☀️'}
+        </button>
+      )
+    }
+
+    it('isDark + onChange 同时提供：点击只调用 onChange，不碰 localStorage', () => {
+      installFakeViewTransition({ autoRun: true })
+      const calls: boolean[] = []
+      const { container } = render(<ControlledToggle onChangeSpy={(next) => calls.push(next)} />)
+
+      fireEvent.click(getToggle(container))
+
+      expect(calls).toEqual([true])
+      // 外部系统（layoutEffect）已写 class，截图时序由协议保证
+      expect(html().classList.contains('dark')).toBe(true)
+      expect(getToggle(container).textContent).toBe('🌙')
+      expect(localStorage.getItem(THEME_STORAGE_KEY)).toBeNull()
+    })
+
+    it('库不自行改 class：转场回调内只通知外部，class 由外部写入', () => {
+      // 模拟外部系统延迟写入：onChange 后不改 class，验证协议在等外部而不是库自己动手
+      installFakeViewTransition({ autoRun: true })
+      let externalState = false
+      const { container } = render(
+        <ThemeButton
+          options={{
+            isDark: externalState,
+            onChange: (next) => {
+              externalState = next
+            },
+          }}
+        />,
+      )
+      const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+
+      fireEvent.click(getToggle(container))
+
+      // 该组件未把 isDark 接回状态（仍然 false），库不改 class 也不写 localStorage
+      expect(externalState).toBe(true)
+      expect(html().classList.contains('dark')).toBe(false)
+      expect(localStorage.getItem(THEME_STORAGE_KEY)).toBeNull()
+      // isDark 恒为 false → incomplete 不成立（两个都提供了），不应告警
+      expect(warn).not.toHaveBeenCalled()
+    })
+
+    it('快速连点：onChange 与外部状态、html class 三者一致（§9-2）', () => {
+      installFakeViewTransition({ autoRun: true })
+      const calls: boolean[] = []
+      const { container } = render(<ControlledToggle onChangeSpy={(next) => calls.push(next)} />)
+
+      fireEvent.click(getToggle(container))
+      fireEvent.click(getToggle(container))
+
+      expect(calls).toEqual([true, false])
+      expect(html().classList.contains('dark')).toBe(false)
+      expect(getToggle(container).textContent).toBe('☀️')
+      expect(localStorage.getItem(THEME_STORAGE_KEY)).toBeNull()
+    })
+
+    it('受控 + 降级路径（无 View Transitions）：onChange 照常调用，状态照常更新', () => {
+      const calls: boolean[] = []
+      const { container } = render(<ControlledToggle onChangeSpy={(next) => calls.push(next)} />)
+
+      fireEvent.click(getToggle(container))
+
+      expect(calls).toEqual([true])
+      expect(html().classList.contains('dark')).toBe(true)
+      expect(getToggle(container).textContent).toBe('🌙')
+    })
+
+    it('只提供 isDark：dev 环境告警，按非受控处理', () => {
+      const proc = (globalThis as unknown as { process: { env: { NODE_ENV?: string } } }).process
+      const original = proc.env.NODE_ENV
+      proc.env.NODE_ENV = 'development'
+      const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+      const { container } = render(<ThemeButton options={{ isDark: true }} />)
+
+      expect(warn).toHaveBeenCalledWith(expect.stringContaining('受控模式'))
+
+      // 非受控行为：点击走 class + localStorage
+      fireEvent.click(getToggle(container))
+      expect(html().classList.contains('dark')).toBe(true)
+      expect(localStorage.getItem(THEME_STORAGE_KEY)).toBe('dark')
+
+      proc.env.NODE_ENV = original
+    })
+
+    it('只提供 onChange：同样告警并按非受控处理', () => {
+      const proc = (globalThis as unknown as { process: { env: { NODE_ENV?: string } } }).process
+      const original = proc.env.NODE_ENV
+      proc.env.NODE_ENV = 'development'
+      const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+      const onChange = vi.fn()
+      const { container } = render(<ThemeButton options={{ onChange }} />)
+
+      expect(warn).toHaveBeenCalledWith(expect.stringContaining('受控模式'))
+
+      fireEvent.click(getToggle(container))
+      expect(onChange).not.toHaveBeenCalled()
+      expect(html().classList.contains('dark')).toBe(true)
+
+      proc.env.NODE_ENV = original
+    })
+
+    it('契约完整或都缺省时不告警；生产环境不告警', () => {
+      const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+      const proc = (globalThis as unknown as { process: { env: { NODE_ENV?: string } } }).process
+      const original = proc.env.NODE_ENV
+
+      render(<ThemeButton options={{ isDark: true, onChange: () => {} }} />)
+      render(<ThemeButton />)
+      expect(warn).not.toHaveBeenCalled()
+      cleanup()
+
+      proc.env.NODE_ENV = 'production'
+      const incomplete = render(<ThemeButton options={{ isDark: true }} />)
+      expect(warn).not.toHaveBeenCalled()
+      incomplete.unmount()
+
+      proc.env.NODE_ENV = original
     })
   })
 })
