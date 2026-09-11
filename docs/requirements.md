@@ -2,7 +2,7 @@
 
 | 项目 | 内容 |
 |---|---|
-| 版本 | v1.3（措辞澄清，见 §10 修订记录） |
+| 版本 | v1.4（peer 增补，见 §10 修订记录） |
 | 日期 | 2026-09-11 |
 | 状态 | 已评审通过，待开发指令 |
 | 仓库 / npm 包名 | `theme-switch-animation`（npm 已确认未注册） |
@@ -77,11 +77,13 @@ theme-switch-animation/                  # 仓库名 = 包名
   },
   "peerDependencies": {
     "react": ">=18",
+    "react-dom": ">=18",
     "vue": ">=3",
     "@nuxt/kit": ">=3"
   },
   "peerDependenciesMeta": {
     "react":     { "optional": true },
+    "react-dom": { "optional": true },
     "vue":       { "optional": true },
     "@nuxt/kit": { "optional": true }
   },
@@ -275,6 +277,10 @@ export type { ThemeAnimationOptions, ... } from '@theme-switch-animation/core'
 11. **发布清单**：`npm pack` 内容 = dist（含 nuxt-runtime 目录）+ LICENSE + README；四个子路径（`.` / `./react` / `./vue` / `./nuxt`）exports 均可解析。
 
 ## 10. 修订记录
+
+### v1.4（2026-09-11）
+
+1. **§4 peerDependencies 补充 `react-dom: ">=18"`**（optional）：`theme-switch-animation/react` 的 `useThemeAnimation` 在转场回调内通过 `react-dom` 的 `flushSync` 强制同步渲染，`react-dom` 与 `react` 同为可选 peer。随 Phase 2a 实际交付同步，避免发布后子路径缺少依赖声明。
 
 ### v1.3（2026-09-11）
 
