@@ -1,0 +1,21 @@
+{
+  "name": "@theme-switch-animation/vue",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Vue 3 adapter of theme-switch-animation. Bundled into the root package as `theme-switch-animation/vue`.",
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "sideEffects": false,
+  "peerDependencies": {
+    "vue": ">=3"
+  },
+  "dependencies": {
+    "@theme-switch-animation/core": "workspace:*"
+  },
+  "devDependencies": {
+    "@vue/server-renderer": "^3.5.42",
+    "@vue/test-utils": "^2.5.0",
+    "vue": "^3.5.42"
+  }
+}
