@@ -11,16 +11,26 @@ const ANIMATION_TYPES = [
 ] as const
 
 // @nuxtjs/color-mode 默认 classPrefix/classSuffix 均为空串，暗色类名是 dark。
-// 如配置了 classSuffix: '-mode'，把 darkClassName 改成 'dark-mode' 即可（§6.2）。
-const { triggerRef, toggleTheme, isDark } = useThemeAnimation<HTMLButtonElement>({
+// 配置了 classSuffix: '-mode' 时暗色类名是 'dark-mode'（§6.2），darkClassName 需同步。
+// options 必须是响应式来源（reactive）：isDark/onChange 才能随外部状态更新——
+// 传普通对象字面量会让受控模式的 isDark 冻结在初始值（Phase 5 文档需写明此约定）。
+const options = reactive({
   animationType: ThemeAnimationType.CIRCLE,
   darkClassName: 'dark',
   duration: 500,
-  isDark: computed(() => colorMode.value === 'dark'),
-  onChange: (next) => {
+  isDark: false,
+  onChange: (next: boolean) => {
     colorMode.preference = next ? 'dark' : 'light'
   },
 })
+// §9-3 组二：classSuffix '-mode' 时 color-mode 写入的类名是 'dark-mode'，
+// 经 runtimeConfig 从 nuxt.config 传入（服务端与客户端一致）
+options.darkClassName = useRuntimeConfig().public.darkClassName as string
+watchEffect(() => {
+  options.isDark = colorMode.value === 'dark'
+})
+
+const { triggerRef, toggleTheme, isDark } = useThemeAnimation<HTMLButtonElement>(options)
 
 // 模板 ref 走函数形式，写入 composable 的 triggerRef（SFC 的 :ref 需要 VNodeRef）
 const setTrigger = (el: unknown) => {
