@@ -42,6 +42,9 @@ describe('core 公开导出', () => {
         'readStoredTheme',
         'syncThemeOnMount',
         'writeStoredTheme',
+        // controlled-sync
+        'THEME_SYNC_TIMEOUT_MS',
+        'waitForThemeSync',
       ].sort(),
     )
   })

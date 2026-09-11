@@ -57,3 +57,6 @@ export {
   writeStoredTheme,
 } from './uncontrolled'
 export type { StoredTheme } from './uncontrolled'
+
+export { THEME_SYNC_TIMEOUT_MS, waitForThemeSync } from './controlled-sync'
+export type { WaitForThemeSyncOptions } from './controlled-sync'
