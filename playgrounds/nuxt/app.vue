@@ -1,5 +1,6 @@
 <script setup lang="ts">
-// §9-9：useThemeAnimation / ThemeAnimationType 由本库 nuxt 模块自动导入，无需 import
+// §9-9：useThemeAnimation / ThemeAnimationType 由本库 nuxt 模块自动导入，无需 import；
+// ThemeButton 由 Nuxt 组件自动导入扫描 components/ 目录
 const colorMode = useColorMode()
 
 const ANIMATION_TYPES = [
@@ -10,32 +11,21 @@ const ANIMATION_TYPES = [
   { type: ThemeAnimationType.BTT, label: 'BTT', hint: '从下向上擦除', pos: 'pos-br' },
 ] as const
 
-// @nuxtjs/color-mode 默认 classPrefix/classSuffix 均为空串，暗色类名是 dark。
-// 配置了 classSuffix: '-mode' 时暗色类名是 'dark-mode'（§6.2），darkClassName 需同步。
-// options 必须是响应式来源（reactive）：isDark/onChange 才能随外部状态更新——
-// 传普通对象字面量会让受控模式的 isDark 冻结在初始值（Phase 5 文档需写明此约定）。
-const options = reactive({
-  animationType: ThemeAnimationType.CIRCLE,
-  darkClassName: 'dark',
-  duration: 500,
-  isDark: false,
-  onChange: (next: boolean) => {
-    colorMode.preference = next ? 'dark' : 'light'
-  },
-})
-// §9-3 组二：classSuffix '-mode' 时 color-mode 写入的类名是 'dark-mode'，
-// 经 runtimeConfig 从 nuxt.config 传入（服务端与客户端一致）
-options.darkClassName = useRuntimeConfig().public.darkClassName as string
-watchEffect(() => {
-  options.isDark = colorMode.value === 'dark'
-})
+// 全局指示器：直接监听 html class，任何实例切换后同步（受控模式，状态源是 color-mode）
+const htmlIsDark = ref(false)
+let observer: MutationObserver | undefined
 
-const { triggerRef, toggleTheme, isDark } = useThemeAnimation<HTMLButtonElement>(options)
+const darkClassName = useRuntimeConfig().public.darkClassName as string
 
-// 模板 ref 走函数形式，写入 composable 的 triggerRef（SFC 的 :ref 需要 VNodeRef）
-const setTrigger = (el: unknown) => {
-  triggerRef.value = (el as HTMLButtonElement | null) ?? null
-}
+onMounted(() => {
+  const read = () => {
+    htmlIsDark.value = document.documentElement.classList.contains(darkClassName)
+  }
+  read()
+  observer = new MutationObserver(read)
+  observer.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] })
+})
+onUnmounted(() => observer?.disconnect())
 </script>
 
 <template>
@@ -43,24 +33,27 @@ const setTrigger = (el: unknown) => {
     <h1>theme-switch-animation · Nuxt playground</h1>
     <p class="status">
       受控模式 × @nuxtjs/color-mode（colorMode: <b>{{ colorMode.preference }}</b>，html class:
-      <b>{{ isDark ? 'dark' : 'light' }}</b>）
+      <b>{{ htmlIsDark ? darkClassName : 'light' }}</b>）
+    </p>
+    <p>
+      五个按钮各持有一个受控 <code>useThemeAnimation</code> 实例（自动导入，无 import）；
+      库在转场回调内调用 <code>colorMode.preference = …</code> 并等待 color-mode 写入 class 后截图。
+      每个按钮使用自己声明的动画类型（CIRCLE 的圆心是按钮中心，可验证点击位置跟随）。
     </p>
     <div class="grid">
-      <button
+      <ThemeButton
         v-for="t in ANIMATION_TYPES"
         :key="t.type"
-        :ref="t.type === ThemeAnimationType.CIRCLE ? setTrigger : undefined"
-        :class="['switch-button', t.pos]"
-        @click="toggleTheme"
-      >
-        <strong>{{ t.label }}</strong>
-        <span class="hint">{{ t.hint }}</span>
-        <span class="state">{{ isDark ? '🌙 切到亮色' : '☀️ 切到暗色' }}</span>
-      </button>
+        :animation-type="t.type"
+        :label="t.label"
+        :hint="t.hint"
+        :pos="t.pos"
+      />
     </div>
     <p class="note">
-      注：五按钮共享同一个 toggleTheme（演示受控模式下多触发器同状态源）；CIRCLE 的 ref 绑定在中央按钮。
-      验收提示（§9-3）：默认类名 dark 通过后，再切 classSuffix: '-mode' + darkClassName: 'dark-mode' 验证可配置性。
+      验收提示（§9-3）：默认类名 <code>dark</code> 通过后，再切 <code>classSuffix: '-mode'</code> +
+      <code>darkClassName: 'dark-mode'</code> 验证可配置性。不复用非受控模式，也不共享单实例——
+      每个按钮的动画类型独立生效。
     </p>
   </main>
 </template>

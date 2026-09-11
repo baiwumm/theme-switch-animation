@@ -12,7 +12,7 @@
  *       ├── index.mjs        ← 转出 internal/vue.mjs
  *       └── index.d.ts       ← 转出 internal/vue.d.ts
  */
-import { copyFileSync, existsSync, mkdirSync, readdirSync, writeFileSync } from 'node:fs'
+import { copyFileSync, existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from 'node:fs'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
@@ -35,21 +35,20 @@ const sharedTypeChunks = readdirSync(dist).filter((f) => /^types-.*\.d\.ts$/.tes
 mkdirSync(internalDir, { recursive: true })
 mkdirSync(composablesDir, { recursive: true })
 
-copyFileSync(join(dist, 'vue.mjs'), join(internalDir, 'vue.mjs'))
+// 复制实现时去掉 sourceMappingURL：map 不随 runtime 目录发布，留着会让 Vite 反复报
+// "Failed to load source map"
+const vueMjs = readFileSync(join(dist, 'vue.mjs'), 'utf8').replace(/^\/\/# sourceMappingURL=.*$/gm, '')
+writeFileSync(join(internalDir, 'vue.mjs'), vueMjs)
 copyFileSync(join(dist, 'vue.d.ts'), join(internalDir, 'vue.d.ts'))
 for (const chunk of sharedTypeChunks) {
   copyFileSync(join(dist, chunk), join(internalDir, chunk))
 }
 
-// 扫描目录只保留入口文件：addImportsDir 会把目录下所有文件的导出（含内部类型别名）登记为自动导入
-writeFileSync(
-  join(composablesDir, 'index.mjs'),
-  "export * from '../internal/vue.mjs'\n",
-)
-writeFileSync(
-  join(composablesDir, 'index.d.ts'),
-  "export * from '../internal/vue.js'\n",
-)
+// 扫描目录只保留入口文件：addImportsDir 会把目录下所有文件的导出（含内部类型别名）登记为自动导入。
+// 注意 specifier 必须无扩展名——unimport 按真实文件解析，写成 '../internal/vue.js' 会因找不到
+// vue.js 而 skip scanning（.d.ts 由 TS 的 bundler 解析规则映射，无需字面 .js 文件）。
+writeFileSync(join(composablesDir, 'index.mjs'), "export * from '../internal/vue'\n")
+writeFileSync(join(composablesDir, 'index.d.ts'), "export * from '../internal/vue'\n")
 
 console.log(
   `[copy-nuxt-runtime] dist/nuxt-runtime/composables/{index.mjs,index.d.ts} 已就绪（实现与类型在 internal/，${sharedTypeChunks.length} 个共享类型块）`,
