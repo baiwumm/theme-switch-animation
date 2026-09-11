@@ -125,3 +125,28 @@ f9aeffb feat(nuxt): 添加 Nuxt 模块（addImportsDir 自动导入）与 runtim
 ```
 
 仍按约定未 push（本阶段 4 个 commit 待你 review 后推送）。
+
+---
+
+## 附录（真机反馈修复，2026-09-11）
+
+**反馈**：Nuxt playground 服务正常，但点击任何按钮都只播 CIRCLE 动画；终端出现 `WARN [unimport] failed to resolve ".../nuxt-runtime/internal/vue.js", skip scanning` 与 `Failed to load source map for .../internal/vue.mjs`。
+
+**问题一：五按钮均为 CIRCLE（playground 缺陷）**
+初版 `app.vue` 为图省事让五个按钮共享**同一个** `useThemeAnimation` 实例（模板里即注明"共享同一个 toggleTheme"），于是 `animationType` 只有一份 = CIRCLE，按钮点击全部走 CIRCLE。React / Vue playground 都是每按钮独立实例，Nuxt 版漏了。**修复**：抽出 `components/ThemeButton.vue`（每实例自持 reactive options + 自己的 colorMode 受控接线），`app.vue` 只负责布局与全局指示器——与非受控的 Vue playground 结构对齐，受控语义不变。
+
+**问题二：unimport 解析警告 + source map 警告（产物生成缺陷）**
+- `composables/index.d.ts` 原本写 `export * from '../internal/vue.js'`：物理文件只有 `vue.d.ts`/`vue.mjs`，unimport 按真实文件解析 `.js` 失败 → `skip scanning`（类型当时靠显式 `addImports(type)` 兜住，功能正常但警告刺眼，且值扫描的 `from` 记录也变得不可预期）。改为**无扩展名** `export * from '../internal/vue'`——TS 按 bundler 解析规则映射到 `.d.ts`，unimport 也能解析（对齐它自身生成的 `from '.../internal/vue'` 形态）。
+- 复制 `vue.mjs` 时剥离 `//# sourceMappingURL=` 注释：runtime 目录不发布 source map，留着会让 Vite 每次加载都报 `ENOENT ... vue.mjs.map`。
+
+**验证**（均在 production 构建上）：
+- `nuxt prepare` / `nuxt typecheck` / `nuxt build` 的 unimport 与 source map 警告数 **0**（修复前每次构建必现）；
+- 新增 `scripts/cdp-nuxt-animtypes.mjs`：逐个点击五按钮，断言注入的 `@keyframes theme-switch-<type>` 与按钮声明类型一致——**五类全对**（这是本 bug 的针对性回归，已接入 `pnpm test:acceptance`）；
+- §9-3 两组回归通过、§9-9 强证据（5 类型自动导入、故意错误恰好 2 条）复测通过；
+- 全量：lint / typecheck / 129 单测 / build / 四 playground 全绿，`npm pack` 21 文件不变。
+
+**本附录 commit**：
+```
+73e90de fix(nuxt): playground 每按钮独立 useThemeAnimation 实例（修复五按钮均为 CIRCLE）；runtime 产物改无扩展名 specifier 消除 unimport 解析警告、剥离 sourceMappingURL；新增动画类型独立性验收脚本
+```
+累计待推送 6 个 commit（Phase 4 主体 4 + 本附录 1 + Phase 4 汇报 1）。
