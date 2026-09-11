@@ -12,5 +12,8 @@ minimumReleaseAgeExclude:
 # chokidar@4.0.3（2024-12 发布，tsup 的依赖）未附带 provenance 而更早的 4.0.1 有，
 # 会触发 pnpm `trustPolicy: no-downgrade` 的 ERR_PNPM_TRUST_DOWNGRADE。
 # 该版本发布已久且被广泛使用，按 pnpm 官方文档示例精确排除这一个版本，信任检查对其他包继续生效。
+# semver@6.3.1（2023-07 发布，nuxt 3 的依赖）同理：semver 自 7.5.1（2024）起才携带 provenance，
+# 6.x 全线无证明属早期发布的正常情况（6.3.1 为 npm 生态被依赖最广的版本之一），精确排除这一个版本。
 trustPolicyExclude:
   - 'chokidar@4.0.3'
+  - 'semver@6.3.1'

@@ -1,0 +1,20 @@
+{
+  "name": "@theme-switch-animation/playground-nuxt",
+  "version": "0.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "pnpm -w run build && nuxt dev",
+    "build": "pnpm -w run build && nuxt build",
+    "preview": "nuxt preview",
+    "typecheck": "nuxt prepare && nuxt typecheck",
+    "prepare": "nuxt prepare"
+  },
+  "dependencies": {
+    "@nuxtjs/color-mode": "^3.5.2",
+    "theme-switch-animation": "workspace:*"
+  },
+  "devDependencies": {
+    "nuxt": "^3.21.11",
+    "vue-tsc": "^3.3.11"
+  }
+}

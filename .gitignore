@@ -2,6 +2,9 @@ node_modules/
 dist/
 coverage/
 .next/
+.nuxt/
+.next-env.d.ts
+.output/
 next-env.d.ts
 *.log
 .DS_Store
