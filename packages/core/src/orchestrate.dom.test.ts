@@ -154,6 +154,38 @@ describe('runThemeTransition 动画路径（jsdom + 模拟 startViewTransition�
     expect(styleNode()).toBeNull()
   })
 
+  it('转场被跳过（AbortError，快速连点竞态）：不视为错误，样式已清理', async () => {
+    const abort = new DOMException('The view transition was skipped', 'AbortError')
+    const startViewTransition = vi.fn(() => ({ finished: Promise.reject(abort) }))
+    Object.defineProperty(document, 'startViewTransition', {
+      value: startViewTransition,
+      configurable: true,
+      writable: true,
+    })
+
+    const result = runThemeTransition({ domUpdate: () => {} })
+
+    expect(result.animated).toBe(true)
+    await expect(result.finished).resolves.toBeUndefined()
+    expect(styleNode()).toBeNull()
+  })
+
+  it('Safari 形态的 skipped transition（无 name 的 Error）：同样不视为错误', async () => {
+    const startViewTransition = vi.fn(() => ({
+      finished: Promise.reject(new Error('Transition was skipped because a new transition started')),
+    }))
+    Object.defineProperty(document, 'startViewTransition', {
+      value: startViewTransition,
+      configurable: true,
+      writable: true,
+    })
+
+    const result = runThemeTransition({ domUpdate: () => {} })
+
+    await expect(result.finished).resolves.toBeUndefined()
+    expect(styleNode()).toBeNull()
+  })
+
   it('prefers-reduced-motion: reduce 时即便支持 View Transitions 也降级', () => {
     const { startViewTransition } = installFakeViewTransition()
     // jsdom 没有 matchMedia，手动挂一个

@@ -88,6 +88,20 @@ function resolveDocument(doc: Document | null | undefined): Document | null {
 }
 
 /**
+ * 转场被跳过时浏览器以 AbortError（DOMException，name === 'AbortError'）结算 finished。
+ * Safari 的 view transition 实现不置 name（领域内已知差异），同时兜底匹配消息文本。
+ * 不用 instanceof（Error / DOMException）：jsdom 等环境的 DOMException 不继承全局 Error，
+ * 且跨 realm 的 instanceof 不可靠，只按结构判断。
+ */
+function isSkippedTransitionError(error: unknown): boolean {
+  if (error === null || typeof error !== 'object') return false
+  const name = (error as { name?: unknown }).name
+  if (typeof name === 'string' && name === 'AbortError') return true
+  const message = (error as { message?: unknown }).message
+  return typeof message === 'string' && /transition.*skip|skip.*transition/i.test(message)
+}
+
+/**
  * 编排一次主题切换：
  * - 可以动画：注入样式 → `startViewTransition(domUpdate)` → 结束后清理样式；
  * - 需要降级：直接调用 `domUpdate`，状态照常更新，只是没有动画。
@@ -119,6 +133,9 @@ export function runThemeTransition(params: RunThemeTransitionParams): RunThemeTr
     },
     (error: unknown) => {
       removeAnimationStyle(doc)
+      // 快速连点时浏览器会跳过未完成的转场（finished 以 AbortError 结算）。这是正常竞态：
+      // 状态已由 domUpdate 落地，跳过只影响旧动画的视觉效果，不作为错误抛给调用方。
+      if (isSkippedTransitionError(error)) return
       throw error
     },
   )
