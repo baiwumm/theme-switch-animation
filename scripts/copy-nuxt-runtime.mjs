@@ -3,23 +3,25 @@
  * 纯 node:fs 实现，跨平台（Windows / *nix），不依赖 cp / rsync。
  *
  * 产物布局（发布包内没有 @theme-switch-animation/*，必须是自包含的）：
- *   dist/nuxt-runtime/
- *   ├── internal/
- *   │   ├── vue.mjs          ← dist/vue.mjs（已内联 core；自动导入的正是 Vue composable）
- *   │   ├── vue.d.ts         ← dist/vue.d.ts
- *   │   └── types-<hash>.d.ts← 共享类型块（vue.d.ts 引用）
- *   └── composables/         ← addImportsDir 扫描的目录，只放入口文件，避免扫描到内部别名
- *       ├── index.mjs        ← 转出 internal/vue.mjs
- *       └── index.d.ts       ← 转出 internal/vue.d.ts
+ *   dist/nuxt-runtime/composables/   ← addImportsDir 扫描的目录，只有两个入口文件
+ *   ├── index.mjs                    ← dist/vue.mjs（已内联 core；值导出）
+ *   └── index.d.ts                   ← 自包含声明（见下；类型导出）
+ *
+ * 为什么 d.ts 要自包含而不是 `export * from '...'`：
+ * addImportsDir 的类型扫描只识别文件内**显式的 export 声明**（`export interface/type/declare const`），
+ * 对 `export {...} from` 这类转发语句中的 `type` 名字会漏掉（曾导致 UseThemeAnimationOptions
+ * 等类型无法自动导入）。因此把 tsup 产物里的声明内联、逐条加 export 关键字。
+ *
+ * `ThemeAnimationType` 的同名类型含义由模块的 addTypeTemplate 补（见 packages/nuxt/src/index.ts），
+ * 因为 unimport 对自动导入的值只生成值含义的全局声明。
  */
-import { copyFileSync, existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 const dist = join(root, 'dist')
 const runtimeDir = join(dist, 'nuxt-runtime')
-const internalDir = join(runtimeDir, 'internal')
 const composablesDir = join(runtimeDir, 'composables')
 
 for (const file of ['vue.mjs', 'vue.d.ts', 'nuxt.mjs']) {
@@ -29,27 +31,44 @@ for (const file of ['vue.mjs', 'vue.d.ts', 'nuxt.mjs']) {
   }
 }
 
-// vue.d.ts 通过共享 chunk（types-<hash>.d.ts）引用 core 类型，需一并携带
+// vue.d.ts 通过共享 chunk（types-<hash>.d.ts）引用 core 类型；其声明需要内联进自包含产物
 const sharedTypeChunks = readdirSync(dist).filter((f) => /^types-.*\.d\.ts$/.test(f))
-
-mkdirSync(internalDir, { recursive: true })
-mkdirSync(composablesDir, { recursive: true })
-
-// 复制实现时去掉 sourceMappingURL：map 不随 runtime 目录发布，留着会让 Vite 反复报
-// "Failed to load source map"
-const vueMjs = readFileSync(join(dist, 'vue.mjs'), 'utf8').replace(/^\/\/# sourceMappingURL=.*$/gm, '')
-writeFileSync(join(internalDir, 'vue.mjs'), vueMjs)
-copyFileSync(join(dist, 'vue.d.ts'), join(internalDir, 'vue.d.ts'))
-for (const chunk of sharedTypeChunks) {
-  copyFileSync(join(dist, chunk), join(internalDir, chunk))
+if (sharedTypeChunks.length !== 1) {
+  console.error(`[copy-nuxt-runtime] 期望恰好 1 个共享类型块，实际 ${sharedTypeChunks.length} 个：${sharedTypeChunks.join(', ')}`)
+  process.exit(1)
 }
 
-// 扫描目录只保留入口文件：addImportsDir 会把目录下所有文件的导出（含内部类型别名）登记为自动导入。
-// 注意 specifier 必须无扩展名——unimport 按真实文件解析，写成 '../internal/vue.js' 会因找不到
-// vue.js 而 skip scanning（.d.ts 由 TS 的 bundler 解析规则映射，无需字面 .js 文件）。
-writeFileSync(join(composablesDir, 'index.mjs'), "export * from '../internal/vue'\n")
-writeFileSync(join(composablesDir, 'index.d.ts'), "export * from '../internal/vue'\n")
+rmSync(runtimeDir, { recursive: true, force: true })
+mkdirSync(composablesDir, { recursive: true })
 
-console.log(
-  `[copy-nuxt-runtime] dist/nuxt-runtime/composables/{index.mjs,index.d.ts} 已就绪（实现与类型在 internal/，${sharedTypeChunks.length} 个共享类型块）`,
-)
+/** 把 tsup 产物转成自包含声明：去掉 import / 合并 export 语句，给顶层声明加 export */
+function toSelfContainedDeclarations(text) {
+  return text
+    .split('\n')
+    .filter((line) => !/^import .* from ['"].*['"];?$/.test(line))
+    .filter((line) => !/^export \{.*\};$/.test(line))
+    .map((line) =>
+      /^(declare const|declare function|type |interface )/.test(line) ? `export ${line}` : line,
+    )
+    .join('\n')
+    .trim()
+}
+
+const declarations = [
+  '// 自动生成（scripts/copy-nuxt-runtime.mjs）——请勿手改',
+  "import type { Ref } from 'vue'",
+  '',
+  toSelfContainedDeclarations(readFileSync(join(dist, sharedTypeChunks[0]), 'utf8')),
+  '',
+  toSelfContainedDeclarations(readFileSync(join(dist, 'vue.d.ts'), 'utf8')),
+  '',
+].join('\n')
+
+writeFileSync(join(composablesDir, 'index.d.ts'), declarations)
+
+// 实现同样直接落盘（不做转发，值与类型的解析落在同一模块）；去掉 sourceMappingURL：
+// map 不随 runtime 目录发布，留着会让 Vite 反复报 "Failed to load source map"
+const vueMjs = readFileSync(join(dist, 'vue.mjs'), 'utf8').replace(/^\/\/# sourceMappingURL=.*$/gm, '')
+writeFileSync(join(composablesDir, 'index.mjs'), vueMjs)
+
+console.log('[copy-nuxt-runtime] dist/nuxt-runtime/composables/{index.mjs,index.d.ts} 已就绪（自包含声明）')
