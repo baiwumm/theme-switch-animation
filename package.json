@@ -71,6 +71,8 @@
     "@eslint/js": "^10.0.1",
     "eslint": "^10.10.0",
     "jsdom": "^30.0.1",
+    "react": "19.3.0",
+    "react-dom": "19.3.0",
     "tsup": "^8.5.1",
     "typescript": "^5.9.3",
     "typescript-eslint": "^8.70.0",
