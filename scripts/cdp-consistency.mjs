@@ -1,10 +1,12 @@
 /**
  * 验收 §9-2 快速连点一致性检查：3 秒内连点 10 次 + 同帧 5 连击，
  * 校验 localStorage 主题 / html class / 按钮 isDark 文案三者一致。
+ * 另含挂载断言：页面就绪后按钮文案应为真实状态（🌙 / ☀️），
+ * 而非挂载前的中性文案（🌗，hydration 防护的占位）。
  * 启动方式同 scripts/cdp-measure.mjs，或运行 `pnpm test:acceptance`。
  */
-const CDP_PORT = 19222
-const PAGE_URL = 'http://127.0.0.1:5222/'
+const CDP_PORT = Number(process.env.ACCEPTANCE_CDP_PORT ?? 19222)
+const PAGE_URL = process.env.ACCEPTANCE_URL ?? 'http://127.0.0.1:5222/'
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms))
 
 const targets = await (await fetch(`http://127.0.0.1:${CDP_PORT}/json/list`)).json()
@@ -18,7 +20,20 @@ const send = (method, params = {}) => new Promise((res) => { const mid = ++id; p
 
 await send('Page.enable'); await send('Runtime.enable')
 await send('Page.navigate', { url: PAGE_URL })
-await sleep(3000)
+await sleep(5000)
+
+// 挂载断言：中性占位（🌗）说明 mounted 从未翻转，React 未完成水合
+const mountedProbe = await send('Runtime.evaluate', {
+  expression: `document.querySelector('.switch-button .state')?.textContent ?? ''`,
+  returnByValue: true,
+})
+const mountedText = mountedProbe.result?.result?.value ?? ''
+if (!/(🌙|☀️)/.test(mountedText)) {
+  console.error(`MOUNT FAIL: 按钮仍为占位文案「${mountedText}」，React 未完成挂载`)
+  ws.close()
+  process.exit(1)
+}
+console.log(`MOUNTED ✓（按钮文案：${mountedText}）`)
 
 // 3 秒内连点 10 次
 for (let i = 0; i < 10; i++) {

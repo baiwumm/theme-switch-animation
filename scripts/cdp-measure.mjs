@@ -10,8 +10,8 @@
  * 19222 已实测可用；可用 `netsh interface ipv4 show excludedportrange protocol=tcp` 查询。
  * 或直接运行 `pnpm test:acceptance`（需先自行启动上述两个进程）。
  */
-const CDP_PORT = 19222
-const PAGE_URL = 'http://127.0.0.1:5222/'
+const CDP_PORT = Number(process.env.ACCEPTANCE_CDP_PORT ?? 19222)
+const PAGE_URL = process.env.ACCEPTANCE_URL ?? 'http://127.0.0.1:5222/'
 const CLICKS_PER_PROFILE = 25
 const CLICK_INTERVAL_MS = 400
 const TIMEOUT_MS = 300
