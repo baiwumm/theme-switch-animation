@@ -36,6 +36,12 @@ describe('core 公开导出', () => {
         'runThemeTransition',
         'shouldSkipTransition',
         'supportsViewTransition',
+        // uncontrolled
+        'applyThemeClass',
+        'hasThemeClass',
+        'readStoredTheme',
+        'syncThemeOnMount',
+        'writeStoredTheme',
       ].sort(),
     )
   })

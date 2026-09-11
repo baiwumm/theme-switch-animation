@@ -48,3 +48,12 @@ export type {
   RunThemeTransitionResult,
   ViewTransitionLike,
 } from './orchestrate'
+
+export {
+  applyThemeClass,
+  hasThemeClass,
+  readStoredTheme,
+  syncThemeOnMount,
+  writeStoredTheme,
+} from './uncontrolled'
+export type { StoredTheme } from './uncontrolled'
