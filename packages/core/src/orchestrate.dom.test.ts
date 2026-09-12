@@ -154,6 +154,26 @@ describe('runThemeTransition 动画路径（jsdom + 模拟 startViewTransition�
     expect(styleNode()).toBeNull()
   })
 
+  it('跳过竞态身份守卫：旧转场以 AbortError 结算时，不得误删新一轮注入的样式（闪屏修复）', async () => {
+    const { calls } = installFakeViewTransition({ manualFinish: true })
+
+    const first = runThemeTransition({ domUpdate: () => {}, options: { duration: 100, animationType: ThemeAnimationType.LTR } })
+    // 第二轮点击：注入已替换第一轮的节点
+    const second = runThemeTransition({ domUpdate: () => {}, options: { duration: 100, animationType: ThemeAnimationType.RTL } })
+    expect(styleNode()!.textContent).toContain('theme-switch-rtl')
+
+    // 浏览器跳过第一轮 → finished 以 AbortError 结算；此时 id 上是第二轮的样式，不得被删
+    calls[0]!.finish.reject(new DOMException('The view transition was skipped', 'AbortError'))
+    await expect(first.finished).resolves.toBeUndefined()
+    expect(styleNode()).not.toBeNull()
+    expect(styleNode()!.textContent).toContain('theme-switch-rtl')
+
+    calls[1]!.finish.resolve()
+    await second.finished
+    vi.advanceTimersByTime(100)
+    expect(styleNode()).toBeNull()
+  })
+
   it('转场被跳过（AbortError，快速连点竞态）：不视为错误，样式已清理', async () => {
     const abort = new DOMException('The view transition was skipped', 'AbortError')
     const startViewTransition = vi.fn(() => ({ finished: Promise.reject(abort) }))

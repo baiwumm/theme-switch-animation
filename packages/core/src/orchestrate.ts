@@ -142,7 +142,10 @@ export function runThemeTransition(params: RunThemeTransitionParams): RunThemeTr
       scheduleCleanup(doc, resolved.duration, node)
     },
     (error: unknown) => {
-      removeAnimationStyle(doc)
+      // 只清理自己注入的那个节点：跳过竞态下本转场结算时，固定 id 上挂的已是
+      // 新一轮注入的样式——误删会让新转场裸奔（UA 默认交叉淡入淡出 + plus-lighter
+      // 叠加发白），表现为屏幕闪动一下。
+      if (doc.getElementById(THEME_ANIMATION_STYLE_ID) === node) removeAnimationStyle(doc)
       // 快速连点时浏览器会跳过未完成的转场（finished 以 AbortError 结算）。这是正常竞态：
       // 状态已由 domUpdate 落地，跳过只影响旧动画的视觉效果，不作为错误抛给调用方。
       if (isSkippedTransitionError(error)) return

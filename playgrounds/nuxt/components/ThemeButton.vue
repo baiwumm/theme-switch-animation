@@ -5,17 +5,20 @@ const props = defineProps<{
   animationType: ThemeAnimationType
   label: string
   hint: string
-  duration?: number
+  duration: number
+  easing: string
 }>()
 
 const colorMode = useColorMode()
 
 // options 必须是响应式来源（reactive）：受控模式下 isDark 才能随外部状态更新；
 // 传普通对象字面量会让 isDark 冻结在初始值（Phase 4 报告 §3.1）。
+// duration / easing 同样经 reactive 承接全局预设，点击时读取当前值。
 const options = reactive({
   animationType: props.animationType,
   darkClassName: 'dark',
-  duration: props.duration ?? 500,
+  duration: props.duration,
+  easing: props.easing,
   isDark: false,
   onChange: (next: boolean) => {
     colorMode.preference = next ? 'dark' : 'light'
@@ -25,6 +28,8 @@ const options = reactive({
 options.darkClassName = useRuntimeConfig().public.darkClassName as string
 watchEffect(() => {
   options.isDark = colorMode.value === 'dark'
+  options.duration = props.duration
+  options.easing = props.easing
 })
 
 const { triggerRef, toggleTheme, isDark } = useThemeAnimation<HTMLButtonElement>(options)

@@ -66,6 +66,42 @@ code {
   margin: 24px 0;
 }
 
+/* duration / easing 全局预设选择器：选中后所有动画按钮的下一次切换立即生效 */
+.presets {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin: 14px 0;
+}
+
+.presets > span {
+  opacity: 0.65;
+  font-size: 13px;
+  margin-right: 4px;
+}
+
+.chip {
+  padding: 5px 12px;
+  font: inherit;
+  font-size: 13px;
+  color: var(--fg);
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  cursor: pointer;
+}
+
+.chip:hover {
+  border-color: var(--accent);
+}
+
+.chip.active {
+  border-color: var(--accent);
+  box-shadow: inset 0 0 0 1px var(--accent);
+  font-weight: 600;
+}
+
 .switch-button {
   display: flex;
   flex-direction: column;
