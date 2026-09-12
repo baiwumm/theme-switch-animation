@@ -121,6 +121,7 @@ export function runThemeTransition(params: RunThemeTransitionParams): RunThemeTr
   const css = buildAnimationCSS({
     animationType: resolved.animationType,
     geometry,
+    origin: center,
     duration: resolved.duration,
     easing: resolved.easing,
   })

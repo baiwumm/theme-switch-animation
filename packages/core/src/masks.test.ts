@@ -19,7 +19,6 @@ import {
   getBlurCircleMaskGeometry,
   getBlurCircleMaskImage,
   getCircleMaskGeometry,
-  getCircleRevertMaskGeometry,
   getDiamondMaskGeometry,
   getDirectionalMaskGeometry,
   getHexagonMaskGeometry,
@@ -32,7 +31,6 @@ import {
   getTriangleMaskGeometry,
   isBlurAnimationType,
   isDirectionalAnimationType,
-  isRevertAnimationType,
   isShapeAnimationType,
 } from './masks'
 import type { RectProvider } from './masks'
@@ -244,31 +242,6 @@ describe('中心扩散形状几何（SQUARE / RECTANGLE / DIAMOND / HEXAGON / TR
   })
 })
 
-describe('getCircleRevertMaskGeometry（CIRCLE_REVERT：全尺寸收缩到触发点）', () => {
-  it('起始尺寸与 CIRCLE 终尺寸相同（2.1 × maxRadius），保证初始盖住视口', () => {
-    const revert = getCircleRevertMaskGeometry({ x: 400, y: 300 }, viewport)
-    const circle = getCircleMaskGeometry({ x: 400, y: 300 }, viewport)
-    expect(revert.startSize).toBe(circle.endSize)
-    expect(revert.startPosition).toBe(circle.endPosition)
-  })
-
-  it('收缩终点：尺寸 0、位置钉在触发点，蒙版为同一张圆形 SVG', () => {
-    const revert = getCircleRevertMaskGeometry({ x: 400, y: 300 }, viewport)
-    expect(revert.endSize).toBe('0px 0px')
-    expect(revert.endPosition).toBe('400px 300px')
-    expect(revert.maskImage).toBe(CIRCLE_MASK_IMAGE)
-  })
-
-  it('分发：REVERT 走专用几何；isRevertAnimationType 仅对 CIRCLE_REVERT 为 true', () => {
-    expect(getMaskGeometry(ThemeAnimationType.CIRCLE_REVERT, { x: 400, y: 300 }, viewport)).toEqual(
-      getCircleRevertMaskGeometry({ x: 400, y: 300 }, viewport),
-    )
-    expect(isRevertAnimationType(ThemeAnimationType.CIRCLE_REVERT)).toBe(true)
-    expect(isRevertAnimationType(ThemeAnimationType.CIRCLE)).toBe(false)
-    expect(isShapeAnimationType(ThemeAnimationType.CIRCLE_REVERT)).toBe(false)
-  })
-})
-
 describe('getBlurCircleMaskImage / getBlurCircleMaskGeometry（CIRCLE_BLUR）', () => {
   it('模糊烘焙进 SVG：feGaussianBlur stdDeviation = blurAmount × 1.2，data-URI 完整编码', () => {
     expect(BLUR_MASK_DEVIATION_FACTOR).toBe(1.2)
@@ -313,7 +286,6 @@ describe('getBlurCircleMaskImage / getBlurCircleMaskGeometry（CIRCLE_BLUR）', 
     expect(isBlurAnimationType(ThemeAnimationType.CIRCLE_BLUR)).toBe(true)
     expect(isBlurAnimationType(ThemeAnimationType.CIRCLE)).toBe(false)
     expect(isShapeAnimationType(ThemeAnimationType.CIRCLE_BLUR)).toBe(false)
-    expect(isRevertAnimationType(ThemeAnimationType.CIRCLE_BLUR)).toBe(false)
   })
 })
 

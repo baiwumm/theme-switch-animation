@@ -89,3 +89,46 @@ playgrounds/nuxt               ✓ prepare + typecheck + build（§9-3 / §9-9 �
 ## 附：本阶段 commit
 
 见 git log（6a / 6b / 6c / playground / docs 分组提交）。
+
+---
+
+## 附录（桌面真机反馈修复，2026-09-13）
+
+**反馈**（React playground 桌面验证）：
+1. CIRCLE_REVERT 语义不对——期望"一次收起，然后一次扩散"，实际每次只有收起；
+2. CIRCLE_BLUR 有问题——主题一下就全变了，然后圆形才模糊扩散。
+
+### 问题一：REVERT 只做了"收起"半段 → 改为穿越缩放（transform）
+
+原实现用 mask 在旧截图层做圆形收缩（iris 收拢），内容不动、只被裁剪，没有"扩散"半段。而"扩散"半段用 mask **做不出来**：蒙版外露出的永远是已翻转的实时页面（新主题），新截图层的蒙版扩散与背景重合、不可见。改为**穿越缩放**（常见 zoom-through 主题切换的实现方式）：
+
+- `::view-transition-old(root)`：`scale 1 → 0`（收起），`z-index: 1` 置顶；
+- `::view-transition-new(root)`：`scale 0 → 1`（扩散，keyframes 名 `-expand` 后缀）；
+- `transform-origin` 钉在触发点，同长同时进行——旧页面内容缩进点击点，新页面内容从点击点长出，两段都可见。
+
+**架构影响**：Phase 6b 引入的层选择机制（`AnimationLayerTarget` / `getAnimationLayerTarget` / `layerRule`）随之移除——REVERT 在 `buildAnimationCSS` 内独立分支（不使用 MaskGeometry），`buildAnimationCSSParams` 新增必填 `origin`（orchestrate 传入触发点）；`getCircleRevertMaskGeometry` / `isRevertAnimationType` 删除；BLUR 回到与普通类型相同的"仅 new 层"路径。`getMaskGeometry` 对 REVERT 占位回落 CIRCLE 几何（下游不消费）。
+
+**命名**：保留 `CIRCLE_REVERT`——相对 CIRCLE（新主题先到、盖住旧主题），它是交接顺序反转（旧先走、新后到）。如需更直白的 `CIRCLE_ZOOM`，发布前改名成本很低。
+
+**Safari 注意**：transform 动画在 WebKit 的表现需真机验证（需求 §2 的限制针对 clip-path 与 WAAPI，未涉及 CSS transform）——归入 Phase 5 前的 Safari 验收清单。
+
+### 问题二：BLUR"瞬间全变" → 蒙版只挂新截图层
+
+根因是**误读参考实现**：`useBlurCircleTheme` 只给 `::view-transition-new(root)` 挂了模糊蒙版，old 层只有一段 `maskScale` 动画——没有 `mask-image`，实为无效代码（`z-index: -1` 同样多余，默认堆叠本就是新在旧上）。我照着"双层同蒙版"的误读实现，导致蒙版外新旧截图全部透明、露出已翻转的实时页面 → 主题瞬间全变，只剩圈内模糊边缘可辨。
+
+修复：模糊蒙版**只挂新截图层**，旧截图层完整垫底——蒙版外是旧主题，直到模糊圆扫过。`buildAnimationCSS` 的 `both` 分支删除。
+
+### 复验（Nuxt production 构建 + 无头 Chrome 19222，端口 3100）
+
+| 检查 | 结果 |
+|---|---|
+| `pnpm lint` / `typecheck` / `test` / `build` | ✓ 12 files / **175 tests**（REVERT 蒙版用例删除、缩放用例新增；既有类型字节快照不变） |
+| §9 动画类型独立性 | ✓ **13/13 PASS**（revert 的收起 keyframes 名即主名，脚本无需改动） |
+| REVERT 中段截图 | ✓ 旧浅色页面内容可见地缩进触发点，四周为新主题（收起半段成立） |
+| BLUR 中段截图 + 探针 | ✓ 旧主题残留在蒙版外的远端（L=144 过渡带），近端为新主题（L=28）——不再瞬间全变 |
+| `npm pack --dry-run` | ✓ 18 files 不变 |
+
+**本附录 commit**：
+```
+fix(core): 真机反馈修复——REVERT 改穿越缩放（收起+扩散）、BLUR 蒙版仅挂新截图层
+```

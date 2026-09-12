@@ -34,7 +34,6 @@ export {
   TRIANGLE_MASK_IMAGE,
   getCircleMaskGeometry,
   getBlurCircleMaskGeometry,
-  getCircleRevertMaskGeometry,
   getDiamondMaskGeometry,
   getDirectionalMaskGeometry,
   getHexagonMaskGeometry,
@@ -47,7 +46,6 @@ export {
   getTriangleMaskGeometry,
   isBlurAnimationType,
   isDirectionalAnimationType,
-  isRevertAnimationType,
   isShapeAnimationType,
 } from './masks'
 export type { MaskGeometry, Point, RectProvider, Size } from './masks'
@@ -56,12 +54,11 @@ export {
   DURATION_VAR,
   EASING_VAR,
   buildAnimationCSS,
-  getAnimationLayerTarget,
   getAnimationName,
   injectAnimationStyle,
   removeAnimationStyle,
 } from './styles'
-export type { AnimationLayerTarget, BuildAnimationCSSParams } from './styles'
+export type { BuildAnimationCSSParams } from './styles'
 
 export {
   getViewportSize,

@@ -253,25 +253,10 @@ export function getStarMaskGeometry(center: Point, viewport: Size): MaskGeometry
 }
 
 /**
- * CIRCLE_REVERT：动画作用于**旧截图层**（见 styles.ts 的层选择），蒙版从全覆盖收缩到触发点 0——
- * 旧主题以圆形收起，新主题从四周显现。起始尺寸与 CIRCLE 的终尺寸相同（2.1 × maxRadius，
- * 保证初始盖住整个视口），钉扎方向相反：from 全尺寸居中 → to 触发点 0。
- */
-export function getCircleRevertMaskGeometry(center: Point, viewport: Size): MaskGeometry {
-  const side = getMaxRadiusToCorners(center, viewport) * CIRCLE_SIZE_FACTOR
-  return {
-    maskImage: CIRCLE_MASK_IMAGE,
-    startSize: `${px(side)} ${px(side)}`,
-    startPosition: `${px(center.x - side / 2)} ${px(center.y - side / 2)}`,
-    endSize: '0px 0px',
-    endPosition: `${px(center.x)} ${px(center.y)}`,
-  }
-}
-
-/**
  * CIRCLE_BLUR：`feGaussianBlur` 烘焙进 SVG 蒙版本身（而非 CSS filter，Safari 兼容性同其余类型）。
  * viewBox -50..50、圆 r=25 与参考实现（magicui 系 useBlurCircleTheme）一致；模糊强度按
  * BLUR_MASK_DEVIATION_FACTOR 放大后作为 stdDeviation 写进 data-URI，随蒙版缩放。
+ * 蒙版只挂新截图层（旧层完整垫底），否则蒙版外露出的是已翻转的实时页面——主题会瞬间全变。
  */
 export const BLUR_MASK_DEVIATION_FACTOR = 1.2
 
@@ -322,10 +307,6 @@ export function isShapeAnimationType(type: ThemeAnimationType): type is ShapeAni
   return type in SHAPE_GEOMETRY
 }
 
-export function isRevertAnimationType(type: ThemeAnimationType): boolean {
-  return type === ThemeAnimationType.CIRCLE_REVERT
-}
-
 export function isBlurAnimationType(type: ThemeAnimationType): boolean {
   return type === ThemeAnimationType.CIRCLE_BLUR
 }
@@ -334,7 +315,10 @@ export function isDirectionalAnimationType(type: ThemeAnimationType): type is Di
   return type in DIRECTIONAL_START
 }
 
-/** 按动画类型分发；未知类型按 CIRCLE 处理。blurAmount 仅被 CIRCLE_BLUR 消费 */
+/**
+ * 按动画类型分发；未知类型按 CIRCLE 处理。blurAmount 仅被 CIRCLE_BLUR 消费。
+ * CIRCLE_REVERT 不走蒙版（styles 层以 transform 缩放实现），geometry 占位回落 CIRCLE、下游不消费。
+ */
 export function getMaskGeometry(
   type: ThemeAnimationType,
   center: Point,
@@ -344,6 +328,5 @@ export function getMaskGeometry(
   if (isDirectionalAnimationType(type)) return getDirectionalMaskGeometry(type)
   if (isShapeAnimationType(type)) return SHAPE_GEOMETRY[type](center, viewport)
   if (isBlurAnimationType(type)) return getBlurCircleMaskGeometry(center, viewport, blurAmount)
-  if (isRevertAnimationType(type)) return getCircleRevertMaskGeometry(center, viewport)
   return getCircleMaskGeometry(center, viewport)
 }
