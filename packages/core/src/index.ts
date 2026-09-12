@@ -34,6 +34,7 @@ export {
   TRIANGLE_MASK_IMAGE,
   getCircleMaskGeometry,
   getBlurCircleMaskGeometry,
+  getCircleRevertMaskGeometry,
   getDiamondMaskGeometry,
   getDirectionalMaskGeometry,
   getHexagonMaskGeometry,

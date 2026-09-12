@@ -34,6 +34,7 @@ describe('core 公开导出', () => {
         'getBlurCircleMaskGeometry',
         'getBlurCircleMaskImage',
         'getCircleMaskGeometry',
+        'getCircleRevertMaskGeometry',
         'getDiamondMaskGeometry',
         'getDirectionalMaskGeometry',
         'getHexagonMaskGeometry',

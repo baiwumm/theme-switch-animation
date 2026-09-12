@@ -12,7 +12,7 @@ const ANIMATION_TYPES: Array<{
   duration?: number
 }> = [
   { type: ThemeAnimationType.CIRCLE, label: 'CIRCLE', hint: '圆形扩散 · 圆心 = 点击位置' },
-  { type: ThemeAnimationType.CIRCLE_REVERT, label: 'CIRCLE_REVERT', hint: '圆形收起 · 旧主题收缩进点击点' },
+  { type: ThemeAnimationType.CIRCLE_REVERT, label: 'CIRCLE_REVERT', hint: '圆形收起/扩散 · 切回亮色收起、切到暗色扩散' },
   { type: ThemeAnimationType.CIRCLE_BLUR, label: 'CIRCLE_BLUR', hint: '圆形模糊扩散 · 边缘高斯模糊', duration: 750 },
   { type: ThemeAnimationType.LTR, label: 'LTR', hint: '从左向右擦除' },
   { type: ThemeAnimationType.RTL, label: 'RTL', hint: '从右向左擦除' },

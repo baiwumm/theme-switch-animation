@@ -253,6 +253,23 @@ export function getStarMaskGeometry(center: Point, viewport: Size): MaskGeometry
 }
 
 /**
+ * CIRCLE_REVERT 收起方向（切回亮色）的几何：暗色圆从全覆盖收缩到触发点 0。
+ * 起始尺寸与 CIRCLE 的终尺寸相同（2.1 × maxRadius，保证初始盖住整个视口），
+ * 钉扎方向与 CIRCLE 相反：from 全尺寸居中 → to 触发点 0。
+ * 扩散方向（切到暗色）直接复用 getCircleMaskGeometry（暗色圆从 0 长出）。
+ */
+export function getCircleRevertMaskGeometry(center: Point, viewport: Size): MaskGeometry {
+  const side = getMaxRadiusToCorners(center, viewport) * CIRCLE_SIZE_FACTOR
+  return {
+    maskImage: CIRCLE_MASK_IMAGE,
+    startSize: `${px(side)} ${px(side)}`,
+    startPosition: `${px(center.x - side / 2)} ${px(center.y - side / 2)}`,
+    endSize: '0px 0px',
+    endPosition: `${px(center.x)} ${px(center.y)}`,
+  }
+}
+
+/**
  * CIRCLE_BLUR：`feGaussianBlur` 烘焙进 SVG 蒙版本身（而非 CSS filter，Safari 兼容性同其余类型）。
  * viewBox -50..50、圆 r=25 与参考实现（magicui 系 useBlurCircleTheme）一致；模糊强度按
  * BLUR_MASK_DEVIATION_FACTOR 放大后作为 stdDeviation 写进 data-URI，随蒙版缩放。
@@ -317,7 +334,8 @@ export function isDirectionalAnimationType(type: ThemeAnimationType): type is Di
 
 /**
  * 按动画类型分发；未知类型按 CIRCLE 处理。blurAmount 仅被 CIRCLE_BLUR 消费。
- * CIRCLE_REVERT 不走蒙版（styles 层以 transform 缩放实现），geometry 占位回落 CIRCLE、下游不消费。
+ * CIRCLE_REVERT 的收起方向由 orchestrate 直接取 getCircleRevertMaskGeometry；
+ * 扩散方向与本分发一致（暗色圆从触发点长出 = CIRCLE 几何），故回落 CIRCLE。
  */
 export function getMaskGeometry(
   type: ThemeAnimationType,

@@ -245,7 +245,7 @@ export type { ThemeAnimationOptions, ... } from '@theme-switch-animation/core'
 
 - **CIRCLE**：`getBoundingClientRect` 取触发元素中心，`Math.hypot` 算到视口四角最大距离定蒙版终值；SVG data-URI 圆形蒙版从 `mask-size: 0` 长到 `2.1 × maxRadius`（留余量防角落锯齿）。
 - **形状家族（v1.5：SQUARE / DIAMOND / RECTANGLE / HEXAGON / TRIANGLE / STAR）**：与 CIRCLE 同构（SVG data-URI 多边形蒙版从触发点 0 长到终尺寸），形状观感对齐 magicui（六边形/三角形/星形顶点朝上、星形内顶点半径比 0.42）。终尺寸按各形状**内切半径盖住视口最远角**计算：SQUARE/RECTANGLE 用轴对齐半边界 × 1.05；DIAMOND/HEXAGON 用 `√2 × 1.05 × maxRadius` 外接圆；TRIANGLE 外接圆 `2.2 × maxRadius`（内切半径 1.1×）；STAR 外接圆 `2.5 × maxRadius`（内凹谷半径 0.42 × 2.5 = 1.05×）——**有意大于 magicui**：它的星形凹谷盖不住视口角落（clip-path 随转场组销毁所以它可接受），本库 mask 在样式移除前持续生效（fill both），必须保证完全覆盖。RECTANGLE 贴合视口宽高比（实心矩形蒙版 `preserveAspectRatio="none"`）。
-- **CIRCLE_REVERT（v1.5，桌面真机反馈后修正）**："穿越缩放"两段式——旧截图层 `scale 1 → 0`（收起，置顶 `z-index: 1`）、新截图层 `scale 0 → 1`（扩散），`transform-origin` 钉在触发点，同长同时进行，与 CIRCLE 的交接顺序相反（旧先走、新后到）。**不用 mask**：mask 只做裁剪、内容不动，"扩散"半段会与已是新主题的实时页面重合而不可见；transform 让内容随缩放移动，两段才都可见。注意：transform 动画在 Safari 的表现需真机验证（§2 的 WebKit 限制针对 clip-path 与 WAAPI，未涉及 CSS transform）。
+- **CIRCLE_REVERT（v1.5，桌面真机反馈两轮后定稿）**：**方向感知的暗色圆**——切到暗色：暗色圆从点击点**扩散**（复用 CIRCLE 几何，蒙版挂新截图层）；切回亮色：暗色圆**收起**进点击点（蒙版挂旧截图层并置顶 `z-index: 1`，从全覆盖收缩到 0）。方向由 core 在转场前读取 `<html>` 类名推导（toggle 后必为取反），来回切换自然产生一次扩散、一次收起；无点击奇偶等隐藏状态。仍纯 mask 实现，Safari 约束不变。**单次点击内"收起 → 扩散"两段不可行**：收起结束时屏幕已是新主题，紧随的扩散圆与背景重合不可见（transform 整页缩放与双层蒙版两种实现试错后，与需求方确认本方案）。
 - **CIRCLE_BLUR（v1.5，桌面真机反馈后修正）**：`feGaussianBlur` **烘焙进 SVG data-URI 蒙版本身**（非 CSS filter，Safari 兼容性同其余类型）；模糊蒙版**只挂新截图层**，旧截图层完整垫底——蒙版外是旧主题，直到模糊圆扫过（若两层同蒙版，透明区露出的是已翻转的实时页面，主题会瞬间全变）。强度由 `blurAmount`（默认 2，×1.2 得 stdDeviation）控制；终尺寸 `max(4 × (长边+200), 2.5 × maxRadius)` 封顶 8000px 防超大屏 GPU 纹理过大。技术参考 `useBlurCircleTheme`（next-daily-hot；其 old 层的 maskScale 动画无 mask-image，实为无效代码，勿照抄"双层同蒙版"的误读）。
 - **LTR / RTL / TTB / BTT**：`linear-gradient(white, white)` 实心条蒙版，起始 4px 细条，`mask-position` 钉在对应边（LTR `0% 0%`、RTL `100% 0%`、TTB `0% 0%`、BTT `0% 100%`），蒙版条沿对应方向从起始边缘生长到 `100% 100%`（keyframes 只改 `mask-size`，被钉住的边由百分比 `mask-position` 固定不动）。
 - **Safari 兼容**：只用 mask 动画，不碰 view-transition 伪元素上的 clip-path 和 WAAPI；`will-change: mask-size, mask-position`。
@@ -284,7 +284,7 @@ export type { ThemeAnimationOptions, ... } from '@theme-switch-animation/core'
 
 ### v1.5（2026-09-12）
 
-1. **动画类型 5 → 13 种**（§1 / §5.1 / §7）：新增 `CIRCLE_REVERT`（穿越缩放：旧主题收起进触发点、新主题从触发点扩散，两段式）、`CIRCLE_BLUR`（圆形模糊扩散，模糊烘焙进 SVG 蒙版、仅挂新截图层）与 6 种中心扩散形状（SQUARE / DIAMOND / RECTANGLE / HEXAGON / TRIANGLE / STAR，观感对齐 magicui animated-theme-toggler，技术路线仍仅用 mask 以保 Safari 兼容；REVERT 为 transform 缩放实现）。形状/收起/模糊类型的实现要点与覆盖系数见 §7。
+1. **动画类型 5 → 13 种**（§1 / §5.1 / §7）：新增 `CIRCLE_REVERT`（方向感知：切到暗色暗色圆扩散、切回亮色暗色圆收起进点击点）、`CIRCLE_BLUR`（圆形模糊扩散，模糊烘焙进 SVG 蒙版、仅挂新截图层）与 6 种中心扩散形状（SQUARE / DIAMOND / RECTANGLE / HEXAGON / TRIANGLE / STAR，观感对齐 magicui animated-theme-toggler，技术路线仍仅用 mask 以保 Safari 兼容）。形状/收起/模糊类型的实现要点与覆盖系数见 §7。
 2. **§5.1 新增 `blurAmount` 参数**（默认 2，仅 `CIRCLE_BLUR` 生效，非法值回落默认）。
 3. **`DirectionalAnimationType` 语义收窄**：原定义 `Exclude<ThemeAnimationType, CIRCLE>` 在类型扩展后会把新形状误纳入"四向擦除"，改为显式 LTR/RTL/TTB/BTT 联合（对外形状不变，仅类型定义修正）。
 4. **§9-8 Playwright 矩阵与 §9-6/真机视觉验收的适用范围扩展到全部 13 种**；Nuxt 自动导入（§9-9）对新增类型值/类型均自动生效（runtime 自包含声明扫描，无需改模块）。

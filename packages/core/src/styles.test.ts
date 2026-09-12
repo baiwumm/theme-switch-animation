@@ -4,6 +4,7 @@ import { afterEach, describe, expect, it } from 'vitest'
 import {
   getBlurCircleMaskGeometry,
   getCircleMaskGeometry,
+  getCircleRevertMaskGeometry,
   getMaskGeometry,
 } from './masks'
 import {
@@ -17,8 +18,9 @@ import {
 import { THEME_ANIMATION_STYLE_ID, ThemeAnimationType } from './types'
 
 const viewport = { width: 800, height: 600 }
-const origin = { x: 400, y: 300 }
-const circle = getCircleMaskGeometry(origin, viewport)
+const center = { x: 400, y: 300 }
+const circle = getCircleMaskGeometry(center, viewport)
+const revertGeometry = getCircleRevertMaskGeometry(center, viewport)
 
 /** 提取某个选择器块的正文（用于断言声明存在与顺序）；跳过作为分组选择器一部分（前面带逗号）的出现位置 */
 function blockOf(css: string, selector: string): string {
@@ -32,7 +34,6 @@ describe('buildAnimationCSS（CSS 变量化）', () => {
   const css = buildAnimationCSS({
     animationType: ThemeAnimationType.CIRCLE,
     geometry: circle,
-    origin,
     duration: 600,
     easing: 'cubic-bezier(0.4, 0, 0.2, 1)',
   })
@@ -88,17 +89,17 @@ describe('buildAnimationCSS（CSS 变量化）', () => {
 
   it('linear() / steps() 等任意 timing-function 原样进入变量', () => {
     for (const easing of ['linear(0, 0.25 75%, 1)', 'steps(4, end)', 'ease']) {
-      const out = buildAnimationCSS({ animationType: ThemeAnimationType.LTR, geometry: circle, origin, duration: 400, easing })
+      const out = buildAnimationCSS({ animationType: ThemeAnimationType.LTR, geometry: circle, duration: 400, easing })
       expect(blockOf(out, ':root')).toContain(`${EASING_VAR}: ${easing};`)
     }
   })
 
   it('非法 duration（NaN / 负数）回落到默认 400ms', () => {
     for (const duration of [Number.NaN, -1, Number.POSITIVE_INFINITY]) {
-      const out = buildAnimationCSS({ animationType: ThemeAnimationType.LTR, geometry: circle, origin, duration, easing: 'ease' })
+      const out = buildAnimationCSS({ animationType: ThemeAnimationType.LTR, geometry: circle, duration, easing: 'ease' })
       expect(blockOf(out, ':root')).toContain(`${DURATION_VAR}: 400ms;`)
     }
-    const zero = buildAnimationCSS({ animationType: ThemeAnimationType.LTR, geometry: circle, origin, duration: 0, easing: 'ease' })
+    const zero = buildAnimationCSS({ animationType: ThemeAnimationType.LTR, geometry: circle, duration: 0, easing: 'ease' })
     expect(blockOf(zero, ':root')).toContain(`${DURATION_VAR}: 0ms;`)
   })
 
@@ -107,76 +108,71 @@ describe('buildAnimationCSS（CSS 变量化）', () => {
       expect(getAnimationName(type)).toBe(`theme-switch-${type}`)
       const out = buildAnimationCSS({
         animationType: type,
-        geometry: getMaskGeometry(type, origin, viewport),
-        origin,
+        geometry: getMaskGeometry(type, center, viewport),
         duration: 400,
         easing: 'ease',
       })
-      // CIRCLE_REVERT 的收起 keyframes 名即主名；其余类型唯一 keyframes 同名
+      // CIRCLE_REVERT 两个方向的 keyframes 名都是主名；其余类型唯一 keyframes 同名
       expect(out).toContain(`@keyframes theme-switch-${type} {`)
     }
   })
 })
 
-describe('buildAnimationCSS（CIRCLE_REVERT：穿越缩放，收起 + 扩散）', () => {
-  const css = buildAnimationCSS({
-    animationType: ThemeAnimationType.CIRCLE_REVERT,
-    geometry: circle,
-    origin,
-    duration: 400,
-    easing: 'ease',
-  })
-
-  it('两个 keyframes：旧层 scale 1→0（收起），新层 scale 0→1（扩散）', () => {
-    const collapse = css.match(/@keyframes theme-switch-circle-revert \{([\s\S]*?)\n\}/)
-    expect(collapse).not.toBeNull()
-    expect(collapse![1]).toContain('transform: scale(1);')
-    expect(collapse![1]).toContain('transform: scale(0);')
-    const expand = css.match(/@keyframes theme-switch-circle-revert-expand \{([\s\S]*?)\n\}/)
-    expect(expand).not.toBeNull()
-    expect(expand![1]).toContain('transform: scale(0);')
-    expect(expand![1]).toContain('transform: scale(1);')
-  })
-
-  it('旧层置顶（z-index: 1）并缩放，transform-origin 钉在触发点', () => {
-    const block = blockOf(css, '::view-transition-old(root)')
-    expect(block).toContain('transform-origin: 400px 300px;')
-    expect(block).toContain('z-index: 1;')
-    expect(block).toContain('will-change: transform;')
-    expect(block.match(/animation: theme-switch-circle-revert /g)).toHaveLength(2)
-  })
-
-  it('新层扩散动画用 -expand keyframes，不置顶', () => {
-    const block = blockOf(css, '::view-transition-new(root)')
-    expect(block).toContain('transform-origin: 400px 300px;')
-    expect(block).toContain('will-change: transform;')
-    expect(block).not.toContain('z-index')
-    expect(block.match(/animation: theme-switch-circle-revert-expand /g)).toHaveLength(2)
-  })
-
-  it('REVERT 不使用蒙版（transform 实现，内容随缩放移动）', () => {
-    expect(css).not.toContain('mask-image')
-    expect(css).not.toContain('mask-size')
-  })
-
-  it('transform-origin 保留两位小数', () => {
-    const out = buildAnimationCSS({
+describe('buildAnimationCSS（CIRCLE_REVERT：方向感知）', () => {
+  it('collapse（切回亮色）：蒙版挂旧截图层并置顶，从全覆盖收缩到触发点', () => {
+    const css = buildAnimationCSS({
       animationType: ThemeAnimationType.CIRCLE_REVERT,
-      geometry: circle,
-      origin: { x: 100.12345, y: 50 },
+      geometry: revertGeometry,
+      revertDirection: 'collapse',
       duration: 400,
       easing: 'ease',
     })
-    expect(out).toContain('transform-origin: 100.12px 50px;')
+    const block = blockOf(css, '::view-transition-old(root)')
+    expect(block).toContain(`mask-image: ${revertGeometry.maskImage};`)
+    expect(block).toContain('z-index: 1;')
+    expect(block).toContain('will-change: mask-size, mask-position;')
+    expect(block.match(/animation: theme-switch-circle-revert /g)).toHaveLength(2)
+    // 新层只出现在重置规则里（旧层收缩时四周露出的是新截图层）
+    expect(css.match(/::view-transition-new\(root\)\s*\{/g) ?? []).toHaveLength(1)
+    const keyframes = css.match(/@keyframes theme-switch-circle-revert \{([\s\S]*?)\n\}/)
+    expect(keyframes![1]).toContain(`mask-size: ${revertGeometry.startSize};`)
+    expect(keyframes![1]).toContain('mask-size: 0px 0px;')
+    expect(keyframes![1]).toContain(`mask-position: ${revertGeometry.endPosition};`)
+  })
+
+  it('expand（切到暗色）：蒙版挂新截图层扩散，旧层完整垫底、不置顶', () => {
+    const css = buildAnimationCSS({
+      animationType: ThemeAnimationType.CIRCLE_REVERT,
+      geometry: circle,
+      revertDirection: 'expand',
+      duration: 400,
+      easing: 'ease',
+    })
+    const block = blockOf(css, '::view-transition-new(root)')
+    expect(block).toContain(`mask-image: ${circle.maskImage};`)
+    expect(block).not.toContain('z-index')
+    // 旧层只以分组选择器形式出现在重置规则，没有独立规则
+    expect(css.match(/::view-transition-old\(root\),/g) ?? []).toHaveLength(1)
+    expect(css.match(/::view-transition-old\(root\)\s*\{/g) ?? []).toHaveLength(0)
+    expect(css.match(/::view-transition-new\(root\)\s*\{/g) ?? []).toHaveLength(2)
+  })
+
+  it('缺省方向按 collapse 处理（向后兼容）', () => {
+    const css = buildAnimationCSS({
+      animationType: ThemeAnimationType.CIRCLE_REVERT,
+      geometry: revertGeometry,
+      duration: 400,
+      easing: 'ease',
+    })
+    expect(blockOf(css, '::view-transition-old(root)')).toContain('z-index: 1;')
   })
 })
 
 describe('buildAnimationCSS（CIRCLE_BLUR：仅新层挂模糊蒙版，旧层完整垫底）', () => {
-  const blurGeometry = getBlurCircleMaskGeometry(origin, viewport, 2)
+  const blurGeometry = getBlurCircleMaskGeometry(center, viewport, 2)
   const css = buildAnimationCSS({
     animationType: ThemeAnimationType.CIRCLE_BLUR,
     geometry: blurGeometry,
-    origin,
     duration: 750,
     easing: 'ease-in-out',
   })
@@ -209,7 +205,6 @@ describe('buildAnimationCSS（既有类型产物字节稳定）', () => {
       buildAnimationCSS({
         animationType: ThemeAnimationType.CIRCLE,
         geometry,
-        origin: { x: 100, y: 50 },
         duration: 400,
         easing: 'ease',
       }),

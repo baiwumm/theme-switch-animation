@@ -132,3 +132,35 @@ playgrounds/nuxt               ✓ prepare + typecheck + build（§9-3 / §9-9 �
 ```
 fix(core): 真机反馈修复——REVERT 改穿越缩放（收起+扩散）、BLUR 蒙版仅挂新截图层
 ```
+
+---
+
+## 附录二（REVERT 定稿：方向感知，更正附录一的穿越缩放方案，2026-09-13）
+
+**反馈**（React playground 第二轮桌面验证）：CIRCLE_BLUR 已正常；CIRCLE_REVERT 不对——不是圆形效果（整个页面在缩放收起），而且每次都是收起。
+
+### 更正说明
+
+附录一的"穿越缩放"（transform 双 keyframes）方案作废：它确实能呈现"收起 + 扩散"两段，但缩放的是整张页面截图——边界是矩形不是圆形，且与用户期望的"圆形收起/扩散"不符。根因是需求理解偏差："一次收起，然后一次扩散"在一次点击内**物理上不可行**（收起结束时屏幕已是新主题，紧随的扩散圆与背景重合不可见——mask 与 transform 两种实现都绕不开），经与需求方确认改为**方向感知**。
+
+### 定稿设计：方向感知的暗色圆
+
+- **切到暗色**：暗色圆从点击点**扩散**（复用 CIRCLE 几何，蒙版挂新截图层）；
+- **切回亮色**：暗色圆**收起**进点击点（蒙版挂旧截图层并置顶 `z-index: 1`，从全覆盖收缩到 0）；
+- 方向由 core 在转场前读取 `<html>` 类名推导（toggle 后必为取反，`nextIsDark = !hasThemeClass(doc, darkClassName)`），来回切换自然产生一次扩散、一次收起，无点击奇偶等隐藏状态；
+- 仍纯 mask 实现（transform 分支删除，`buildAnimationCSS` 以 `revertDirection` 参数选择挂载层），Safari 约束不变，适配层零改动。
+
+### 复验（Nuxt production 构建 + 无头 Chrome，端口 3100）
+
+| 检查 | 结果 |
+|---|---|
+| 第一击（亮→暗，expand） | ✓ 蒙版挂新层；near 暗（新圆内）/ far 亮（旧层在圆外） |
+| 第二击（暗→亮，collapse） | ✓ 蒙版挂旧层（z-index: 1）；near 暗（旧暗盘内）/ far 亮（新主题四周） |
+| 中段截图 | ✓ 暗色圆清晰收缩进点击点、四周露出新亮色主题（圆形边界） |
+| §9 动画类型独立性 | ✓ 13/13 PASS（两个方向 keyframes 名同为 `theme-switch-circle-revert`） |
+| `pnpm lint` / `typecheck` / `test` / `build` | ✓ 175 tests（REVERT 方向用例 3 个：collapse / expand / 缺省回落 collapse） |
+
+**本附录 commit**：
+```
+fix(core): REVERT 定稿为方向感知——切暗扩散、切亮收起（更正附录一穿越缩放方案）
+```

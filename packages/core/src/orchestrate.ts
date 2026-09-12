@@ -1,8 +1,9 @@
-import { getMaskGeometry, getTriggerCenter } from './masks'
+import { getCircleRevertMaskGeometry, getMaskGeometry, getTriggerCenter } from './masks'
 import type { RectProvider, Size } from './masks'
 import { buildAnimationCSS, injectAnimationStyle, removeAnimationStyle } from './styles'
-import { THEME_ANIMATION_STYLE_ID, resolveAnimationOptions } from './types'
+import { THEME_ANIMATION_STYLE_ID, ThemeAnimationType, resolveAnimationOptions } from './types'
 import type { ThemeAnimationOptions } from './types'
+import { hasThemeClass } from './uncontrolled'
 
 /** 最小 ViewTransition 结构，不依赖特定版本 lib.dom 的声明 */
 export interface ViewTransitionLike {
@@ -117,11 +118,19 @@ export function runThemeTransition(params: RunThemeTransitionParams): RunThemeTr
 
   const viewport = getViewportSize(doc)
   const center = getTriggerCenter(trigger, viewport)
-  const geometry = getMaskGeometry(resolved.animationType, center, viewport, resolved.blurAmount)
+  // 方向感知（CIRCLE_REVERT §7）：转场前 <html> 的类名即当前（旧）主题，toggle 后必为取反——
+  // 切到暗色 = 暗色圆扩散（新截图层），切回亮色 = 暗色圆收起（旧截图层）。
+  const nextIsDark = !hasThemeClass(doc, resolved.darkClassName)
+  const isRevert = resolved.animationType === ThemeAnimationType.CIRCLE_REVERT
+  const revertDirection = isRevert ? (nextIsDark ? 'expand' : 'collapse') : undefined
+  const geometry =
+    isRevert && revertDirection === 'collapse'
+      ? getCircleRevertMaskGeometry(center, viewport)
+      : getMaskGeometry(resolved.animationType, center, viewport, resolved.blurAmount)
   const css = buildAnimationCSS({
     animationType: resolved.animationType,
     geometry,
-    origin: center,
+    revertDirection,
     duration: resolved.duration,
     easing: resolved.easing,
   })

@@ -19,6 +19,7 @@ import {
   getBlurCircleMaskGeometry,
   getBlurCircleMaskImage,
   getCircleMaskGeometry,
+  getCircleRevertMaskGeometry,
   getDiamondMaskGeometry,
   getDirectionalMaskGeometry,
   getHexagonMaskGeometry,
@@ -239,6 +240,22 @@ describe('中心扩散形状几何（SQUARE / RECTANGLE / DIAMOND / HEXAGON / TR
     const first = svg.match(/points="([\d.]+),([\d.]+) /)!
     expect(first[1]).toBe('1')
     expect(first[2]).toBe('0')
+  })
+})
+
+describe('getCircleRevertMaskGeometry（REVERT 收起方向：全尺寸收缩到触发点）', () => {
+  it('起始尺寸与 CIRCLE 终尺寸相同（2.1 × maxRadius），保证初始盖住视口', () => {
+    const revert = getCircleRevertMaskGeometry({ x: 400, y: 300 }, viewport)
+    const circle = getCircleMaskGeometry({ x: 400, y: 300 }, viewport)
+    expect(revert.startSize).toBe(circle.endSize)
+    expect(revert.startPosition).toBe(circle.endPosition)
+  })
+
+  it('收缩终点：尺寸 0、位置钉在触发点，蒙版为同一张圆形 SVG', () => {
+    const revert = getCircleRevertMaskGeometry({ x: 400, y: 300 }, viewport)
+    expect(revert.endSize).toBe('0px 0px')
+    expect(revert.endPosition).toBe('400px 300px')
+    expect(revert.maskImage).toBe(CIRCLE_MASK_IMAGE)
   })
 })
 
