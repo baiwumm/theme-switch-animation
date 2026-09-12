@@ -5,7 +5,7 @@ const props = defineProps<{
   animationType: ThemeAnimationType
   label: string
   hint: string
-  pos: string
+  duration?: number
 }>()
 
 const colorMode = useColorMode()
@@ -15,7 +15,7 @@ const colorMode = useColorMode()
 const options = reactive({
   animationType: props.animationType,
   darkClassName: 'dark',
-  duration: 500,
+  duration: props.duration ?? 500,
   isDark: false,
   onChange: (next: boolean) => {
     colorMode.preference = next ? 'dark' : 'light'
@@ -36,7 +36,7 @@ const setTrigger = (el: unknown) => {
 </script>
 
 <template>
-  <button :ref="setTrigger" :class="['switch-button', props.pos]" @click="toggleTheme">
+  <button :ref="setTrigger" class="switch-button" :data-animation-type="animationType" @click="toggleTheme">
     <strong>{{ props.label }}</strong>
     <span class="hint">{{ props.hint }}</span>
     <span class="state">{{ isDark ? '🌙 切到亮色' : '☀️ 切到暗色' }}</span>

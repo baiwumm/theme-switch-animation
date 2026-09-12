@@ -5,13 +5,26 @@ import { ThemeAnimationType, useThemeAnimation } from 'theme-switch-animation/vu
 
 import ThemeButton from './ThemeButton.vue'
 
-const ANIMATION_TYPES = [
-  { type: ThemeAnimationType.CIRCLE, label: 'CIRCLE', hint: '圆形扩散 · 圆心 = 点击位置', pos: 'pos-c' },
-  { type: ThemeAnimationType.LTR, label: 'LTR', hint: '从左向右擦除', pos: 'pos-tl' },
-  { type: ThemeAnimationType.RTL, label: 'RTL', hint: '从右向左擦除', pos: 'pos-tr' },
-  { type: ThemeAnimationType.TTB, label: 'TTB', hint: '从上向下擦除', pos: 'pos-bl' },
-  { type: ThemeAnimationType.BTT, label: 'BTT', hint: '从下向上擦除', pos: 'pos-br' },
-] as const
+const ANIMATION_TYPES: Array<{
+  type: ThemeAnimationType
+  label: string
+  hint: string
+  duration?: number
+}> = [
+  { type: ThemeAnimationType.CIRCLE, label: 'CIRCLE', hint: '圆形扩散 · 圆心 = 点击位置' },
+  { type: ThemeAnimationType.CIRCLE_REVERT, label: 'CIRCLE_REVERT', hint: '圆形收起 · 旧主题收缩进点击点' },
+  { type: ThemeAnimationType.CIRCLE_BLUR, label: 'CIRCLE_BLUR', hint: '圆形模糊扩散 · 边缘高斯模糊', duration: 750 },
+  { type: ThemeAnimationType.LTR, label: 'LTR', hint: '从左向右擦除' },
+  { type: ThemeAnimationType.RTL, label: 'RTL', hint: '从右向左擦除' },
+  { type: ThemeAnimationType.TTB, label: 'TTB', hint: '从上向下擦除' },
+  { type: ThemeAnimationType.BTT, label: 'BTT', hint: '从下向上擦除' },
+  { type: ThemeAnimationType.SQUARE, label: 'SQUARE', hint: '正方形扩散' },
+  { type: ThemeAnimationType.DIAMOND, label: 'DIAMOND', hint: '菱形扩散' },
+  { type: ThemeAnimationType.RECTANGLE, label: 'RECTANGLE', hint: '矩形扩散 · 贴合视口比例' },
+  { type: ThemeAnimationType.HEXAGON, label: 'HEXAGON', hint: '六边形扩散 · 尖顶朝上' },
+  { type: ThemeAnimationType.TRIANGLE, label: 'TRIANGLE', hint: '三角形扩散 · 顶点朝上' },
+  { type: ThemeAnimationType.STAR, label: 'STAR', hint: '五角星扩散 · 顶点朝上' },
+]
 
 /** 全局指示器：直接监听 html class，任何实例切换后所有指示器同步 */
 const htmlIsDark = ref(false)
@@ -38,8 +51,8 @@ onUnmounted(() => observer?.disconnect())
       }}</b>
     </p>
     <p>
-      五个按钮各自是一个独立的 <code>useThemeAnimation</code> 实例（状态以 <code>&lt;html&gt;</code>
-      class 为准，互相不会失步）。CIRCLE 的圆心是按钮中心：分别点四角与中间，可以验证扩散起点跟随点击位置。
+      13 个按钮各自是一个独立的 <code>useThemeAnimation</code> 实例（状态以 <code>&lt;html&gt;</code>
+      class 为准，互相不会失步）。中心扩散类动画的起收点都是按钮中心：在不同位置点击可验证跟随效果。
     </p>
     <div class="grid">
       <ThemeButton
@@ -48,7 +61,7 @@ onUnmounted(() => observer?.disconnect())
         :animation-type="t.type"
         :label="t.label"
         :hint="t.hint"
-        :pos="t.pos"
+        :duration="t.duration"
       />
     </div>
     <p class="note">
