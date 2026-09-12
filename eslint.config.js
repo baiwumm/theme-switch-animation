@@ -16,8 +16,8 @@ export default tseslint.config(
   js.configs.recommended,
   ...tseslint.configs.recommended,
   {
-    // CDP 验收脚本：跑在 Node 22+（内置 fetch / WebSocket），声明其全局
-    files: ['scripts/**/*.mjs'],
+    // CDP 验收脚本与 playground 的 Node 脚本：跑在 Node 22+（内置 fetch / WebSocket），声明其全局
+    files: ['scripts/**/*.mjs', 'playgrounds/*/scripts/**/*.mjs'],
     languageOptions: {
       globals: {
         console: 'readonly',

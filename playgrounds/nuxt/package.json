@@ -6,8 +6,8 @@
     "dev": "pnpm -w run build && nuxt dev",
     "build": "pnpm -w run build && nuxt build",
     "preview": "nuxt preview",
-    "typecheck": "nuxt prepare && nuxt typecheck",
-    "prepare": "nuxt prepare"
+    "typecheck": "pnpm -w run build && nuxt prepare && nuxt typecheck",
+    "prepare": "node ./scripts/prepare.mjs"
   },
   "dependencies": {
     "@nuxtjs/color-mode": "^3.5.2",
