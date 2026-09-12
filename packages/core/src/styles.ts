@@ -70,8 +70,8 @@ ${selector} {
   mask-image: ${geometry.maskImage};
   mask-repeat: no-repeat;${zIndexLine}
   will-change: mask-size, mask-position;
-  animation: ${name} var(${DURATION_VAR}, 400ms) ease-in-out both;
-  animation: ${name} var(${DURATION_VAR}, 400ms) var(${EASING_VAR}, ease-in-out) both;
+  animation: ${name} var(${DURATION_VAR}, ${THEME_ANIMATION_DEFAULTS.duration}ms) ease-in-out both;
+  animation: ${name} var(${DURATION_VAR}, ${THEME_ANIMATION_DEFAULTS.duration}ms) var(${EASING_VAR}, ease-in-out) both;
 }
 `
 }

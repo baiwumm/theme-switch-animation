@@ -164,3 +164,30 @@ fix(core): 真机反馈修复——REVERT 改穿越缩放（收起+扩散）、B
 ```
 fix(core): REVERT 定稿为方向感知——切暗扩散、切亮收起（更正附录一穿越缩放方案）
 ```
+
+---
+
+## 附录三（playground 预设 chips + duration 默认值调整，2026-09-13）
+
+**反馈**：第三轮桌面验证——① CIRCLE_REVERT 收起时偶现屏幕闪动一下；② 标准 400ms 还是偏快；③ easing 选 `linear()` 不是平滑过渡。
+
+### 处理
+
+1. **偶现闪屏（core 缺陷，跳过竞态样式误删）**：快速连点时浏览器跳过上一个转场（`finished` 以 AbortError 结算），结算处理器无条件按固定 id 删样式——此时 id 上已是新一轮注入的样式，新转场被剥掉蒙版/重置规则一帧（UA plus-lighter 叠加发白）。修复：rejection 路径补"只删自己注入的节点"身份守卫（与 `scheduleCleanup` 同款），新增回归测试。
+2. **四 playground 加 duration / easing 全局预设 chips**：duration 500 / 750 / 1000（默认 750），easing `ease-in-out` / `cubic-bezier(0.4, 0, 0.2, 1)` / `linear`（原 `linear(0, 0.25 75%, 1)` 是"慢进急收"曲线并非匀速，标签误导，按反馈改真匀速）。选中后所有按钮的下一次切换立即生效——React 侧经 `optionsRef` 每渲染同步；Vue / Nuxt 侧 options 以 `reactive` 承接 + `watchEffect` 同步（Phase 4 §3.1 响应式约定的直接复用）。
+3. **库默认 `duration` 400 → 750**（需求文档 v1.5 §5.1 / §7 / §10 同步；`var(--theme-switch-duration, …)` 兜底改为引用 `THEME_ANIMATION_DEFAULTS.duration` 常量，防再漂移）。显式传 `duration` 的调用方不受影响。
+
+### 复验
+
+| 检查 | 结果 |
+|---|---|
+| `pnpm lint` / `typecheck` / `test` / `build` | ✓ **176 tests**（+1 跳过竞态身份守卫回归；字节快照同步 750ms） |
+| 无头：默认（不点 chips）注入 | ✓ `750ms / ease-in-out` |
+| 无头：点 500ms + linear chips 后下一次切换 | ✓ 注入 `500ms / linear` |
+| `npm pack --dry-run` | ✓ 18 files 不变 |
+
+**本附录 commit**：
+```
+fix(core): 跳过竞态身份守卫修复偶现闪屏；playgrounds 加 duration/easing 全局预设
+fix(core): 库默认 duration 400 → 750（需求文档 v1.5 同步）
+```

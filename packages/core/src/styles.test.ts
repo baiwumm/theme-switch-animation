@@ -47,7 +47,7 @@ describe('buildAnimationCSS（CSS 变量化）', () => {
   it('动画声明只引用变量并带默认兜底，不拼接用户输入', () => {
     const block = blockOf(css, '::view-transition-new(root)')
     expect(block).toContain(
-      'animation: theme-switch-circle var(--theme-switch-duration, 400ms) var(--theme-switch-easing, ease-in-out) both;',
+      'animation: theme-switch-circle var(--theme-switch-duration, 750ms) var(--theme-switch-easing, ease-in-out) both;',
     )
     expect(block).not.toContain('cubic-bezier')
     expect(block).not.toContain('600ms')
@@ -55,7 +55,7 @@ describe('buildAnimationCSS（CSS 变量化）', () => {
 
   it('双 animation 声明：先硬编码 ease-in-out 兜底，再引用变量（后者在支持 var() 的浏览器生效）', () => {
     const block = blockOf(css, '::view-transition-new(root)')
-    const fallback = block.indexOf('animation: theme-switch-circle var(--theme-switch-duration, 400ms) ease-in-out both;')
+    const fallback = block.indexOf('animation: theme-switch-circle var(--theme-switch-duration, 750ms) ease-in-out both;')
     const variable = block.indexOf('var(--theme-switch-easing, ease-in-out)')
     expect(fallback).toBeGreaterThan(-1)
     expect(variable).toBeGreaterThan(fallback)
@@ -94,10 +94,10 @@ describe('buildAnimationCSS（CSS 变量化）', () => {
     }
   })
 
-  it('非法 duration（NaN / 负数）回落到默认 400ms', () => {
+  it('非法 duration（NaN / 负数）回落到默认 750ms', () => {
     for (const duration of [Number.NaN, -1, Number.POSITIVE_INFINITY]) {
       const out = buildAnimationCSS({ animationType: ThemeAnimationType.LTR, geometry: circle, duration, easing: 'ease' })
-      expect(blockOf(out, ':root')).toContain(`${DURATION_VAR}: 400ms;`)
+      expect(blockOf(out, ':root')).toContain(`${DURATION_VAR}: 750ms;`)
     }
     const zero = buildAnimationCSS({ animationType: ThemeAnimationType.LTR, geometry: circle, duration: 0, easing: 'ease' })
     expect(blockOf(zero, ':root')).toContain(`${DURATION_VAR}: 0ms;`)
@@ -205,11 +205,11 @@ describe('buildAnimationCSS（既有类型产物字节稳定）', () => {
       buildAnimationCSS({
         animationType: ThemeAnimationType.CIRCLE,
         geometry,
-        duration: 400,
+        duration: 750,
         easing: 'ease',
       }),
     ).toBe(`:root {
-  --theme-switch-duration: 400ms;
+  --theme-switch-duration: 750ms;
   --theme-switch-easing: ease;
 }
 ::view-transition-old(root),
@@ -231,8 +231,8 @@ describe('buildAnimationCSS（既有类型产物字节稳定）', () => {
   mask-image: ${geometry.maskImage};
   mask-repeat: no-repeat;
   will-change: mask-size, mask-position;
-  animation: theme-switch-circle var(--theme-switch-duration, 400ms) ease-in-out both;
-  animation: theme-switch-circle var(--theme-switch-duration, 400ms) var(--theme-switch-easing, ease-in-out) both;
+  animation: theme-switch-circle var(--theme-switch-duration, 750ms) ease-in-out both;
+  animation: theme-switch-circle var(--theme-switch-duration, 750ms) var(--theme-switch-easing, ease-in-out) both;
 }
 `)
   })

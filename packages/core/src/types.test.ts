@@ -34,7 +34,7 @@ describe('resolveAnimationOptions', () => {
     expect(resolveAnimationOptions()).toEqual({
       animationType: 'circle',
       darkClassName: 'dark',
-      duration: 400,
+      duration: 750,
       easing: 'ease-in-out',
       blurAmount: 2,
     })

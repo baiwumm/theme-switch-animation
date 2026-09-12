@@ -108,7 +108,7 @@ theme-switch-animation/                  # 仓库名 = 包名
 |---|---|---|---|
 | `animationType` | `ThemeAnimationType` | `CIRCLE` | 动画类型：`CIRCLE` \| `CIRCLE_REVERT` \| `CIRCLE_BLUR` \| `LTR` \| `RTL` \| `TTB` \| `BTT` \| `SQUARE` \| `DIAMOND` \| `RECTANGLE` \| `HEXAGON` \| `TRIANGLE` \| `STAR` |
 | `darkClassName` | `string` | `'dark'` | 暗色类名，可配置 |
-| `duration` | `number` | `400` | 动画时长 ms |
+| `duration` | `number` | `750` | 动画时长 ms |
 | `easing` | `string` | `'ease-in-out'` | 任意合法 CSS timing-function |
 | `blurAmount` | `number` | `2` | 模糊强度（仅 `CIRCLE_BLUR` 生效，v1.5 新增） |
 | `isDark` | `boolean` | 可选 | 受控模式：外部暗色状态 |
@@ -250,7 +250,7 @@ export type { ThemeAnimationOptions, ... } from '@theme-switch-animation/core'
 - **LTR / RTL / TTB / BTT**：`linear-gradient(white, white)` 实心条蒙版，起始 4px 细条，`mask-position` 钉在对应边（LTR `0% 0%`、RTL `100% 0%`、TTB `0% 0%`、BTT `0% 100%`），蒙版条沿对应方向从起始边缘生长到 `100% 100%`（keyframes 只改 `mask-size`，被钉住的边由百分比 `mask-position` 固定不动）。
 - **Safari 兼容**：只用 mask 动画，不碰 view-transition 伪元素上的 clip-path 和 WAAPI；`will-change: mask-size, mask-position`。
 - **duration / easing 变量化注入**：注入的临时 `<style>` 中动画声明一律写
-  `animation: <name> var(--theme-switch-duration, 400ms) var(--theme-switch-easing, ease-in-out) both;`
+  `animation: <name> var(--theme-switch-duration, 750ms) var(--theme-switch-easing, ease-in-out) both;`
   两个变量定义在同一份样式表的 `:root` 规则里。用户传任意合法 timing-function（`cubic-bezier(...)`、`linear(...)`、`steps(...)`）直接生效，零字符串拼接。说明：点击坐标和蒙版终尺寸是逐次计算的运行时值，仍需插值进 keyframes——变量化只覆盖 duration / easing 两项。
 - **样式生命周期**：固定 styleId，注入前先移除旧节点（防快速连点叠加样式），转场结束后 `setTimeout(duration)` 清理。
 - **SSR 安全**：core 全部入口有 `typeof window/document` 守卫；React 侧要求 `'use client'`，Vue composable 天然客户端安全。
@@ -288,6 +288,7 @@ export type { ThemeAnimationOptions, ... } from '@theme-switch-animation/core'
 2. **§5.1 新增 `blurAmount` 参数**（默认 2，仅 `CIRCLE_BLUR` 生效，非法值回落默认）。
 3. **`DirectionalAnimationType` 语义收窄**：原定义 `Exclude<ThemeAnimationType, CIRCLE>` 在类型扩展后会把新形状误纳入"四向擦除"，改为显式 LTR/RTL/TTB/BTT 联合（对外形状不变，仅类型定义修正）。
 4. **§9-8 Playwright 矩阵与 §9-6/真机视觉验收的适用范围扩展到全部 13 种**；Nuxt 自动导入（§9-9）对新增类型值/类型均自动生效（runtime 自包含声明扫描，无需改模块）。
+5. **`duration` 默认值 400 → 750**（§5.1 / §7，桌面真机体感反馈：400ms 偏快），样式表内 `var(--theme-switch-duration, …)` 的兜底值同步；§5.1 的其余默认值不变。
 
 ### v1.4（2026-09-11）
 

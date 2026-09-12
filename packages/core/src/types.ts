@@ -55,7 +55,7 @@ export interface ThemeAnimationOptions {
   animationType?: ThemeAnimationType
   /** 暗色类名，默认 `'dark'` */
   darkClassName?: string
-  /** 动画时长（ms），默认 `400` */
+  /** 动画时长（ms），默认 `750` */
   duration?: number
   /** 任意合法 CSS timing-function，默认 `'ease-in-out'` */
   easing?: string
@@ -79,7 +79,7 @@ export interface ResolvedAnimationOptions {
 export const THEME_ANIMATION_DEFAULTS: Readonly<ResolvedAnimationOptions> = Object.freeze({
   animationType: ThemeAnimationType.CIRCLE,
   darkClassName: 'dark',
-  duration: 400,
+  duration: 750,
   easing: 'ease-in-out',
   blurAmount: 2,
 })
