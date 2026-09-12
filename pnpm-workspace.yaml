@@ -1,4 +1,8 @@
 packages:
+  # 根目录 = 发布包 theme-switch-animation 本体，必须入 workspace 清单，
+  # 否则 changesets 报 "package theme-switch-animation which is not in the workspace"，
+  # changeset version / publish 无法作用于根包（Phase 6 发现的 Phase 0 遗留问题）。
+  - .
   - packages/*
   - playgrounds/*
 

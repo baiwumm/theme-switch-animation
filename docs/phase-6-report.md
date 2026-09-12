@@ -1,0 +1,91 @@
+# Phase 6 执行汇报（动画类型扩展：5 → 13）
+
+| 项目 | 内容 |
+|---|---|
+| 日期 | 2026-09-12 |
+| 依据 | 需求文档 v1.5（§1 / §5.1 / §7 / §10）、magicui animated-theme-toggler（形状观感参考）、`useBlurCircleTheme`（next-daily-hot，模糊技术参考） |
+| 范围 | Phase 6a（6 种形状）+ 6b（CIRCLE_REVERT）+ 6c（CIRCLE_BLUR + `blurAmount`）、四 playground 按钮矩阵改造、§9 动画类型独立性验收扩到 13 种。**Phase 5（文档站 + 发布）仍延后** |
+| 基线 | `52a40e3 docs: phase-4 报告附录三` → 本阶段 commit 见文末 |
+
+**结论**：13 种动画类型全部落地，lint / typecheck / **177 单测** / build / 四 playground 全绿。Nuxt production 构建上 `cdp-nuxt-animtypes.mjs` **13/13 PASS**（逐按钮断言注入的 `@keyframes` 与声明类型一致）；无头 Chrome 截图 + 像素探针验证了 REVERT 的"旧主题收缩"与 BLUR 的"模糊扩散"语义方向。全部新类型仍走 mask 动画（未引入 clip-path / WAAPI / CSS filter），Safari 兼容约束不破。React / Vue / Nuxt 适配层**零改动**。
+
+---
+
+## 1. 已完成项
+
+| # | 子项 | 说明 |
+|---|---|---|
+| 6a | 6 种中心扩散形状 | `SQUARE` / `DIAMOND` / `RECTANGLE` / `HEXAGON` / `TRIANGLE` / `STAR`：SVG polygon data-URI 蒙版（顶点由极坐标计算，星形内顶点半径比 0.42、多边形顶点朝上，对齐 magicui）；终尺寸按"内切半径盖住视口最远角"逐形状推导（§7）；RECTANGLE 贴合视口宽高比（实心矩形蒙版 `preserveAspectRatio="none"`，与 SQUARE 共用） |
+| 6b | CIRCLE_REVERT | `styles.ts` 引入**层选择**（`getAnimationLayerTarget`：new / old / both）：REVERT 的圆形蒙版挂在 `::view-transition-old(root)` 并置顶（`z-index: 1`），从全覆盖收缩到触发点 0 |
+| 6c | CIRCLE_BLUR + `blurAmount` | `feGaussianBlur` 烘焙进 SVG data-URI（非 CSS filter）；`both` 层 = 新旧双层同蒙版联动（old 沉底 `z-index: -1`，透明区露出实时页面）；`blurAmount`（默认 2，×1.2 = stdDeviation，非法值回落）进 `ThemeAnimationOptions` / `ResolvedAnimationOptions`；终尺寸 `max(4×(长边+200), 2.5×maxRadius)` 封顶 8000 |
+| — | 分组类型 | `ShapeAnimationType`（CIRCLE + 6 形状）；`DirectionalAnimationType` 从 `Exclude<…, CIRCLE>` 改为显式四向联合（原定义在类型扩展后会误纳新形状，属必要修正） |
+| — | playground 矩阵 | 4 个 playground 五按钮 → 13 按钮响应式矩阵（`auto-fill minmax(220px,1fr)`），按钮带 `data-animation-type`，CIRCLE_BLUR 演示 750ms |
+| — | 验收脚本 | `cdp-nuxt-animtypes.mjs` 改为从 DOM 读类型清单（新增类型零脚本改动），keyframes 正则扩到 `[a-z-]+` |
+| — | 文档 | requirements v1.5（§1/§5.1/§7/§10）、README、changeset（minor） |
+
+## 2. 验收结果
+
+### §9 动画类型独立性（13/13 PASS，强证据）
+
+Nuxt production 构建（`nuxt build` + `node .output/server/index.mjs`，端口 3100）+ 无头 Chrome（CDP 19222）：
+
+```
+circle ✓ circle-revert ✓ circle-blur ✓ ltr ✓ rtl ✓ ttb ✓ btt ✓
+square ✓ diamond ✓ rectangle ✓ hexagon ✓ triangle ✓ star ✓
+PASS: 13 个按钮各自播放声明的动画类型
+```
+
+### 语义方向像素探针（无头 Chrome，固定初始主题 light）
+
+转场中段截屏 → 页内 canvas 采样"按钮下方 80px（蒙版内）"与"视口角（蒙版外）"：
+
+| 类型 | 蒙版内 | 蒙版外 | 判定 |
+|---|---|---|---|
+| CIRCLE_REVERT | **亮（旧主题）** L=255 | 暗（新主题） L=18 | ✓ 旧主题收缩进触发点 |
+| CIRCLE_BLUR | 暗（新主题） L=28 | 中间调 L=75（模糊淡出边缘） | ✓ 模糊扩散，软边缘真实渲染 |
+| CIRCLE（对照） | 暗（新主题） L=28 | —（探针时机偏晚，角落已被覆盖） | 方向正确（near=新） |
+
+9 张中段截图目检：圆/方/菱/六边/三角/星形轮廓清晰、REVERT 收缩方向正确、BLUR 高斯软边明显。
+
+### 全量验证
+
+```
+pnpm lint / typecheck / test   ✓ 12 files / 177 tests（新增 48：形状几何 19 + REVERT 7 + BLUR 9 + 类型/导出守护等）
+pnpm build                     ✓ dist 四子路径 + nuxt-runtime/ 不变
+npm pack --dry-run             ✓ 18 files 不变（无新增发布物）
+playgrounds/react / vue        ✓ build
+playgrounds/next               ✓ typecheck
+playgrounds/nuxt               ✓ prepare + typecheck + build（§9-3 / §9-9 所用产物）
+```
+
+## 3. 关键实现决策
+
+1. **STAR 外接圆 2.5 × maxRadius，有意大于 magicui（≈1.45）**：五角星内凹谷半径 = 0.42 × 外接圆，magicui 的尺寸盖不住视口角落——它的 clip-path 随转场组销毁故可接受；本库 mask 以 `fill both` 持续生效到样式移除，凹谷漏出旧主题会在末帧可见，故按"内切半径 ≥ maxRadius × 1.05"取值。形状与朝向保持一致，仅终尺寸更大。
+2. **模糊不是 CSS filter**：参考实现的核心技巧是把 `feGaussianBlur` 写进 SVG data-URI 内部，本质仍是 mask-image 动画，WebKit 兼容性与其余类型同路；本库用 `encodeURIComponent` 完整编码（参考实现手工 `%23` 转义）。
+3. **REVERT / BLUR 共享层选择机制**：`buildAnimationCSS` 按 `getAnimationLayerTarget(type)` 分发 new / old / both 三种挂载方式，既有 5 类型的产物 CSS 逐字节不变（有快照测试守护）。
+4. **高分屏分支不搬**：参考实现的 `isHighResolution` 双档系数不引入，仅保留尺寸上限；如真机高分屏有问题再评估。
+5. **真机（Safari / Firefox）视觉验证仍欠**：BLUR 的烘焙模糊蒙版在 WebKit 的渲染是最大未知数，Playwright WebKit 与真机 Safari 验证归入 Phase 5 前的验收清单。
+
+## 4. 遇到的问题与处理
+
+1. **`require.resolve` vs `import.meta.resolve` 的教训重现**：无（本阶段未涉及）；但 Phase 2b 报告记录的"Bash 内联脚本写盘会静默丢失"问题本阶段再次出现两次（`node -e` 对 index.test.ts / masks.test.ts 的多段替换只落了一部分），均经复读发现后用 Edit 工具修复——**结论维持：本仓库一律用 Edit/Write 工具改文件**。
+2. **测试自身的数学错误**：形状几何首轮断言把 `maxRadius`（半对角线 500）误按对角线 1000 计算、浮点期望值未做两位取整、STAR 顶点正则未考虑顶点对以空格分隔——三处均为测试错误，实现无误，修正断言后全绿。
+3. **styles.ts 的 `ThemeAnimationType` 原为 `import type`**：层选择需要把它当值用（`ThemeAnimationType.CIRCLE_REVERT`），TS1361 报错后改为值导入。
+4. **playground 数组 `as const` 与可选 `duration`**：部分条目无 `duration` 字段时联合类型访问报错，改为显式 `Array<{...}>` 标注。
+
+## 5. Phase 5（文档站 + 发布 0.1.0）前置条件更新
+
+| 前置条件 | 状态 | 说明 |
+|---|---|---|
+| 13 种动画产物 | ✓ | 四子路径 + nuxt-runtime 不变，`npm pack` 18 文件 |
+| changeset | ✓ | `.changeset/add-eight-animation-types.md`（minor，0.0.0 → 0.1.0 由它驱动） |
+| live demo 素材 | ✓ | 四 playground 13 按钮矩阵即文档站素材 |
+| 文档站选型 | — | 未定（Phase 5 首个决策） |
+| Playwright e2e + WebKit 真机 | — | §9-8 仍欠；BLUR 的 Safari 渲染验证归入此项 |
+| Firefox 真机手测 | — | §9-8 注明理由后暂缓 |
+
+**判定：可以开始 Phase 5。** 文档站需覆盖三条既有用法约定（Vue 受控 options 响应式、SFC `:ref` 桥接、Nuxt 类型自动导入事实）+ 本阶段新增的 `blurAmount` 说明与 STAR 尺寸偏离 magicui 的原因。
+
+## 附：本阶段 commit
+
+见 git log（6a / 6b / 6c / playground / docs 分组提交）。

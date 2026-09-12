@@ -3,7 +3,7 @@
 基于浏览器 View Transitions API 的主题切换动画库：切换 light / dark 主题时，新主题以指定形状（圆形扩散 / 四向擦除）"揭开"覆盖旧主题，而不是生硬跳变。
 
 - 跨框架：React 18+、Vue 3+、Next.js（App Router）、Nuxt 3+
-- 首期 5 种动画类型：`CIRCLE` / `LTR` / `RTL` / `TTB` / `BTT`
+- 13 种动画类型：圆形扩散 / 收起 / 模糊（`CIRCLE` / `CIRCLE_REVERT` / `CIRCLE_BLUR`）、四向擦除（`LTR` / `RTL` / `TTB` / `BTT`）、形状扩散（`SQUARE` / `DIAMOND` / `RECTANGLE` / `HEXAGON` / `TRIANGLE` / `STAR`）
 - 受控模式：不独占主题状态管理，`next-themes`、`@nuxtjs/color-mode` 用户可直接接入
 - 不支持 View Transitions 或 `prefers-reduced-motion: reduce` 时自动降级为直接切换
 
