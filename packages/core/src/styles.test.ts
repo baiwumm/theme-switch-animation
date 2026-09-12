@@ -1,11 +1,17 @@
 // @vitest-environment jsdom
 import { afterEach, describe, expect, it } from 'vitest'
 
-import { getCircleMaskGeometry, getDirectionalMaskGeometry } from './masks'
+import {
+  getBlurCircleMaskGeometry,
+  getCircleMaskGeometry,
+  getCircleRevertMaskGeometry,
+  getMaskGeometry,
+} from './masks'
 import {
   DURATION_VAR,
   EASING_VAR,
   buildAnimationCSS,
+  getAnimationLayerTarget,
   getAnimationName,
   injectAnimationStyle,
   removeAnimationStyle,
@@ -101,12 +107,117 @@ describe('buildAnimationCSS（CSS 变量化）', () => {
       expect(getAnimationName(type)).toBe(`theme-switch-${type}`)
       const out = buildAnimationCSS({
         animationType: type,
-        geometry: type === ThemeAnimationType.CIRCLE ? circle : getDirectionalMaskGeometry(type),
+        geometry: getMaskGeometry(type, { x: 400, y: 300 }, viewport),
         duration: 400,
         easing: 'ease',
       })
       expect(out).toContain(`@keyframes theme-switch-${type} {`)
     }
+  })
+})
+
+describe('getAnimationLayerTarget（层选择）', () => {
+  it('默认类型只动 new 层；CIRCLE_REVERT 动 old 层', () => {
+    expect(getAnimationLayerTarget(ThemeAnimationType.CIRCLE)).toBe('new')
+    expect(getAnimationLayerTarget(ThemeAnimationType.LTR)).toBe('new')
+    expect(getAnimationLayerTarget(ThemeAnimationType.SQUARE)).toBe('new')
+    expect(getAnimationLayerTarget(ThemeAnimationType.STAR)).toBe('new')
+    expect(getAnimationLayerTarget(ThemeAnimationType.CIRCLE_REVERT)).toBe('old')
+  })
+})
+
+describe('buildAnimationCSS（CIRCLE_REVERT：动画挂 old 层）', () => {
+  const revertGeometry = getCircleRevertMaskGeometry({ x: 400, y: 300 }, viewport)
+  const css = buildAnimationCSS({
+    animationType: ThemeAnimationType.CIRCLE_REVERT,
+    geometry: revertGeometry,
+    duration: 400,
+    easing: 'ease',
+  })
+
+  it('蒙版与动画挂在 ::view-transition-old(root)，并置顶（z-index: 1）', () => {
+    const block = blockOf(css, '::view-transition-old(root)')
+    expect(block).toContain(`mask-image: ${revertGeometry.maskImage};`)
+    expect(block).toContain('mask-repeat: no-repeat;')
+    expect(block).toContain('z-index: 1;')
+    expect(block).toContain('will-change: mask-size, mask-position;')
+    expect(block.match(/animation:/g)).toHaveLength(2)
+  })
+
+  it('new 层只出现在重置规则里，不再被单独加蒙版', () => {
+    // 唯一出现处是重置规则（old, new 分组选择器）；REVERT 的 mask/animation 只应挂在 old 规则上
+    const occurrences = css.match(/::view-transition-new\(root\)\s*\{/g) ?? []
+    expect(occurrences).toHaveLength(1)
+    expect(css).toContain('::view-transition-old(root) {\n  mask-image:')
+  })
+
+  it('keyframes 从全尺寸收缩到触发点 0', () => {
+    const keyframes = css.match(/@keyframes theme-switch-circle-revert \{([\s\S]*?)\n\}/)
+    expect(keyframes).not.toBeNull()
+    const body = keyframes![1]!
+    expect(body).toContain(`mask-size: ${revertGeometry.startSize};`)
+    expect(body).toContain(`mask-position: ${revertGeometry.startPosition};`)
+    expect(body).toContain('mask-size: 0px 0px;')
+    expect(body).toContain(`mask-position: ${revertGeometry.endPosition};`)
+  })
+})
+
+describe('buildAnimationCSS（既有类型产物字节稳定）', () => {
+  it('CIRCLE 的完整 CSS 与重构前逐字节一致（guard：改层结构不得影响默认类型）', () => {
+    const geometry = getCircleMaskGeometry({ x: 100, y: 50 }, { width: 800, height: 600 })
+    expect(
+      buildAnimationCSS({ animationType: ThemeAnimationType.CIRCLE, geometry, duration: 400, easing: 'ease' }),
+    ).toBe(`:root {
+  --theme-switch-duration: 400ms;
+  --theme-switch-easing: ease;
+}
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation: none;
+  mix-blend-mode: normal;
+}
+@keyframes theme-switch-circle {
+  from {
+    mask-size: 0px 0px;
+    mask-position: 100px 50px;
+  }
+  to {
+    mask-size: ${geometry.endSize};
+    mask-position: ${geometry.endPosition};
+  }
+}
+::view-transition-new(root) {
+  mask-image: ${geometry.maskImage};
+  mask-repeat: no-repeat;
+  will-change: mask-size, mask-position;
+  animation: theme-switch-circle var(--theme-switch-duration, 400ms) ease-in-out both;
+  animation: theme-switch-circle var(--theme-switch-duration, 400ms) var(--theme-switch-easing, ease-in-out) both;
+}
+`)
+  })
+})
+
+describe('buildAnimationCSS（CIRCLE_BLUR：新旧双层联动）', () => {
+  const blurGeometry = getBlurCircleMaskGeometry({ x: 400, y: 300 }, viewport, 2)
+  const css = buildAnimationCSS({
+    animationType: ThemeAnimationType.CIRCLE_BLUR,
+    geometry: blurGeometry,
+    duration: 750,
+    easing: 'ease-in-out',
+  })
+
+  it('层选择为 both', () => {
+    expect(getAnimationLayerTarget(ThemeAnimationType.CIRCLE_BLUR)).toBe('both')
+  })
+
+  it('old 层挂同一蒙版并沉底（z-index: -1），new 层挂蒙版', () => {
+    const oldBlock = blockOf(css, '::view-transition-old(root)')
+    expect(oldBlock).toContain(`mask-image: ${blurGeometry.maskImage};`)
+    expect(oldBlock).toContain('z-index: -1;')
+    const newBlock = blockOf(css, '::view-transition-new(root)')
+    expect(newBlock).toContain(`mask-image: ${blurGeometry.maskImage};`)
+    expect(newBlock).not.toContain('z-index')
+    expect(newBlock.match(/animation:/g)).toHaveLength(2)
   })
 })
 

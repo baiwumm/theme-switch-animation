@@ -3,14 +3,37 @@ import { describe, expect, it } from 'vitest'
 import {
   BAR_MASK_IMAGE,
   BAR_START_PX,
+  BLUR_MASK_DEVIATION_FACTOR,
+  BLUR_MAX_MASK_SIZE,
   CIRCLE_MASK_IMAGE,
   CIRCLE_SIZE_FACTOR,
+  DIAMOND_COVERAGE_FACTOR,
+  HEXAGON_COVERAGE_FACTOR,
+  RECTANGLE_COVERAGE_MARGIN,
+  SOLID_RECT_MASK_IMAGE,
+  SQUARE_COVERAGE_MARGIN,
+  STAR_CIRCUMRADIUS_FACTOR,
+  STAR_INNER_RATIO,
+  STAR_MASK_IMAGE,
+  TRIANGLE_CIRCUMRADIUS_FACTOR,
+  getBlurCircleMaskGeometry,
+  getBlurCircleMaskImage,
   getCircleMaskGeometry,
+  getCircleRevertMaskGeometry,
+  getDiamondMaskGeometry,
   getDirectionalMaskGeometry,
+  getHexagonMaskGeometry,
   getMaskGeometry,
   getMaxRadiusToCorners,
+  getRectangleMaskGeometry,
+  getSquareMaskGeometry,
+  getStarMaskGeometry,
   getTriggerCenter,
+  getTriangleMaskGeometry,
+  isBlurAnimationType,
   isDirectionalAnimationType,
+  isRevertAnimationType,
+  isShapeAnimationType,
 } from './masks'
 import type { RectProvider } from './masks'
 import { ThemeAnimationType } from './types'
@@ -121,6 +144,179 @@ describe('getDirectionalMaskGeometry（四向起始位置 / 尺寸）', () => {
   })
 })
 
+describe('中心扩散形状几何（SQUARE / RECTANGLE / DIAMOND / HEXAGON / TRIANGLE / STAR）', () => {
+  const center = { x: 400, y: 300 }
+
+  it('覆盖系数与推导一致（修改时必须同步需求文档 §7）', () => {
+    expect(SQUARE_COVERAGE_MARGIN).toBe(1.05)
+    expect(RECTANGLE_COVERAGE_MARGIN).toBe(1.05)
+    expect(DIAMOND_COVERAGE_FACTOR).toBeCloseTo(Math.SQRT2 * 1.05, 12)
+    expect(HEXAGON_COVERAGE_FACTOR).toBeCloseTo(Math.SQRT2 * 1.05, 12)
+    expect(TRIANGLE_CIRCUMRADIUS_FACTOR).toBe(2.2)
+    expect(STAR_CIRCUMRADIUS_FACTOR).toBe(2.5)
+    expect(STAR_INNER_RATIO).toBe(0.42)
+  })
+
+  it('SQUARE：半边长盖住更远的半边界 × 1.05，蒙版中心钉在触发点', () => {
+    const geometry = getSquareMaskGeometry(center, viewport)
+    // halfW = 400 → side = 400 × 2 × 1.05 = 840
+    expect(geometry.endSize).toBe('840px 840px')
+    expect(geometry.startSize).toBe('0px 0px')
+    expect(geometry.startPosition).toBe('400px 300px')
+    expect(geometry.endPosition).toBe('-20px -120px')
+  })
+
+  it('RECTANGLE：半宽 / 半高分别盖住对应半边界（贴合视口宽高比）', () => {
+    const geometry = getRectangleMaskGeometry(center, viewport)
+    // w = 400×2×1.05 = 840，h = 300×2×1.05 = 630
+    expect(geometry.endSize).toBe('840px 630px')
+    expect(geometry.endPosition).toBe('-20px -15px')
+  })
+
+  it('SQUARE / RECTANGLE：角落触发时盖住到远侧边界 × 1.05', () => {
+    const corner = { x: 0, y: 0 }
+    expect(getSquareMaskGeometry(corner, viewport).endSize).toBe('1680px 1680px')
+    expect(getRectangleMaskGeometry(corner, viewport).endSize).toBe('1680px 1260px')
+    expect(getRectangleMaskGeometry(corner, viewport).endPosition).toBe('-840px -630px')
+  })
+
+  it('SQUARE / RECTANGLE：共用 preserveAspectRatio="none" 的实心矩形 SVG', () => {
+    const svg = decodeURIComponent(SOLID_RECT_MASK_IMAGE)
+    expect(SOLID_RECT_MASK_IMAGE).toMatch(/^url\("data:image\/svg\+xml,/)
+    expect(svg).toContain('preserveAspectRatio="none"')
+    expect(svg).toContain('<rect')
+    expect(getSquareMaskGeometry(center, viewport).maskImage).toBe(SOLID_RECT_MASK_IMAGE)
+    expect(getRectangleMaskGeometry(center, viewport).maskImage).toBe(SOLID_RECT_MASK_IMAGE)
+  })
+
+  it.each([
+    ['DIAMOND', getDiamondMaskGeometry, DIAMOND_COVERAGE_FACTOR],
+    ['HEXAGON', getHexagonMaskGeometry, HEXAGON_COVERAGE_FACTOR],
+  ] as const)('%s：终边长 = maxRadius × √2 × 1.05 × 2，中心钉在触发点', (_label, geometryFn, factor) => {
+    const geometry = geometryFn(center, viewport)
+    // maxRadius = 500（中心到四角）
+    const expectedSide = Math.round(500 * factor * 2 * 100) / 100
+    const r2 = (v: number) => Math.round(v * 100) / 100
+    expect(geometry.endSize).toBe(`${expectedSide}px ${expectedSide}px`)
+    expect(geometry.startPosition).toBe('400px 300px')
+    expect(geometry.endPosition).toBe(`${r2(400 - expectedSide / 2)}px ${r2(300 - expectedSide / 2)}px`)
+  })
+
+  it('TRIANGLE：外接圆半径 2.2 × maxRadius（内切半径 1.1 × maxRadius 天然覆盖）', () => {
+    const geometry = getTriangleMaskGeometry(center, viewport)
+    // 500 × 2.2 × 2 = 2200
+    expect(geometry.endSize).toBe('2200px 2200px')
+    expect(geometry.endPosition).toBe('-700px -800px')
+  })
+
+  it('STAR：外接圆半径 2.5 × maxRadius——内凹谷半径 0.42 × 2.5 = 1.05 ≥ maxRadius，凹谷方向也完全覆盖', () => {
+    const geometry = getStarMaskGeometry(center, viewport)
+    // 500 × 2.5 × 2 = 2500
+    expect(geometry.endSize).toBe('2500px 2500px')
+    expect(geometry.endPosition).toBe('-850px -950px')
+  })
+
+  it.each([
+    ['DIAMOND', 4],
+    ['HEXAGON', 6],
+    ['TRIANGLE', 3],
+    ['STAR', 10],
+  ] as const)('%s 蒙版是含 %i 个顶点的 SVG polygon data-URI', (label, vertexCount) => {
+    const images = {
+      DIAMOND: getDiamondMaskGeometry(center, viewport).maskImage,
+      HEXAGON: getHexagonMaskGeometry(center, viewport).maskImage,
+      TRIANGLE: getTriangleMaskGeometry(center, viewport).maskImage,
+      STAR: getStarMaskGeometry(center, viewport).maskImage,
+    } as const
+    const maskImage = images[label]
+    expect(maskImage).toMatch(/^url\("data:image\/svg\+xml,/)
+    const svg = decodeURIComponent(maskImage)
+    expect(svg).toContain('<polygon')
+    const pairs = svg.match(/points="([^"]+)"/)![1].trim().split(/\s+/)
+    expect(pairs).toHaveLength(vertexCount)
+  })
+
+  it('STAR 蒙版顶点朝上：最顶点在 x=1（viewBox 中心线上）', () => {
+    const svg = decodeURIComponent(STAR_MASK_IMAGE)
+    const first = svg.match(/points="([\d.]+),([\d.]+) /)!
+    expect(first[1]).toBe('1')
+    expect(first[2]).toBe('0')
+  })
+})
+
+describe('getCircleRevertMaskGeometry（CIRCLE_REVERT：全尺寸收缩到触发点）', () => {
+  it('起始尺寸与 CIRCLE 终尺寸相同（2.1 × maxRadius），保证初始盖住视口', () => {
+    const revert = getCircleRevertMaskGeometry({ x: 400, y: 300 }, viewport)
+    const circle = getCircleMaskGeometry({ x: 400, y: 300 }, viewport)
+    expect(revert.startSize).toBe(circle.endSize)
+    expect(revert.startPosition).toBe(circle.endPosition)
+  })
+
+  it('收缩终点：尺寸 0、位置钉在触发点，蒙版为同一张圆形 SVG', () => {
+    const revert = getCircleRevertMaskGeometry({ x: 400, y: 300 }, viewport)
+    expect(revert.endSize).toBe('0px 0px')
+    expect(revert.endPosition).toBe('400px 300px')
+    expect(revert.maskImage).toBe(CIRCLE_MASK_IMAGE)
+  })
+
+  it('分发：REVERT 走专用几何；isRevertAnimationType 仅对 CIRCLE_REVERT 为 true', () => {
+    expect(getMaskGeometry(ThemeAnimationType.CIRCLE_REVERT, { x: 400, y: 300 }, viewport)).toEqual(
+      getCircleRevertMaskGeometry({ x: 400, y: 300 }, viewport),
+    )
+    expect(isRevertAnimationType(ThemeAnimationType.CIRCLE_REVERT)).toBe(true)
+    expect(isRevertAnimationType(ThemeAnimationType.CIRCLE)).toBe(false)
+    expect(isShapeAnimationType(ThemeAnimationType.CIRCLE_REVERT)).toBe(false)
+  })
+})
+
+describe('getBlurCircleMaskImage / getBlurCircleMaskGeometry（CIRCLE_BLUR）', () => {
+  it('模糊烘焙进 SVG：feGaussianBlur stdDeviation = blurAmount × 1.2，data-URI 完整编码', () => {
+    expect(BLUR_MASK_DEVIATION_FACTOR).toBe(1.2)
+    const maskImage = getBlurCircleMaskImage(2)
+    expect(maskImage).toMatch(/^url\("data:image\/svg\+xml,/)
+    const svg = decodeURIComponent(maskImage)
+    expect(svg).toContain('viewBox="-50 -50 100 100"')
+    expect(svg).toContain('<feGaussianBlur stdDeviation="2.4"/>')
+    expect(svg).toContain('r="25"')
+    expect(svg).toContain('filter="url(#b)"')
+    expect(maskImage).not.toContain('#')
+  })
+
+  it('同强度命中缓存返回一致结果，不同强度生成不同 stdDeviation', () => {
+    expect(getBlurCircleMaskImage(2)).toBe(getBlurCircleMaskImage(2))
+    expect(getBlurCircleMaskImage(3)).toContain(encodeURIComponent('stdDeviation="3.6"'))
+    expect(getBlurCircleMaskImage(2)).not.toBe(getBlurCircleMaskImage(3))
+  })
+
+  it('终尺寸 = max(4 × (长边 + 200), 2.5 × maxRadius)，蒙版中心钉在触发点', () => {
+    const geometry = getBlurCircleMaskGeometry({ x: 400, y: 300 }, viewport, 2)
+    // max(4 × (800 + 200), 2.5 × 500) = 4000
+    expect(geometry.endSize).toBe('4000px 4000px')
+    expect(geometry.startSize).toBe('0px 0px')
+    expect(geometry.startPosition).toBe('400px 300px')
+    expect(geometry.endPosition).toBe('-1600px -1700px')
+  })
+
+  it('超大视口按 BLUR_MAX_MASK_SIZE 封顶', () => {
+    expect(BLUR_MAX_MASK_SIZE).toBe(8000)
+    const geometry = getBlurCircleMaskGeometry({ x: 2000, y: 1500 }, { width: 4000, height: 3000 }, 2)
+    expect(geometry.endSize).toBe('8000px 8000px')
+  })
+
+  it('蒙版随 blurAmount 变化：dispatch 透传第四参', () => {
+    expect(getMaskGeometry(ThemeAnimationType.CIRCLE_BLUR, { x: 400, y: 300 }, viewport, 3).maskImage).toBe(
+      getBlurCircleMaskImage(3),
+    )
+    expect(getMaskGeometry(ThemeAnimationType.CIRCLE_BLUR, { x: 400, y: 300 }, viewport).maskImage).toBe(
+      getBlurCircleMaskImage(2),
+    )
+    expect(isBlurAnimationType(ThemeAnimationType.CIRCLE_BLUR)).toBe(true)
+    expect(isBlurAnimationType(ThemeAnimationType.CIRCLE)).toBe(false)
+    expect(isShapeAnimationType(ThemeAnimationType.CIRCLE_BLUR)).toBe(false)
+    expect(isRevertAnimationType(ThemeAnimationType.CIRCLE_BLUR)).toBe(false)
+  })
+})
+
 describe('getMaskGeometry（按类型分发）', () => {
   it('CIRCLE 走圆形几何，且依赖触发点与视口', () => {
     expect(getMaskGeometry(ThemeAnimationType.CIRCLE, { x: 400, y: 300 }, viewport)).toEqual(
@@ -135,9 +331,31 @@ describe('getMaskGeometry（按类型分发）', () => {
     expect(a).toEqual(getDirectionalMaskGeometry(ThemeAnimationType.LTR))
   })
 
+  it('形状类型分发给各自的几何函数', () => {
+    expect(getMaskGeometry(ThemeAnimationType.SQUARE, { x: 400, y: 300 }, viewport)).toEqual(
+      getSquareMaskGeometry({ x: 400, y: 300 }, viewport),
+    )
+    expect(getMaskGeometry(ThemeAnimationType.DIAMOND, { x: 400, y: 300 }, viewport)).toEqual(
+      getDiamondMaskGeometry({ x: 400, y: 300 }, viewport),
+    )
+    expect(getMaskGeometry(ThemeAnimationType.RECTANGLE, { x: 400, y: 300 }, viewport)).toEqual(
+      getRectangleMaskGeometry({ x: 400, y: 300 }, viewport),
+    )
+    expect(getMaskGeometry(ThemeAnimationType.HEXAGON, { x: 400, y: 300 }, viewport)).toEqual(
+      getHexagonMaskGeometry({ x: 400, y: 300 }, viewport),
+    )
+    expect(getMaskGeometry(ThemeAnimationType.TRIANGLE, { x: 400, y: 300 }, viewport)).toEqual(
+      getTriangleMaskGeometry({ x: 400, y: 300 }, viewport),
+    )
+    expect(getMaskGeometry(ThemeAnimationType.STAR, { x: 400, y: 300 }, viewport)).toEqual(
+      getStarMaskGeometry({ x: 400, y: 300 }, viewport),
+    )
+  })
+
   it('未知类型按 CIRCLE 处理', () => {
-    const unknown = 'diamond' as unknown as ThemeAnimationType
+    const unknown = 'spiral' as unknown as ThemeAnimationType
     expect(isDirectionalAnimationType(unknown)).toBe(false)
+    expect(isShapeAnimationType(unknown)).toBe(false)
     expect(getMaskGeometry(unknown, { x: 400, y: 300 }, viewport).maskImage).toBe(CIRCLE_MASK_IMAGE)
   })
 
@@ -145,6 +363,23 @@ describe('getMaskGeometry（按类型分发）', () => {
     expect(isDirectionalAnimationType(ThemeAnimationType.CIRCLE)).toBe(false)
     for (const type of [ThemeAnimationType.LTR, ThemeAnimationType.RTL, ThemeAnimationType.TTB, ThemeAnimationType.BTT]) {
       expect(isDirectionalAnimationType(type)).toBe(true)
+    }
+  })
+
+  it('isShapeAnimationType 对 CIRCLE 与全部几何形状为 true，对四向类型为 false', () => {
+    for (const type of [
+      ThemeAnimationType.CIRCLE,
+      ThemeAnimationType.SQUARE,
+      ThemeAnimationType.DIAMOND,
+      ThemeAnimationType.RECTANGLE,
+      ThemeAnimationType.HEXAGON,
+      ThemeAnimationType.TRIANGLE,
+      ThemeAnimationType.STAR,
+    ]) {
+      expect(isShapeAnimationType(type)).toBe(true)
+    }
+    for (const type of [ThemeAnimationType.LTR, ThemeAnimationType.RTL, ThemeAnimationType.TTB, ThemeAnimationType.BTT]) {
+      expect(isShapeAnimationType(type)).toBe(false)
     }
   })
 })

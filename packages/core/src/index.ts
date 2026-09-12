@@ -8,20 +8,47 @@ export {
 export type {
   DirectionalAnimationType,
   ResolvedAnimationOptions,
+  ShapeAnimationType,
   ThemeAnimationOptions,
 } from './types'
 
 export {
   BAR_MASK_IMAGE,
   BAR_START_PX,
+  BLUR_MASK_DEVIATION_FACTOR,
+  BLUR_MAX_MASK_SIZE,
   CIRCLE_MASK_IMAGE,
   CIRCLE_SIZE_FACTOR,
+  DIAMOND_COVERAGE_FACTOR,
+  DIAMOND_MASK_IMAGE,
+  getBlurCircleMaskImage,
+  HEXAGON_COVERAGE_FACTOR,
+  HEXAGON_MASK_IMAGE,
+  RECTANGLE_COVERAGE_MARGIN,
+  SOLID_RECT_MASK_IMAGE,
+  SQUARE_COVERAGE_MARGIN,
+  STAR_CIRCUMRADIUS_FACTOR,
+  STAR_INNER_RATIO,
+  STAR_MASK_IMAGE,
+  TRIANGLE_CIRCUMRADIUS_FACTOR,
+  TRIANGLE_MASK_IMAGE,
   getCircleMaskGeometry,
+  getBlurCircleMaskGeometry,
+  getCircleRevertMaskGeometry,
+  getDiamondMaskGeometry,
   getDirectionalMaskGeometry,
+  getHexagonMaskGeometry,
   getMaskGeometry,
   getMaxRadiusToCorners,
+  getRectangleMaskGeometry,
+  getSquareMaskGeometry,
+  getStarMaskGeometry,
   getTriggerCenter,
+  getTriangleMaskGeometry,
+  isBlurAnimationType,
   isDirectionalAnimationType,
+  isRevertAnimationType,
+  isShapeAnimationType,
 } from './masks'
 export type { MaskGeometry, Point, RectProvider, Size } from './masks'
 
@@ -29,11 +56,12 @@ export {
   DURATION_VAR,
   EASING_VAR,
   buildAnimationCSS,
+  getAnimationLayerTarget,
   getAnimationName,
   injectAnimationStyle,
   removeAnimationStyle,
 } from './styles'
-export type { BuildAnimationCSSParams } from './styles'
+export type { AnimationLayerTarget, BuildAnimationCSSParams } from './styles'
 
 export {
   getViewportSize,

@@ -117,7 +117,7 @@ export function runThemeTransition(params: RunThemeTransitionParams): RunThemeTr
 
   const viewport = getViewportSize(doc)
   const center = getTriggerCenter(trigger, viewport)
-  const geometry = getMaskGeometry(resolved.animationType, center, viewport)
+  const geometry = getMaskGeometry(resolved.animationType, center, viewport, resolved.blurAmount)
   const css = buildAnimationCSS({
     animationType: resolved.animationType,
     geometry,
