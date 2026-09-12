@@ -197,3 +197,32 @@ f9aeffb feat(nuxt): 添加 Nuxt 模块（addImportsDir 自动导入）与 runtim
 6b72d50 fix(nuxt): 自包含 runtime 声明 + addTypeTemplate 补 ThemeAnimationType 同名类型（值/类型双用法），去掉 addImports 与 internal 转发
 ```
 累计待推送 8 个 commit。
+
+---
+
+## 附录三（CI 红灯修复，2026-09-12）
+
+**反馈**：GitHub Actions 自 Phase 4 起连续红灯（`a65c1bd`、`dbfcee9` 均失败，最后一次全绿停在 Phase 3 的 `53658dc`），失败步骤是 **Install**；本地全新 clone `pnpm install` 同样失败，且 pnpm 11 `verify-deps-before-run` 会连锁阻塞后续所有 pnpm 命令。
+
+### 根因：prepare 生命周期与产物构建的引导死锁
+
+`playgrounds/nuxt` 的 `"prepare": "nuxt prepare"` 挂在 install 生命周期上，而它要加载根包的 `theme-switch-animation/nuxt`（exports → `dist/nuxt.mjs`）——全新 clone 时 `dist/` 尚不存在，install 必失败。CI 的 fresh checkout 正是这条路径。Phase 4 报告此前的"全绿"结论是在已有构建产物的本机得出的，未覆盖该路径。其他三个 playground 无此问题：没有 prepare 脚本，`dev` / `build` 均已 `pnpm -w run build &&` 先行构建。
+
+### 修复
+
+1. **`playgrounds/nuxt/scripts/prepare.mjs` 守卫**：`import.meta.resolve('theme-switch-animation/nuxt')` 可解析且文件存在 → 真正执行 `nuxt prepare`；否则跳过并提示（exit 0）。实现要点：**必须用 ESM 解析**——根包 exports 只声明 `types` / `import` 条件，CJS 的 `require.resolve` 缺 `require` 条件会误报不可解析（首轮实现踩到，测试抓出后改 `import.meta.resolve`）。
+2. **`typecheck` 脚本对齐既有模式**：改为 `pnpm -w run build && nuxt prepare && nuxt typecheck`，关闭"fresh clone 直接 typecheck 报同样错误"的次级陷阱（与 `dev` / `build` 的先行构建约定一致）。
+3. **eslint globals 块扩到 `playgrounds/*/scripts/**/*.mjs`**，新脚本复用 Node 全局声明。
+
+不修 CI 本身：Install 修通后既有四步（lint / typecheck / test / build）即可恢复全绿，无需新步骤。
+
+### 验证（模拟全新 clone：删除全部 node_modules / dist / .nuxt 后）
+
+| 检查 | 结果 |
+|---|---|
+| `pnpm install --frozen-lockfile`（无 dist） | ✓ exit 0，打印跳过提示（修复前必失败） |
+| 守卫负向路径（临时移走 dist 后跑 prepare） | ✓ 跳过、exit 0 |
+| `pnpm build` → 守卫正向路径 | ✓ 真正执行 `nuxt prepare`，`.nuxt/imports.d.ts` 生成 |
+| `pnpm lint` / `typecheck` / `test` / `build` | ✓ 全绿（129 单测不变） |
+| `pnpm --filter …playground-nuxt typecheck`（新脚本） | ✓ 自动构建 → prepare → typecheck 全通过 |
+| `npm pack --dry-run` | ✓ 18 文件不变（发布物无任何变化） |
