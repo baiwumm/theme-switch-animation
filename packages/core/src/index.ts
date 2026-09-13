@@ -64,6 +64,7 @@ export {
 export type { BuildAnimationCSSParams } from './styles'
 
 export {
+  SKIP_TRANSITION,
   getViewportSize,
   prefersReducedMotion,
   runThemeTransition,
@@ -72,6 +73,7 @@ export {
 } from './orchestrate'
 export type {
   DomUpdate,
+  DomUpdateResult,
   RunThemeTransitionParams,
   RunThemeTransitionResult,
   ViewTransitionLike,
@@ -80,6 +82,7 @@ export type {
 export {
   applyThemeClass,
   hasThemeClass,
+  observeThemeClass,
   readStoredTheme,
   syncThemeOnMount,
   writeStoredTheme,

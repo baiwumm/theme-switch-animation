@@ -289,5 +289,106 @@ describe('useThemeAnimation（Vue composable）', () => {
       expect(html().classList.contains('dark')).toBe(true)
       wrapper.unmount()
     })
+
+    it('外部系统写 data-theme 而非 class（color-mode attribute 配置）：协议命中 data-* 变化', async () => {
+      installFakeViewTransition({ autoRun: true })
+      const { Host, options } = makeControlledHost()
+      // 覆写外部系统：以 data-theme 形式写入（color-mode attribute="data-theme" 形态）
+      options.onChange = (next: boolean) => {
+        options.isDark = next
+        html().setAttribute('data-theme', next ? 'dark' : 'light')
+      }
+      document.body.innerHTML = '<div id="app"></div>'
+      const wrapper = mount(Host, { attachTo: '#app' })
+      await flush()
+
+      await getButton().click()
+      await flush()
+
+      expect(html().getAttribute('data-theme')).toBe('dark')
+      expect(html().classList.contains('dark')).toBe(false)
+      expect(localStorage.getItem(THEME_STORAGE_KEY)).toBeNull()
+      wrapper.unmount()
+    })
+
+    it('动态模式切换：先非受控运行，响应式补上 isDark + onChange → 行为与 isDark 来源随新模式走', async () => {
+      installFakeViewTransition({ autoRun: true })
+      const { Host, options } = makeHost()
+      document.body.innerHTML = '<div id="app"></div>'
+      const wrapper = mount(Host, { attachTo: '#app' })
+      await flush()
+
+      // 非受控阶段：点击写 class + localStorage
+      await getButton().click()
+      await flush()
+      expect(getButton().textContent).toBe('🌙')
+      expect(localStorage.getItem(THEME_STORAGE_KEY)).toBe('dark')
+
+      // 响应式补全受控契约（旧版此处 mode 被快照，isDark 返回值会与真实行为脱钩）
+      options.isDark = true
+      options.onChange = (next) => {
+        options.isDark = next
+        html().classList.toggle('dark', next)
+      }
+      await flush()
+      expect(getButton().textContent).toBe('🌙') // 受控读取 options.isDark = true
+
+      await getButton().click() // 受控：next = false，class 由"外部系统"写入
+      await flush()
+      expect(html().classList.contains('dark')).toBe(false)
+      expect(getButton().textContent).toBe('☀️')
+      // 受控模式不碰 localStorage：仍是非受控阶段写入的 dark
+      expect(localStorage.getItem(THEME_STORAGE_KEY)).toBe('dark')
+      wrapper.unmount()
+    })
+
+    it('同一页面多个实例：任一实例切换后，所有实例的 isDark 同步（html class 事实源）', async () => {
+      installFakeViewTransition({ autoRun: true })
+      const { Host: HostA } = makeHost({ animationType: ThemeAnimationType.LTR })
+      const { Host: HostB } = makeHost({ animationType: ThemeAnimationType.RTL })
+      document.body.innerHTML = '<div id="app"></div><div id="app-b"></div>'
+      const wa = mount(HostA, { attachTo: '#app' })
+      const wb = mount(HostB, { attachTo: '#app-b' })
+      await flush()
+
+      const btnA = document.querySelector('[data-testid="toggle"]') as HTMLButtonElement
+      const btnB = document.querySelectorAll('[data-testid="toggle"]')[1] as HTMLButtonElement
+
+      await btnA.click()
+      await flush()
+      expect(btnA.textContent).toBe('🌙')
+      // B 未被点击，但镜像了 html class 的翻转：不再各自为政
+      expect(btnB.textContent).toBe('🌙')
+
+      await btnB.click()
+      await flush()
+      expect(btnA.textContent).toBe('☀️')
+      expect(btnB.textContent).toBe('☀️')
+      expect(localStorage.getItem(THEME_STORAGE_KEY)).toBe('light')
+      wa.unmount()
+      wb.unmount()
+    })
+
+    it('finished：暴露最近一次切换的结束 Promise，降级路径立即结算', async () => {
+      const probes: Array<{ value: Promise<void> }> = []
+      const FinishedHost = defineComponent({
+        setup() {
+          const res = useThemeAnimation<HTMLButtonElement>({ animationType: ThemeAnimationType.LTR })
+          probes.push(res.finished)
+          return () =>
+            h('button', { ref: res.triggerRef, onClick: res.toggleTheme, 'data-testid': 'toggle' })
+        },
+      })
+      document.body.innerHTML = '<div id="app"></div>'
+      const wrapper = mount(FinishedHost, { attachTo: '#app' })
+      await flush()
+
+      expect(probes[0]).toBeDefined()
+      // jsdom 降级：domUpdate 同步完成
+      await getButton().click()
+      await flush()
+      await expect(probes[0]!.value).resolves.toBeUndefined()
+      wrapper.unmount()
+    })
   })
 })

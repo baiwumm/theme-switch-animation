@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
-import { runThemeTransition } from './orchestrate'
+import { runThemeTransition, SKIP_TRANSITION } from './orchestrate'
 import type { DomUpdate, ViewTransitionLike } from './orchestrate'
 import { removeAnimationStyle } from './styles'
 import { THEME_ANIMATION_STYLE_ID, ThemeAnimationType } from './types'
@@ -74,7 +74,8 @@ describe('runThemeTransition 动画路径（jsdom + 模拟 startViewTransition�
 
     expect(result.animated).toBe(true)
     expect(startViewTransition).toHaveBeenCalledTimes(1)
-    expect(startViewTransition).toHaveBeenCalledWith(domUpdate)
+    // domUpdate 被包进哨兵检测层（SKIP_TRANSITION 用），不再是裸引用
+    expect(startViewTransition).toHaveBeenCalledWith(expect.any(Function))
     expect(domUpdate).toHaveBeenCalledTimes(1)
 
     const node = styleNode()
@@ -257,5 +258,152 @@ describe('runThemeTransition 动画路径（jsdom + 模拟 startViewTransition�
     expect(runThemeTransition({ domUpdate }).animated).toBe(false)
     expect(domUpdate).toHaveBeenCalledTimes(1)
     expect(styleNode()).toBeNull()
+  })
+})
+
+describe('runThemeTransition 新增行为（哨兵 / 跨文档清理 / 显式方向）', () => {
+  beforeEach(() => {
+    vi.useFakeTimers()
+  })
+
+  afterEach(() => {
+    vi.useRealTimers()
+    removeAnimationStyle(document)
+    delete (document as unknown as Record<string, unknown>).startViewTransition
+    vi.restoreAllMocks()
+  })
+
+  it('domUpdate 返回 SKIP_TRANSITION：立即调用 skipTransition，跳过结算不视为错误且样式即时清理', async () => {
+    const skipTransition = vi.fn()
+    const startViewTransition = vi.fn((update: DomUpdate): ViewTransitionLike => {
+      void update()
+      return { finished: Promise.reject(new DOMException('skipped', 'AbortError')), skipTransition }
+    })
+    Object.defineProperty(document, 'startViewTransition', {
+      value: startViewTransition,
+      configurable: true,
+      writable: true,
+    })
+
+    const result = runThemeTransition({
+      domUpdate: () => {
+        // 模拟受控模式超时未同步
+        return Promise.resolve(SKIP_TRANSITION)
+      },
+    })
+
+    // wrapped 内有 await：skip 发生在 domUpdate 结算后的微任务里
+    await result.finished
+    expect(skipTransition).toHaveBeenCalledTimes(1)
+    // 哨兵主动 skip → finished 以 AbortError 形态结算，不视为错误
+    await expect(result.finished).resolves.toBeUndefined()
+    expect(styleNode()).toBeNull()
+  })
+
+  it('domUpdate 正常结算值（true/false）：不触发 skipTransition', () => {
+    const skipTransition = vi.fn()
+    const startViewTransition = vi.fn((update: DomUpdate): ViewTransitionLike => {
+      void update()
+      return { finished: Promise.resolve(), skipTransition }
+    })
+    Object.defineProperty(document, 'startViewTransition', {
+      value: startViewTransition,
+      configurable: true,
+      writable: true,
+    })
+
+    runThemeTransition({ domUpdate: () => Promise.resolve(false) })
+    expect(skipTransition).not.toHaveBeenCalled()
+  })
+
+  it('跨文档：docB 的转场清理不会取消 docA 的待清理定时器（iframe / 多窗口场景）', async () => {
+    const { calls, startViewTransition } = installFakeViewTransition({ manualFinish: true })
+    const docA = document as Document
+    const docB = document.implementation.createHTMLDocument('b')
+    // docB 也装上同一 mock：两个 document 各自走完整的转场 + 清理
+    Object.defineProperty(docB, 'startViewTransition', {
+      value: startViewTransition,
+      configurable: true,
+      writable: true,
+    })
+
+    const first = runThemeTransition({
+      domUpdate: () => {},
+      doc: docA,
+      options: { duration: 100, animationType: ThemeAnimationType.LTR },
+    })
+    calls[0]!.finish.resolve()
+    await first.finished
+
+    // docB 排上自己的清理定时器：不得把 docA 的 clear 掉
+    const second = runThemeTransition({
+      domUpdate: () => {},
+      doc: docB,
+      options: { duration: 100, animationType: ThemeAnimationType.LTR },
+    })
+    calls[1]!.finish.resolve()
+    await second.finished
+
+    vi.advanceTimersByTime(100)
+    // 两个文档的样式都按各自的定时器清理，无残留
+    expect(docA.querySelector(`style#${THEME_ANIMATION_STYLE_ID}`)).toBeNull()
+    expect(docB.querySelector(`style#${THEME_ANIMATION_STYLE_ID}`)).toBeNull()
+  })
+
+  it('nextIsDark 显式传入时方向以它为准，不从 html class 反推（受控 + data-theme 系统）', () => {
+    installFakeViewTransition()
+    // html 处于暗色（收起方向），但受控调用方声明本次是切到暗色 → 应走扩散
+    document.documentElement.classList.add('dark')
+
+    runThemeTransition({
+      domUpdate: () => {},
+      nextIsDark: true,
+      options: { animationType: ThemeAnimationType.CIRCLE_REVERT },
+    })
+
+    // 扩散方向：蒙版挂新层、无洞式 CSS
+    const css = styleNode()!.textContent!
+    expect(css).not.toContain('@property --theme-switch-radius')
+    expect(css.match(/::view-transition-new\(root\)\s*\{/g)).toHaveLength(2)
+    expect(css).not.toContain('z-index')
+    document.documentElement.classList.remove('dark')
+  })
+
+  it('startViewTransition 同步抛错：回滚样式，domUpdate 仍执行一次（降级语义），错误冒泡', () => {
+    const error = new Error('engine broken')
+    const startViewTransition = vi.fn(() => {
+      throw error
+    })
+    Object.defineProperty(document, 'startViewTransition', {
+      value: startViewTransition,
+      configurable: true,
+      writable: true,
+    })
+    const domUpdate = vi.fn()
+
+    expect(() => runThemeTransition({ domUpdate })).toThrow(error)
+    expect(styleNode()).toBeNull()
+    expect(domUpdate).toHaveBeenCalledTimes(1)
+  })
+
+  it('页面存在同 id 的非 style 元素：注入/清理不误删用户节点', () => {
+    installFakeViewTransition()
+    const impostor = document.createElement('div')
+    impostor.id = THEME_ANIMATION_STYLE_ID
+    document.body.appendChild(impostor)
+    // 断言用 style 限定查询，绕开撞名 div 让 getElementById 先命中它的事实
+    const queryStyle = () => document.querySelector(`style#${THEME_ANIMATION_STYLE_ID}`)
+
+    try {
+      runThemeTransition({ domUpdate: () => {} })
+      expect(queryStyle()).not.toBeNull() // 库自己的 <style> 正常注入
+      expect(impostor.isConnected).toBe(true) // 撞名元素未被删除
+
+      removeAnimationStyle(document)
+      expect(queryStyle()).toBeNull()
+      expect(impostor.isConnected).toBe(true)
+    } finally {
+      impostor.remove()
+    }
   })
 })

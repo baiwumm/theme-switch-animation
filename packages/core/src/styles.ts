@@ -130,12 +130,18 @@ ${selector} {
 `
 }
 
-/** 移除已注入的动画样式；不存在时静默 */
+/**
+ * 移除已注入的动画样式；不存在时静默。
+ * 只匹配 `<style>` 节点：固定 id 若与页面里其它元素撞名（如用户自建的容器 div）不得误删。
+ */
 export function removeAnimationStyle(doc: Document): void {
-  doc.getElementById(THEME_ANIMATION_STYLE_ID)?.remove()
+  doc.querySelectorAll(`style#${THEME_ANIMATION_STYLE_ID}`).forEach((node) => node.remove())
 }
 
-/** 注入动画样式。固定 id，注入前先移除旧节点，防止快速连点叠加多份样式 */
+/**
+ * 注入动画样式。固定 id，注入前先移除旧节点，防止快速连点叠加多份样式
+ * （全量匹配 `<style>`，同上防撞名）。
+ */
 export function injectAnimationStyle(doc: Document, css: string): HTMLStyleElement {
   removeAnimationStyle(doc)
   const style = doc.createElement('style')

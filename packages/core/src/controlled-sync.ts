@@ -30,7 +30,10 @@ function isDevEnvironment(): boolean {
  * - 监听 `documentElement` 的 class 与 `data-*` 属性变化（next-themes / color-mode
  *   可能以 `attribute="class"` 或 `attribute="data-theme"` 任一形式写入）；
  * - class 翻转到期望状态，或任意 `data-*` 属性变化 → resolve(true)；
- * - 300ms（可配）超时 → resolve(false) 兜底：转场退化为无动画直切，不悬挂；
+ * - 超时（默认 300ms）前再复查一次目标状态（观察回调异常或极端时序下 class
+ *   恰在定时器刻度写入时的兜底），仍未达成 → resolve(false)：调用方应返回
+ *   SKIP_TRANSITION 让转场跳过——此刻新截图必然还是旧主题，播放动画只会
+ *   得到一段"旧→旧"的空转，不如直切；
  * - 目标状态已达成（同步写入的外部系统）→ 立即 resolve(true)。
  *
  * 库自身不改 class、不碰 localStorage——DOM 归属外部，这里只"等"。
@@ -57,7 +60,7 @@ export function waitForThemeSync({
         if (name !== null && name.startsWith('data-')) return settle(true)
       }
     })
-    const timer = setTimeout(() => settle(false), timeoutMs)
+    const timer = setTimeout(() => settle(synced()), timeoutMs)
 
     function settle(value: boolean): void {
       if (settled) return
@@ -66,7 +69,7 @@ export function waitForThemeSync({
       clearTimeout(timer)
       if (!value && isDevEnvironment()) {
         console.warn(
-          `[theme-switch-animation] ${timeoutMs}ms 内未观察到主题同步（class 或 data-* 变化），本次切换降级为无动画直切。`,
+          `[theme-switch-animation] ${timeoutMs}ms 内未观察到主题同步（class 或 data-* 变化），本次切换跳过动画、直切处理。`,
         )
       }
       resolve(value)

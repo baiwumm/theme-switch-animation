@@ -58,6 +58,7 @@ describe('core 公开导出', () => {
         'injectAnimationStyle',
         'removeAnimationStyle',
         // orchestrate
+        'SKIP_TRANSITION',
         'getViewportSize',
         'prefersReducedMotion',
         'runThemeTransition',
@@ -66,6 +67,7 @@ describe('core 公开导出', () => {
         // uncontrolled
         'applyThemeClass',
         'hasThemeClass',
+        'observeThemeClass',
         'readStoredTheme',
         'syncThemeOnMount',
         'writeStoredTheme',

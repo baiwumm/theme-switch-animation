@@ -31,8 +31,11 @@ for (const file of ['vue.mjs', 'vue.d.ts', 'nuxt.mjs']) {
   }
 }
 
-// vue.d.ts 通过共享 chunk（types-<hash>.d.ts）引用 core 类型；其声明需要内联进自包含产物
-const sharedTypeChunks = readdirSync(dist).filter((f) => /^types-.*\.d\.ts$/.test(f))
+// vue.d.ts 通过共享 chunk 引用 core 类型；其声明需要内联进自包含产物。
+// 共享块名不固定（rollup 按归属模块命名，曾为 types-<hash>，现为 orchestrate-<hash>），
+// 按"除四个入口 facade 外的 .d.ts"识别，保持"恰好 1 个"的不变量校验。
+const entryChunks = new Set(['index.d.ts', 'react.d.ts', 'vue.d.ts', 'nuxt.d.ts'])
+const sharedTypeChunks = readdirSync(dist).filter((f) => f.endsWith('.d.ts') && !entryChunks.has(f))
 if (sharedTypeChunks.length !== 1) {
   console.error(`[copy-nuxt-runtime] 期望恰好 1 个共享类型块，实际 ${sharedTypeChunks.length} 个：${sharedTypeChunks.join(', ')}`)
   process.exit(1)

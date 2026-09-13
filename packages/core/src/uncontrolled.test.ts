@@ -5,6 +5,7 @@ import { THEME_STORAGE_KEY } from './types'
 import {
   applyThemeClass,
   hasThemeClass,
+  observeThemeClass,
   readStoredTheme,
   syncThemeOnMount,
   writeStoredTheme,
@@ -112,6 +113,68 @@ describe('uncontrolled（非受控状态：localStorage + class）', () => {
       document.documentElement.className = 'dark'
       expect(syncThemeOnMount(document, 'dark')).toBeNull()
       expect(hasThemeClass(document, 'dark')).toBe(true)
+    })
+  })
+
+  describe('observeThemeClass（html class 事实源观察，多实例 / 跨标签页同步）', () => {
+    /** MutationObserver 回调在微任务结算：推一拍让断言观察到 */
+    const flushObservers = async () => {
+      await Promise.resolve()
+      await Promise.resolve()
+    }
+
+    it('立即回调一次当前状态；class 变化时再次回调', async () => {
+      document.documentElement.className = 'dark'
+      const seen: boolean[] = []
+      const stop = observeThemeClass(document, 'dark', (dark) => seen.push(dark))
+      expect(seen).toEqual([true])
+
+      applyThemeClass(document, false, 'dark')
+      await flushObservers()
+      expect(seen).toEqual([true, false])
+
+      applyThemeClass(document, true, 'dark')
+      await flushObservers()
+      expect(seen).toEqual([true, false, true])
+      stop()
+    })
+
+    it('无关 class 变化不触发（attributeFilter 限定 class，但过滤目标类名）', async () => {
+      const seen: boolean[] = []
+      const stop = observeThemeClass(document, 'dark', (dark) => seen.push(dark))
+      document.documentElement.classList.add('other')
+      await flushObservers()
+      expect(seen).toEqual([false])
+      stop()
+    })
+
+    it('停止后 class 变化不再回调', async () => {
+      const seen: boolean[] = []
+      const stop = observeThemeClass(document, 'dark', (dark) => seen.push(dark))
+      stop()
+      applyThemeClass(document, true, 'dark')
+      await flushObservers()
+      expect(seen).toEqual([false])
+    })
+
+    it('storage 事件（其它标签页切换）：同 key 触发回读，异 key 忽略', async () => {
+      const seen: boolean[] = []
+      const stop = observeThemeClass(document, 'dark', (dark) => seen.push(dark))
+
+      window.dispatchEvent(new StorageEvent('storage', { key: 'other-key' }))
+      await flushObservers()
+      expect(seen).toEqual([false])
+
+      localStorage.setItem(THEME_STORAGE_KEY, 'dark')
+      window.dispatchEvent(new StorageEvent('storage', { key: THEME_STORAGE_KEY }))
+      await flushObservers()
+      expect(seen).toEqual([false]) // class 未变：回读去重，不重复回调
+
+      document.documentElement.classList.add('dark')
+      window.dispatchEvent(new StorageEvent('storage', { key: THEME_STORAGE_KEY }))
+      await flushObservers()
+      expect(seen).toEqual([false, true])
+      stop()
     })
   })
 })

@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { act, cleanup, fireEvent, render } from '@testing-library/react'
-import { useLayoutEffect, useState } from 'react'
+import { useEffect, useLayoutEffect, useState } from 'react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import type { ViewTransitionLike } from '@theme-switch-animation/core'
@@ -171,17 +171,50 @@ describe('useThemeAnimation（非受控模式）', () => {
       expect(html().classList.contains('dark')).toBe(false)
     })
 
-    it('同一页面多个触发器实例不会失步（都以 html class 为准）', () => {
+    it('同一页面多个触发器实例：任一实例切换后，所有实例的 isDark 同步（html class 事实源）', async () => {
       installFakeViewTransition({ autoRun: true })
       const { container: a } = render(<ThemeButton options={{ animationType: ThemeAnimationType.LTR }} />)
       const { container: b } = render(<ThemeButton options={{ animationType: ThemeAnimationType.RTL }} />)
 
       fireEvent.click(getToggle(a))
-      expect(getToggle(b).textContent).toBe('☀️') // b 尚未点击，自身状态未更新（各自维护 isDark）
+      // class 翻转 → MutationObserver 微任务 → 镜像 state
+      await act(async () => {})
+      // b 未被点击，但镜像了 html class 的翻转：不再各自为政
+      expect(getToggle(b).textContent).toBe('🌙')
+      expect(html().classList.contains('dark')).toBe(true)
 
       fireEvent.click(getToggle(b))
+      await act(async () => {})
       expect(html().classList.contains('dark')).toBe(false)
+      expect(getToggle(a).textContent).toBe('☀️')
+      expect(getToggle(b).textContent).toBe('☀️')
       expect(localStorage.getItem(THEME_STORAGE_KEY)).toBe('light')
+    })
+
+    it('受控实例的切换不影响非受控实例（事实源只对非受控镜像生效）', () => {
+      installFakeViewTransition({ autoRun: true })
+      const externalState = { dark: false }
+      const { container: a } = render(
+        <ThemeButton
+          options={{
+            isDark: externalState.dark,
+            onChange: (next) => {
+              externalState.dark = next
+            },
+          }}
+        />,
+      )
+      const { container: b } = render(<ThemeButton />)
+
+      // 受控实例切换：class 由外部（未接）写入 → html 不变
+      fireEvent.click(getToggle(a))
+      expect(html().classList.contains('dark')).toBe(false)
+      expect(getToggle(b).textContent).toBe('☀️')
+
+      // 非受控实例切换：html class 翻转，本实例与后续镜像立即生效
+      fireEvent.click(getToggle(b))
+      expect(getToggle(b).textContent).toBe('🌙')
+      expect(localStorage.getItem(THEME_STORAGE_KEY)).toBe('dark')
     })
   })
 
@@ -282,6 +315,29 @@ describe('useThemeAnimation（非受控模式）', () => {
       expect(getToggle(container).textContent).toBe('🌙')
     })
 
+    it('外部系统写 data-theme 而非 class（color-mode attribute 配置）：库仍正常工作，不越权写 class', async () => {
+      installFakeViewTransition({ autoRun: true })
+      const { container } = render(
+        <ThemeButton
+          options={{
+            isDark: false,
+            onChange: () => {
+              html().setAttribute('data-theme', 'dark')
+            },
+          }}
+        />,
+      )
+
+      fireEvent.click(getToggle(container))
+      // data-* 变化命中同步协议；库不代写 class
+      await act(async () => {
+        await new Promise((r) => setTimeout(r, 20))
+      })
+      expect(html().getAttribute('data-theme')).toBe('dark')
+      expect(html().classList.contains('dark')).toBe(false)
+      expect(localStorage.getItem(THEME_STORAGE_KEY)).toBeNull()
+    })
+
     it('只提供 isDark：dev 环境告警，按非受控处理', () => {
       const proc = (globalThis as unknown as { process: { env: { NODE_ENV?: string } } }).process
       const original = proc.env.NODE_ENV
@@ -332,6 +388,90 @@ describe('useThemeAnimation（非受控模式）', () => {
       incomplete.unmount()
 
       proc.env.NODE_ENV = original
+    })
+  })
+
+  describe('finished 暴露（动画结束时机）', () => {
+    /** finished 是 state：点击后的重渲染才携带最新一轮 promise，用探针在每次渲染时捕获 */
+    function FinishedProbe({ probe }: { probe: { finished?: Promise<void> } }) {
+      const { ref, toggleTheme, finished } = useThemeAnimation<HTMLButtonElement>()
+      useEffect(() => {
+        probe.finished = finished
+      })
+      return <button ref={ref} onClick={toggleTheme} data-testid="toggle" />
+    }
+
+    it('降级路径：finished 已结算；动画路径：随转场结束结算', async () => {
+      const probe: { finished?: Promise<void> } = {}
+      const { container } = render(<FinishedProbe probe={probe} />)
+      expect(probe.finished).toBeDefined()
+
+      // jsdom 降级：domUpdate 同步完成
+      fireEvent.click(getToggle(container))
+      await act(async () => {})
+      await expect(probe.finished).resolves.toBeUndefined()
+
+      // 动画路径：finished 等待转场结算
+      let resolveFinish!: () => void
+      const pending = new Promise<void>((r) => {
+        resolveFinish = r
+      })
+      Object.defineProperty(document, 'startViewTransition', {
+        configurable: true,
+        writable: true,
+        value: (): ViewTransitionLike => ({ finished: pending }),
+      })
+      fireEvent.click(getToggle(container))
+      await act(async () => {})
+
+      let settled = false
+      void probe.finished!.then(() => {
+        settled = true
+      })
+      await act(async () => {
+        await Promise.resolve()
+      })
+      expect(settled).toBe(false) // 转场未结束，finished 挂起
+
+      act(() => {
+        resolveFinish()
+      })
+      await act(async () => {
+        await Promise.resolve()
+        await Promise.resolve()
+      })
+      expect(settled).toBe(true)
+    })
+
+    it('快速连点：旧转场跳过（AbortError）不产生未捕获 rejection，样式按 duration 延迟清理', async () => {
+      vi.useFakeTimers()
+      try {
+        const abort = new DOMException('The view transition was skipped', 'AbortError')
+        let calls = 0
+        Object.defineProperty(document, 'startViewTransition', {
+          configurable: true,
+          writable: true,
+          value: (): ViewTransitionLike => {
+            calls++
+            // 第一次转场以 AbortError 结算（被新一轮顶掉），第二次正常结束
+            return { finished: calls === 1 ? Promise.reject(abort) : Promise.resolve() }
+          },
+        })
+        const probe: { finished?: Promise<void> } = {}
+        const { container } = render(<FinishedProbe probe={probe} />)
+
+        fireEvent.click(getToggle(container))
+        fireEvent.click(getToggle(container))
+        await act(async () => {
+          await probe.finished
+          // 第二轮 finished 结算 → 排期 duration（默认 750ms）后的清理定时器
+          await vi.advanceTimersByTimeAsync(750)
+        })
+        expect(document.getElementById('theme-switch-animation')).toBeNull()
+        expect(html().classList.contains('dark')).toBe(false)
+      } finally {
+        vi.useRealTimers()
+      }
     })
   })
 })

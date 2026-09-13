@@ -119,7 +119,7 @@ describe('waitForThemeSync（受控模式同步协议 §5.4）', () => {
     const promise = waitForThemeSync({ doc: document, darkClassName: 'dark', nextIsDark: true })
     await vi.advanceTimersByTimeAsync(THEME_SYNC_TIMEOUT_MS)
     await expect(promise).resolves.toBe(false)
-    expect(warn).toHaveBeenCalledWith(expect.stringContaining('降级为无动画直切'))
+    expect(warn).toHaveBeenCalledWith(expect.stringContaining('跳过动画'))
 
     proc.env.NODE_ENV = originalNodeEnv
   })

@@ -7,7 +7,7 @@ export const ThemeAnimationType = {
   CIRCLE: 'circle',
   /** 圆形收起：旧主题以圆形收缩进触发点，新主题从四周显现（动画作用于旧截图层） */
   CIRCLE_REVERT: 'circle-revert',
-  /** 圆形模糊扩散：边缘高斯模糊的圆形蒙版，新旧截图双层联动（动画作用于两层） */
+  /** 圆形模糊扩散：边缘高斯模糊的圆形蒙版（只挂新截图层，旧层完整垫底） */
   CIRCLE_BLUR: 'circle-blur',
   /** 从左到右擦除 */
   LTR: 'ltr',

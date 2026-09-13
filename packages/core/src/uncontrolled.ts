@@ -51,3 +51,40 @@ export function syncThemeOnMount(doc: Document, className: string, key: string =
   applyThemeClass(doc, isDark, className)
   return isDark
 }
+
+/**
+ * 以 `<html>` 上的暗色类名为事实源持续观察（非受控多实例 / 跨标签页同步）：
+ * 同页任一实例切换 class 后所有观察者同步；其它标签页的切换经 storage 事件同步。
+ * 立即回调一次当前状态；无 MutationObserver 的环境只保留初始回读。
+ * 返回停止观察的函数。仅供客户端调用（内部会触碰 DOM 与 window 事件）。
+ */
+export function observeThemeClass(
+  doc: Document,
+  className: string,
+  onChange: (isDark: boolean) => void,
+  key: string = THEME_STORAGE_KEY,
+): () => void {
+  // 只在状态真变化时回调：无关 class 变更、storage 回读不变时不打扰观察者
+  let last: boolean | undefined
+  const read = () => {
+    const dark = hasThemeClass(doc, className)
+    if (dark !== last) {
+      last = dark
+      onChange(dark)
+    }
+  }
+  read()
+  let observer: MutationObserver | undefined
+  if (typeof MutationObserver !== 'undefined') {
+    observer = new MutationObserver(read)
+    observer.observe(doc.documentElement, { attributes: true, attributeFilter: ['class'] })
+  }
+  const onStorage = (event: StorageEvent): void => {
+    if (event.key === key) read()
+  }
+  doc.defaultView?.addEventListener('storage', onStorage)
+  return () => {
+    observer?.disconnect()
+    doc.defaultView?.removeEventListener('storage', onStorage)
+  }
+}
