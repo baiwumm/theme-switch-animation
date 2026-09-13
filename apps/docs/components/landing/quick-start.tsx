@@ -68,12 +68,12 @@ export default defineNuxtConfig({
   },
 ] as const
 
-function CodeBlock({ code }: { code: string }) {
+function CopyButton({ text }: { text: string }) {
   const [copied, setCopied] = useState(false)
 
   const copy = async () => {
     try {
-      await navigator.clipboard.writeText(code)
+      await navigator.clipboard.writeText(text)
       setCopied(true)
       setTimeout(() => setCopied(false), 1600)
     } catch {
@@ -82,19 +82,14 @@ function CodeBlock({ code }: { code: string }) {
   }
 
   return (
-    <div className="relative">
-      <button
-        type="button"
-        onClick={copy}
-        aria-label="复制代码"
-        className="absolute right-3 top-3 rounded-lg border bg-background/80 p-2 text-muted-foreground backdrop-blur transition-colors hover:text-foreground"
-      >
-        {copied ? <Check size={14} className="text-emerald-500" /> : <Copy size={14} />}
-      </button>
-      <pre className="max-h-96 overflow-auto rounded-xl border bg-card/80 p-5 pr-12 font-mono text-xs leading-relaxed backdrop-blur">
-        <code>{code}</code>
-      </pre>
-    </div>
+    <button
+      type="button"
+      onClick={copy}
+      aria-label="复制"
+      className="rounded-lg p-2 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+    >
+      {copied ? <Check size={14} className="text-emerald-500" /> : <Copy size={14} />}
+    </button>
   )
 }
 
@@ -106,7 +101,10 @@ export function QuickStartSection() {
     <section id="quick-start" className="relative z-10 scroll-mt-24 border-b border-dashed border-black/10 py-20 dark:border-white/10">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8">
         <div className="mx-auto mb-10 max-w-2xl text-center">
-          <h2 className="text-3xl font-bold tracking-tight md:text-4xl">快速开始</h2>
+          <span className="mb-3 inline-block rounded-full border bg-card/70 px-3 py-1 font-mono text-[11px] uppercase tracking-widest text-muted-foreground backdrop-blur">
+            Quick Start
+          </span>
+          <h2 className="text-3xl font-bold tracking-tight md:text-4xl">三行代码接入</h2>
           <p className="mt-3 text-muted-foreground">
             三个入口，同一套 API。受控模式接入 next-themes / @nuxtjs/color-mode 的完整示例见{' '}
             <a href={REPO_URL} target="_blank" rel="noreferrer" className="text-primary underline underline-offset-4">
@@ -117,24 +115,37 @@ export function QuickStartSection() {
         </div>
 
         <div className="mx-auto max-w-3xl">
-          <div className="mb-4 flex justify-center gap-2">
+          {/* 分段式 Tab */}
+          <div className="mx-auto mb-5 flex w-fit gap-1 rounded-full border bg-card/70 p-1 backdrop-blur">
             {FRAMEWORKS.map((f) => (
               <button
                 key={f.id}
                 type="button"
                 onClick={() => setActive(f.id)}
-                className={`rounded-full border px-5 py-1.5 text-sm transition-colors ${
-                  active === f.id ? 'border-primary bg-primary/10 font-semibold' : 'hover:border-primary/40'
+                className={`rounded-full px-6 py-1.5 text-sm transition-all ${
+                  active === f.id ? 'bg-primary font-semibold text-primary-foreground shadow' : 'text-muted-foreground hover:text-foreground'
                 }`}
               >
                 {f.label}
               </button>
             ))}
           </div>
-          <div className="mb-3 flex justify-center">
-            <code className="rounded-lg border bg-card/80 px-4 py-2 font-mono text-xs backdrop-blur">{current.install}</code>
+
+          {/* 编辑器窗口：红绿灯 chrome + 安装命令条 + 代码区 */}
+          <div className="overflow-hidden rounded-2xl border bg-card/80 shadow-xl shadow-black/5 backdrop-blur dark:shadow-black/30">
+            <div className="flex items-center justify-between border-b bg-background/50 px-4 py-2.5">
+              <div className="flex items-center gap-1.5">
+                <span className="size-3 rounded-full bg-red-400" />
+                <span className="size-3 rounded-full bg-amber-400" />
+                <span className="size-3 rounded-full bg-emerald-400" />
+              </div>
+              <code className="font-mono text-xs text-muted-foreground">{current.install}</code>
+              <CopyButton text={`${current.install}\n\n${current.code}`} />
+            </div>
+            <pre className="max-h-96 overflow-auto p-5 font-mono text-xs leading-relaxed">
+              <code>{current.code}</code>
+            </pre>
           </div>
-          <CodeBlock code={current.code} />
         </div>
       </div>
     </section>
