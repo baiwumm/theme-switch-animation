@@ -131,7 +131,7 @@ function GalleryCard({
       initial={{ opacity: 0, y: 18 }}
       whileInView={{ opacity: 1, y: 0 }}
       viewport={{ once: true, margin: '-40px' }}
-      transition={{ duration: 0.4, delay: (index % 4) * 0.06 }}
+      transition={{ duration: 0.4, delay: (index % 3) * 0.06 }}
       className="group flex flex-col items-center rounded-3xl border bg-card/80 p-6 shadow-sm backdrop-blur transition-all duration-300 hover:-translate-y-1 hover:shadow-xl hover:shadow-primary/5"
     >
       {/* 渐变图标砖 */}
@@ -223,7 +223,7 @@ export function GallerySection() {
           <PresetRow label="easing" presets={EASING_PRESETS} value={easing} onChange={(v) => setEasing(v)} />
         </div>
 
-        <div className="mx-auto grid max-w-6xl grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="mx-auto grid max-w-5xl grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
           {ANIMATION_TYPES.map((t, index) => (
             <GalleryCard
               key={t.type}

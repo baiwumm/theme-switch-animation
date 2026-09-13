@@ -3,6 +3,7 @@
 import { Check, Copy } from 'lucide-react'
 import { useState } from 'react'
 
+import { NextIcon, NuxtIcon, ReactIcon, VueIcon } from '@/components/ui/framework-icons'
 import { REPO_URL } from '@/constants/site'
 
 const INSTALL_CMD = 'npm install theme-switch-animation'
@@ -11,6 +12,8 @@ const FRAMEWORKS = [
   {
     id: 'react',
     label: 'React',
+    Icon: ReactIcon,
+    iconClass: 'text-sky-500',
     install: INSTALL_CMD,
     code: `'use client'
 import { ThemeAnimationType, useThemeAnimation } from 'theme-switch-animation/react'
@@ -30,8 +33,37 @@ export function ThemeToggle() {
 }`,
   },
   {
+    id: 'next',
+    label: 'Next.js',
+    Icon: NextIcon,
+    iconClass: 'text-foreground',
+    install: INSTALL_CMD,
+    code: `'use client'
+import { useTheme } from 'next-themes'
+import { ThemeAnimationType, useThemeAnimation } from 'theme-switch-animation/react'
+
+export function ThemeToggle() {
+  // 受控模式 × next-themes（§6.1）：App Router 组件需 'use client'
+  const { resolvedTheme, setTheme } = useTheme()
+  const { ref, toggleTheme, isDark } = useThemeAnimation({
+    animationType: ThemeAnimationType.CIRCLE,
+    duration: 750,
+    isDark: resolvedTheme === 'dark',
+    onChange: (next) => setTheme(next ? 'dark' : 'light'),
+  })
+
+  return (
+    <button ref={ref} onClick={toggleTheme}>
+      {isDark ? '🌙' : '☀️'}
+    </button>
+  )
+}`,
+  },
+  {
     id: 'vue',
     label: 'Vue',
+    Icon: VueIcon,
+    iconClass: '',
     install: INSTALL_CMD,
     code: `<script setup lang="ts">
 import { ThemeAnimationType, useThemeAnimation } from 'theme-switch-animation/vue'
@@ -53,6 +85,8 @@ const { triggerRef, toggleTheme, isDark } = useThemeAnimation<HTMLButtonElement>
   {
     id: 'nuxt',
     label: 'Nuxt',
+    Icon: NuxtIcon,
+    iconClass: '',
     install: INSTALL_CMD,
     code: `// nuxt.config.ts —— 仅注册模块，useThemeAnimation / ThemeAnimationType 自动导入
 export default defineNuxtConfig({
@@ -106,7 +140,7 @@ export function QuickStartSection() {
           </span>
           <h2 className="text-3xl font-bold tracking-tight md:text-4xl">三行代码接入</h2>
           <p className="mt-3 text-muted-foreground">
-            三个入口，同一套 API。受控模式接入 next-themes / @nuxtjs/color-mode 的完整示例见{' '}
+            四个入口，同一套 API。受控模式接入 next-themes / @nuxtjs/color-mode 的完整示例见{' '}
             <a href={REPO_URL} target="_blank" rel="noreferrer" className="text-primary underline underline-offset-4">
               GitHub README
             </a>
@@ -115,17 +149,18 @@ export function QuickStartSection() {
         </div>
 
         <div className="mx-auto max-w-3xl">
-          {/* 分段式 Tab */}
+          {/* 分段式 Tab（带框架品牌图标） */}
           <div className="mx-auto mb-5 flex w-fit gap-1 rounded-full border bg-card/70 p-1 backdrop-blur">
             {FRAMEWORKS.map((f) => (
               <button
                 key={f.id}
                 type="button"
                 onClick={() => setActive(f.id)}
-                className={`rounded-full px-6 py-1.5 text-sm transition-all ${
+                className={`flex items-center gap-2 rounded-full px-5 py-1.5 text-sm transition-all ${
                   active === f.id ? 'bg-primary font-semibold text-primary-foreground shadow' : 'text-muted-foreground hover:text-foreground'
                 }`}
               >
+                <f.Icon className={`size-4 shrink-0 ${active === f.id ? '' : f.iconClass}`} />
                 {f.label}
               </button>
             ))}
