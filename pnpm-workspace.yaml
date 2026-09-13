@@ -5,10 +5,13 @@ packages:
   - .
   - packages/*
   - playgrounds/*
+  - apps/*
 
 # pnpm 10+ 默认不执行依赖的 build 脚本，需要 postinstall 的包在此显式放行。
 allowBuilds:
   esbuild: true
+  # Next 16 的图像处理依赖（apps/docs 引入；站点 images.unoptimized 但 Next 仍会装它）
+  sharp: true
 
 minimumReleaseAgeExclude:
   - vite@8.3.0

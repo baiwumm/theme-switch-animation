@@ -11,6 +11,8 @@ export default tseslint.config(
       '**/.next/**',
       '**/.nuxt/**',
       '**/.output/**',
+      // 文档站自带 Biome 工具链（apps/docs/biome.json），不进根 eslint
+      'apps/docs/**',
     ],
   },
   js.configs.recommended,

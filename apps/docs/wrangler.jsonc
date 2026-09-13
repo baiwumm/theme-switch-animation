@@ -1,0 +1,18 @@
+{
+  // Cloudflare Workers Static Assets：纯静态托管（next.config.ts output: 'export' → out/）
+  // 部署：pnpm --filter @theme-switch-animation/docs build && pnpm --filter @theme-switch-animation/docs deploy
+  // 首次部署需 CF 授权（wrangler login 或 CLOUDFLARE_API_TOKEN）
+  "name": "theme-switch-animation-docs",
+  "compatibility_date": "2026-09-01",
+  "assets": {
+    "directory": "./out",
+    "html_handling": "auto-trailing-slash",
+    "not_found_handling": "404-page"
+  },
+  "routes": [
+    {
+      "pattern": "theme-switch-animation.baiwumm.com",
+      "custom_domain": true
+    }
+  ]
+}
