@@ -111,7 +111,13 @@ const DIRECTIONAL_START: Record<DirectionalAnimationType, { size: string; positi
   [ThemeAnimationType.BTT]: { size: `100% ${BAR_START_PX}px`, position: '0% 100%' },
 }
 
-const px = (value: number): string => `${roundTo(value, 2)}px`
+/**
+ * 蒙版几何一律取整到整数 px：Math.hypot 的无理数会产生分数像素，
+ * 而对快照层逐帧动画 mask-size / mask-position 时，分数偏移会在 GPU 栅格化
+ * （尤其 Windows 分数缩放的 dpr）下暴露 1px 级接缝——表现为收起时边缘偶现"线条抖动"。
+ * 覆盖余量（≥5%）远大于取整损失（≤0.5px），安全性无虞。
+ */
+const px = (value: number): string => `${Math.round(value)}px`
 
 function roundTo(value: number, digits: number): number {
   const factor = 10 ** digits

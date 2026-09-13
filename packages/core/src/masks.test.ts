@@ -107,11 +107,11 @@ describe('getCircleMaskGeometry（CIRCLE 终尺寸与圆心钉扎）', () => {
     expect(geometry.endPosition).toBe('-1050px -1050px')
   })
 
-  it('非整数结果保留两位小数，避免超长浮点串进入 CSS', () => {
+  it('结果取整到整数 px，避免分数像素与超长浮点串进入 CSS', () => {
     const geometry = getCircleMaskGeometry({ x: 100, y: 0 }, viewport)
-    const expected = Math.round(Math.hypot(700, 600) * 2.1 * 100) / 100
+    const expected = Math.round(Math.hypot(700, 600) * 2.1)
     expect(geometry.endSize).toBe(`${expected}px ${expected}px`)
-    expect(geometry.endSize).not.toMatch(/\d\.\d{3,}/)
+    expect(geometry.endSize).not.toMatch(/\d\.\d/)
   })
 
   it('使用 SVG data-URI 实心圆作为 mask-image', () => {
@@ -193,12 +193,11 @@ describe('中心扩散形状几何（SQUARE / RECTANGLE / DIAMOND / HEXAGON / TR
     ['HEXAGON', getHexagonMaskGeometry, HEXAGON_COVERAGE_FACTOR],
   ] as const)('%s：终边长 = maxRadius × √2 × 1.05 × 2，中心钉在触发点', (_label, geometryFn, factor) => {
     const geometry = geometryFn(center, viewport)
-    // maxRadius = 500（中心到四角）
-    const expectedSide = Math.round(500 * factor * 2 * 100) / 100
-    const r2 = (v: number) => Math.round(v * 100) / 100
-    expect(geometry.endSize).toBe(`${expectedSide}px ${expectedSide}px`)
+    // maxRadius = 500（中心到四角）；几何一律取整到整数 px（位置用未取整边长计算后取整）
+    const side = 500 * factor * 2
+    expect(geometry.endSize).toBe(`${Math.round(side)}px ${Math.round(side)}px`)
     expect(geometry.startPosition).toBe('400px 300px')
-    expect(geometry.endPosition).toBe(`${r2(400 - expectedSide / 2)}px ${r2(300 - expectedSide / 2)}px`)
+    expect(geometry.endPosition).toBe(`${Math.round(400 - side / 2)}px ${Math.round(300 - side / 2)}px`)
   })
 
   it('TRIANGLE：外接圆半径 2.2 × maxRadius（内切半径 1.1 × maxRadius 天然覆盖）', () => {

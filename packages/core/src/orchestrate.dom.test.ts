@@ -101,7 +101,7 @@ describe('runThemeTransition 动画路径（jsdom + 模拟 startViewTransition�
 
     const css = styleNode()!.textContent!
     // 中心 (120, 60)，最远角 (800, 600)：hypot(680, 540) × 2.1
-    const endSize = Math.round(Math.hypot(680, 540) * 2.1 * 100) / 100
+    const endSize = Math.round(Math.hypot(680, 540) * 2.1)
     expect(css).toContain('mask-position: 120px 60px;')
     expect(css).toContain(`mask-size: ${endSize}px ${endSize}px;`)
   })
