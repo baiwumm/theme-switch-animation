@@ -1,0 +1,388 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <title>CIRCLE_REVERT 抖动实验台</title>
+    <style>
+      /* 两个主题只换颜色，绝不改布局/尺寸，避免布局位移污染实验 */
+      :root {
+        --bg: #ffffff;
+        --fg: #16181d;
+        --card: #eef0f4;
+        --line: #d8dbe2;
+      }
+      html.dark {
+        --bg: #0d0f12;
+        --fg: #e9ebf0;
+        --card: #191c21;
+        --line: #2a2e35;
+      }
+      html,
+      body {
+        margin: 0;
+        height: 100%;
+        overflow: hidden; /* 实验台不滚动：先排除滚动条/滚动容器变量 */
+      }
+      body {
+        background: var(--bg);
+        color: var(--fg);
+        font: 14px/1.5 system-ui, -apple-system, 'Segoe UI', sans-serif;
+        transition: none;
+      }
+      main {
+        padding: 24px;
+      }
+      h1 {
+        margin: 0 0 12px;
+        font-size: 20px;
+      }
+      .cards {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 12px;
+        margin-top: 16px;
+      }
+      .card {
+        background: var(--card);
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        height: 120px;
+        padding: 10px;
+      }
+      #target {
+        position: fixed;
+        left: 62%;
+        top: 34%;
+        width: 120px;
+        height: 44px;
+      }
+      .flat {
+        position: fixed;
+        left: 0;
+        right: 0;
+        top: 70%;
+        bottom: 0;
+        background: var(--bg);
+      }
+      /* clean 变体：隐藏一切文字/卡片/按钮外观，只留纯色背景 + 触发矩形，
+         让"孤立 1px 线条 / 圆弧错位"不被内容边缘干扰（?variant=clean） */
+      body.clean main,
+      body.clean .flat {
+        visibility: hidden;
+      }
+      body.clean #target {
+        border: 0;
+        background: transparent;
+        color: transparent;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>CIRCLE_REVERT 抖动实验台</h1>
+      <p>
+        纯色大平面 + 卡片网格：收起（暗 → 亮）时逐帧采样，检测 1px 级线条伪影。 触发点固定在
+        <code>#target</code>（62% / 34%）。
+      </p>
+      <div class="cards">
+        <div class="card">A</div>
+        <div class="card">B</div>
+        <div class="card">C</div>
+        <div class="card">D</div>
+      </div>
+    </main>
+    <div class="flat"></div>
+    <button id="target">target</button>
+
+    <script type="module">
+      import { ThemeAnimationType, runThemeTransition } from '/dist/index.mjs'
+
+      const html = document.documentElement
+      const target = document.getElementById('target')
+      if (new URLSearchParams(location.search).get('variant') === 'clean') {
+        document.body.classList.add('clean')
+      }
+      /** 每次 start 后注入的样式节点被改写的记录（供 A/B 用） */
+      let lastCss = ''
+
+      /**
+       * 变体：把"逐帧动画 mask-size / mask-position"换成
+       * "蒙版盒子完全静止（100% 100% / 0 0）+ 只动画 @property 注册的半径"。
+       * 用来验证"抖动来自 Chrome 对蒙版层绘制偏移的像素对齐"这一假设。
+       */
+      function buildGradientVariant(injectedCss, soft, invert) {
+        const size = /mask-size:\s*(-?[\d.]+)px (-?[\d.]+)px/.exec(injectedCss)
+        const pos = /mask-position:\s*(-?[\d.]+)px (-?[\d.]+)px/.exec(injectedCss)
+        const dur = /--theme-switch-duration:\s*([^;]+);/.exec(injectedCss)
+        const easing = /--theme-switch-easing:\s*([^;]+);/.exec(injectedCss)
+        if (!size || !pos || !dur || !easing) return injectedCss
+        const side = Number(size[1])
+        const cx = Number(pos[1]) + side / 2
+        const cy = Number(pos[2]) + side / 2
+        const onOld = injectedCss.includes('::view-transition-old(root) {')
+        // invert：蒙版改挂"新截图层"（层序回到 UA 默认，不用 z-index），
+        // 并用"洞"（圆内透明、圆外不透明）实现同样的视觉效果。
+        const onNew = invert && onOld
+        const selector = onOld && !onNew ? '::view-transition-old(root)' : '::view-transition-new(root)'
+        const zIndex = onOld && !onNew ? '\n  z-index: 1;' : ''
+        const radius = side / 2
+        const shrink = onOld
+        const keyframes = shrink
+          ? `@keyframes ts-radius-shrink {\n  from { --ts-radius: ${radius}px; }\n  to { --ts-radius: 0px; }\n}`
+          : `@keyframes ts-radius-grow {\n  from { --ts-radius: 0px; }\n  to { --ts-radius: ${radius}px; }\n}`
+        const name = shrink ? 'ts-radius-shrink' : 'ts-radius-grow'
+        let stops
+        if (soft && onNew) stops = `transparent calc(var(--ts-radius) - 0.5px),\n    #000 calc(var(--ts-radius) + 0.5px)`
+        else if (soft) stops = `#000 calc(var(--ts-radius) - 0.5px),\n    transparent calc(var(--ts-radius) + 0.5px)`
+        else if (onNew) stops = `transparent var(--ts-radius),\n    #000 var(--ts-radius)`
+        else stops = `#000 var(--ts-radius),\n    transparent var(--ts-radius)`
+        return `:root {
+  --theme-switch-duration: ${dur[1]};
+  --theme-switch-easing: ${easing[1]};
+}
+@property --ts-radius {
+  syntax: '<length>';
+  inherits: false;
+  initial-value: 0px;
+}
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation: none;
+  mix-blend-mode: normal;
+}
+${keyframes}
+${selector} {
+  --ts-cx: ${cx}px;
+  --ts-cy: ${cy}px;
+  mask-image: radial-gradient(
+    circle at var(--ts-cx) var(--ts-cy),
+    ${stops}
+  );
+  mask-size: 100% 100%;
+  mask-position: 0px 0px;
+  mask-repeat: no-repeat;${zIndex}
+  animation: ${name} var(--theme-switch-duration, 750ms) var(--theme-switch-easing, ease-in-out) both;
+}
+`
+      }
+
+      /**
+       * 变体：收起改用"反向蒙版挂新截图层"——
+       * 与现在（蒙版挂旧截图层 + z-index:1 置顶）视觉等价，但层序回到 UA 默认，
+       * 结构上与 CIRCLE 完全一致（用户反馈 CIRCLE 不闪、REVERT 收起才闪）。
+       * 蒙版用 SVG 内嵌 mask 掏出一个透明圆洞（洞外不透明），几何/关键帧与现行实现完全相同。
+       */
+      const HOLE_MASK_IMAGE =
+        'url("data:image/svg+xml,' +
+        encodeURIComponent(
+          '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 2 2">' +
+            '<defs><mask id="m"><rect width="2" height="2" fill="#fff"/>' +
+            '<circle cx="1" cy="1" r="1" fill="#000"/></mask></defs>' +
+            '<rect width="2" height="2" fill="#fff" mask="url(#m)"/></svg>',
+        ) +
+        '")'
+
+      function buildInvertVariant(injectedCss) {
+        const onOld = injectedCss.includes('::view-transition-old(root) {')
+        if (!onOld) return injectedCss
+        const maskImage = /mask-image:\s*(url\([^)]*\)|url\("data:[^"]*"\))/.exec(injectedCss)
+        if (!maskImage) return injectedCss
+        return injectedCss
+          .replace(/::view-transition-old\(root\) \{\n/, '::view-transition-new(root) {\n')
+          .replace(/\n  z-index: 1;/, '')
+          .replace(maskImage[1], HOLE_MASK_IMAGE)
+      }
+
+      const lab = {
+        /** 无动画地把主题设为 light / dark */
+        reset(theme) {
+          html.classList.toggle('dark', theme === 'dark')
+          document.getElementById('theme-switch-animation')?.remove()
+          return html.className
+        },
+        theme() {
+          return html.classList.contains('dark') ? 'dark' : 'light'
+        },
+        /** 触发一次真实转场（走库的 runThemeTransition，含圆形蒙版 CSS） */
+        start(opts = {}) {
+          const patch = opts.patch ?? null
+          const result = runThemeTransition({
+            domUpdate: () => {
+              html.classList.toggle('dark')
+            },
+            options: {
+              animationType: opts.animationType ?? ThemeAnimationType.CIRCLE_REVERT,
+              duration: opts.duration ?? 750,
+              easing: opts.easing ?? 'ease-in-out',
+            },
+            trigger: target,
+          })
+          const style = document.getElementById('theme-switch-animation')
+          if (style) {
+            lastCss = style.textContent
+            if (opts.cssVariant === 'gradient') style.textContent = buildGradientVariant(style.textContent, true, false)
+            if (opts.cssVariant === 'gradient-hard') style.textContent = buildGradientVariant(style.textContent, false, false)
+            if (opts.cssVariant === 'invert') style.textContent = buildGradientVariant(style.textContent, true, true)
+            if (patch) {
+              // 便捷补丁：字符串对（数组 [from, to]）
+              for (const [from, to] of patch) style.textContent = style.textContent.split(from).join(to)
+            }
+          }
+          window.__lastResult = result
+          window.__lastOutcome = 'pending'
+          result.finished.then(
+            () => {
+              window.__lastOutcome = 'ok'
+            },
+            (e) => {
+              window.__lastOutcome = `skipped(${e?.name ?? e?.message ?? 'unknown'})`
+            },
+          )
+          return { animated: result.animated }
+        },
+        css: () => lastCss,
+        /** 触发点中心（视口坐标）+ 视口尺寸，供离线分析对齐几何 */
+        center() {
+          const r = target.getBoundingClientRect()
+          return {
+            cx: r.left + r.width / 2,
+            cy: r.top + r.height / 2,
+            width: window.innerWidth,
+            height: window.innerHeight,
+            dpr: window.devicePixelRatio,
+          }
+        },
+        injectedCss: () => document.getElementById('theme-switch-animation')?.textContent ?? '',
+        /** 转场伪元素上的 CSS 动画（暂停后逐帧 seek） */
+        maskAnimations() {
+          return document
+            .getAnimations({ subtree: true })
+            .filter((a) => /^(theme-switch-|ts-radius-)/.test(a.animationName ?? ''))
+        },
+        async waitForAnimation(timeout = 2000) {
+          const started = performance.now()
+          for (;;) {
+            const found = lab.maskAnimations()
+            if (found.length) return found.length
+            if (performance.now() - started > timeout) return 0
+            await new Promise((r) => requestAnimationFrame(r))
+          }
+        },
+        pause() {
+          for (const a of lab.maskAnimations()) a.pause()
+          return lab.progress()
+        },
+        play() {
+          for (const a of lab.maskAnimations()) a.play()
+        },
+        /** 把动画时间轴钉到 t ms（暂停状态） */
+        seek(t) {
+          for (const a of lab.maskAnimations()) a.currentTime = t
+          return lab.progress()
+        },
+        progress() {
+          return lab.maskAnimations().map((a) => ({
+            name: a.animationName,
+            currentTime: a.currentTime,
+            duration: a.effect?.getTiming?.().duration,
+            pseudo: a.effect?.pseudoElement ?? null,
+          }))
+        },
+        /** 读取蒙版伪元素的计算样式（Chrome 支持 view-transition 伪元素查询） */
+        computedMask() {
+          const out = {}
+          for (const sel of ['::view-transition-old(root)', '::view-transition-new(root)']) {
+            const cs = getComputedStyle(html, sel)
+            out[sel] = {
+              maskSize: cs.maskSize ?? cs.webkitMaskSize,
+              maskPosition: cs.maskPosition ?? cs.webkitMaskPosition,
+              maskImage: cs.maskImage ?? cs.webkitMaskImage,
+              zIndex: cs.zIndex,
+              animation: cs.animationName,
+            }
+          }
+          return out
+        },
+        /** 单帧全量快照：伪元素计算样式 + 动画状态（闪屏排查用） */
+        snapshot(t) {
+          const old = getComputedStyle(html, '::view-transition-old(root)')
+          const neu = getComputedStyle(html, '::view-transition-new(root)')
+          const pair = getComputedStyle(html, '::view-transition-image-pair(root)')
+          const anims = document
+            .getAnimations({ subtree: true })
+            .filter((a) => /view-transition/.test(a.effect?.pseudoElement ?? ''))
+            .map((a) => ({
+              name: a.animationName,
+              pseudo: a.effect?.pseudoElement ?? '',
+              playState: a.playState,
+              currentTime: Math.round(a.currentTime ?? -1),
+            }))
+          const styleNode = document.getElementById('theme-switch-animation')
+          return {
+            t: Math.round(t),
+            oldMaskSize: old.maskSize,
+            oldMaskPosition: old.maskPosition,
+            oldMaskImage: (old.maskImage || '').slice(0, 24),
+            oldZ: old.zIndex,
+            oldAnim: old.animationName,
+            oldBlend: old.mixBlendMode,
+            oldOpacity: old.opacity,
+            newAnim: neu.animationName,
+            newBlend: neu.mixBlendMode,
+            newOpacity: neu.opacity,
+            pairIsolation: pair.isolation,
+            anims,
+            styleNode: !!styleNode,
+            dark: html.classList.contains('dark'),
+          }
+        },
+        /**
+         * 跑一次真转场并逐帧采样（每帧一次快照），返回日志。
+         * 用于统计"某一帧样式/动画状态异常"的概率（闪屏）。
+         */
+        async probeRun(opts = {}) {
+          const duration = opts.duration ?? 750
+          lab.reset(opts.theme ?? 'dark')
+          await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)))
+          const log = []
+          const t0 = performance.now()
+          const result = runThemeTransition({
+            domUpdate: () => {
+              html.classList.toggle('dark')
+            },
+            options: { animationType: ThemeAnimationType.CIRCLE_REVERT, duration, easing: 'ease-in-out' },
+            trigger: target,
+          })
+          window.__lastResult = result
+          const sampling = (async () => {
+            for (;;) {
+              const t = performance.now() - t0
+              if (t > duration + 220) break
+              log.push(lab.snapshot(t))
+              await new Promise((r) => requestAnimationFrame(r))
+            }
+          })()
+          await sampling
+          const outcome = await result.finished.then(
+            () => 'ok',
+            (e) => `skipped(${e?.name ?? e?.message ?? 'unknown'})`,
+          )
+          // 等清理定时器落地，再进入下一轮
+          await new Promise((r) => setTimeout(r, duration + 100))
+          return { log, animated: result.animated, outcome }
+        },
+        /** 上一次转场的结算结果（'ok' / 'pending' / 'skipped(...)'），同步读取 */
+        finishedOutcome() {
+          return window.__lastOutcome ?? 'none'
+        },
+        finish() {
+          for (const a of lab.maskAnimations()) a.finish()
+          return window.__lastResult?.animated ?? false
+        },
+      }
+
+      window.__lab = lab
+      window.__ready = true
+    </script>
+  </body>
+</html>
