@@ -230,3 +230,164 @@ fix(core): 库默认 duration 400 → 750（需求文档 v1.5 同步）
 ```
 fix(core): 蒙版几何取整到整数 px（缓解分数 dpr 下 mask 动画的接缝抖动）
 ```
+
+---
+
+## 附录五（"收起时线条抖动"二次排查：定位为蒙版层的设备像素对齐抖动，2026-09-13 续）
+
+**反馈**：附录四加固（几何取整）后，CIRCLE_REVERT 收起时**仍偶现线条抖动**（不是整屏抖动）。
+
+### 结论（先给结论，再给证据）
+
+**附录四把主因判为"分数 dpr 下的 1px 接缝"是不准确的**。真实主因：
+
+> **Chrome 逐帧重栅格化蒙版时，会把蒙版层的 `mask-position` 与 `mask-size` 对齐到设备像素网格**（实测步进 ≈0.5 设备 px）。动画里这两个值**逐帧都是分数**（750ms 内每一帧都不在网格上），于是**每一帧的舍入误差都不同**——整圆连同它的高对比圆弧边缘，在帧间被"推"了 **1px 级**，且 **x / y 各自独立**（还叠加半径的 ±0.25px 对齐误差）。肉眼看到的就是圆弧那条"线"在抖。
+
+- 与 dpr 无关：`deviceScaleFactor=1`（本机 2560×1440、100% 缩放）就能稳定复现，dsf=1.5 同样有（抖动幅度按**设备像素**计约 1px，与缩放无关）。附录四"无头 dpr=1 无法复现"的判断只是因为当时没有能测亚像素位移的手段（只看截图肉眼看圆弧，1px 位移看不出来）。
+- 与"起止几何取整"无关：取整只固定了首末帧，中间帧仍是分数（附录四的真机复测结论方向对了，但归因（"接缝"）不对——**没有任何接缝/错位**：拟合出的圆弧径向 RMS 只有 0.02–0.04px，圆是完美解析圆，动的是**圆心**）。
+- 与跳过竞态、滚动基准、SVG 锯齿无关（附录四已排除的那些继续成立）。
+
+### 排查方法（新增实验台 `scripts/jitter-lab/`）
+
+之前"看截图"的方法测不到亚像素位移。这次的做法是**测边缘几何**而不是看图：
+
+1. `lab.html`：用真实 `dist/index.mjs` 跑真转场（触发点/时长/缓动/几何全部走库），并提供 `?variant=clean`（隐藏一切文字/卡片/按钮外观，只剩纯色背景 + 一个不可见的触发矩形）——**保证画面里唯一的边缘就是蒙版圆弧**，排除内容边缘干扰；
+2. `run.mjs`：无头 Chrome（实测走 ANGLE/D3D11 真 GPU）+ CDP；两种取样：`--mode=live` 用 screencast 抓**每一合成帧**（≈42fps），`--mode=seek` 暂停 WAAPI 动画后按毫秒 seek（**确定性**取样，可重复）；
+3. `analyze.mjs` / `probe.mjs` / `fit.mjs` / `steps.mjs`：对每帧用"亮度阈值穿越 + 线性插值"求亚像素边缘点（无偏，精度 ~0.05px），再最小二乘拟合圆心/半径（Kasa + 一轮粗差剔除），于是能测出**圆心在帧间跳了多少**。
+
+```bash
+node scripts/jitter-lab/run.mjs --mode=live --width=2560 --height=1400 --variant=clean --direction=collapse --out=%TEMP%\j1
+node scripts/jitter-lab/steps.mjs %TEMP%\j1     # 圆心/半径逐帧 + 帧间跳变统计
+node scripts/jitter-lab/fit.mjs   %TEMP%\j1     # 圆心偏移轨迹（Δcx/Δcy 的 σ）
+```
+
+### 证据
+
+收起（暗→亮）、2560×1400、dsf=1、真 GPU、49 帧实时抓帧（23 个相邻帧对）。**圆心本应纹丝不动**（只有半径在缩）：
+
+| 指标 | 现行实现（SVG 蒙版 + 动画 mask-size/position） | 候选修复（见下） |
+|---|---|---|
+| 相邻帧圆心跳变 Δcx | max **1.00px**，σ 0.314；>0.25px **14/23** 帧对，>0.5px 9/23，>0.75px 3/23 | max **0.04px**，σ 0.009；>0.25px **0/23** |
+| 相邻帧圆心跳变 Δcy | max **1.00px**，σ 0.244；>0.25px 7/23，>0.5px 3/23 | max **0.00px**，σ 0.001；>0.25px 0/23 |
+| 拟合半径 | 落在 0.25px 网格上（size 被对齐到 0.5 设备 px） | 连续小数，无对齐 |
+| 圆弧径向 RMS | 0.02–0.04px（圆本身是解析圆） | 0.03–0.05px（同量级） |
+| screencast 帧率 | 42.3 fps | 42.5 fps（无性能代价） |
+
+扩散方向（亮→暗）同样存在：Δcx max 1.00px、σ 0.253、**21/23** 帧对 >0.25px。
+
+**注入 CSS 与渲染位置的对应关系**（同一帧重复截图 4 次结果完全一致 → 渲染对"给定状态"是确定的，抖动来自**状态本身在网格上跳**，不是随机噪声）：
+`mask-position` 的渲染值 ≈ `round(动画插值值)`；`mask-size` 同样被对齐。因此圆心 = `round(pos) + size/2`，其相对真实触发点的偏移 = `-frac(pos)`，随帧变化在 ±0.5px（x/y 独立）内跳，合成后边缘位移可达 1px 级。
+
+**A/B 排除**：去掉 `will-change: mask-size, mask-position` 结果**逐位相同**（不是它）；`z-index: 1` 是收起效果的必需项（去掉后新层完整盖住旧层，圆弧不可见），不参与抖动成因。
+
+### 修复方向（已在实验台验证，未落库）
+
+把**蒙版盒子完全静止**，只让"圆"在盒子内部变化——盒子不动，就没有像素对齐误差：
+
+```css
+@property --ts-radius { syntax: '<length>'; inherits: false; initial-value: 0px; }
+@keyframes ts-radius-shrink { from { --ts-radius: 1986px; } to { --ts-radius: 0px; } }
+::view-transition-old(root) {
+  --ts-cx: 854px; --ts-cy: 294px;
+  mask-image: radial-gradient(circle at var(--ts-cx) var(--ts-cy),
+    #000 calc(var(--ts-radius) - 0.5px), transparent calc(var(--ts-radius) + 0.5px));
+  mask-size: 100% 100%; mask-position: 0 0; mask-repeat: no-repeat; z-index: 1;
+  animation: ts-radius-shrink var(--theme-switch-duration) var(--theme-switch-easing) both;
+}
+```
+
+要点与实测：
+
+| 项 | 结果 |
+|---|---|
+| 抖动 | 圆心 σ 0.343px → **0.008px**；帧间最大 1.00px → **0.04px** |
+| 帧率 | 42.5 fps，与现行实现持平 |
+| 边缘质量 | 1px 渐隐带：径向 RMS 0.04px，与 SVG 抗锯齿同量级。**不能**用硬停（`#000 r, transparent r`）——实测 RMS 劣化到 0.25px（硬停栅格化有明显锯齿） |
+| 兼容性 | `@property` 在 Chrome 85+/Safari 16.4+/Firefox 128+ 均已支持，**覆盖全部支持 View Transition 的版本**（Chrome 111+/Safari 18+/Firefox 144+）；仍是纯 mask、无 clip-path/WAAPI（Safari 约束不变）。**但"VT 伪元素上动画注册自定义属性"未在 Safari 真机验证** |
+| 适用面 | 只解决"圆"类（CIRCLE / CIRCLE_REVERT，CIRCLE_BLUR 可把模糊做成渐变软边）；SQUARE/多边形/四向擦除仍是老路（同一机制，同样有 1px 级抖动），要一起解决需为形状补 `conic-gradient`/多段渐变近似，收益与风险需另评 |
+
+备选（附录四提过的两条仍在）：① 蒙版边缘微羽化（1px 软边即可让 0.5px 抖动不可见，代价是边缘不再锐利）——本质是"掩盖"而非消除；② transform 化蒙版（Safari 兼容性需重新验证，且会缩放蒙版层内容）。
+
+**本附录未提交代码改动**（实验台脚本除外），修复是否落库待定。
+
+**本附录 commit**：
+```
+test(scripts): 新增 scripts/jitter-lab 抖动/闪屏实验台（亚像素几何拟合 + 逐帧抓帧 + 横带检测 + diffdirs 回归）
+docs: 附录五——REVERT 收起抖动定因为蒙版层像素对齐抖动，附验证过的修复方向
+```
+
+---
+
+## 附录六（第三次反馈：收起时"像电视机故障那样闪一下、出现一条横带"，2026-09-13 续）
+
+**反馈（真机，React playground + Chrome，20% 概率）**：`CIRCLE` 看不到，`CIRCLE_REVERT` **收起**时会出现——**像电视机故障，闪一下屏，出现一条横带/错位（撕裂）**，时机无规律。
+
+这一轮症状与附录五的"1px 圆弧抖动"**不是同一个东西**：这是"某一帧画面局部不对"的**撕裂/横带**，属于**合成器/栅格层面**的伪影，不是样式或动画状态丢失（后者会是整屏同色闪一下，而不是一条带）。
+
+### 复现尝试（未能复现，但排除了大量可能）
+
+| 场景 | 次数 | 结果 |
+|---|---|---|
+| 无头 Chrome（headless=new，真 GPU ANGLE/D3D11）+ clean 实验台，收起 | 60+ | 无异常帧 |
+| 无头 + 真 React playground（重建产物）连续切换 | 30（15 次收起） | 无异常帧 |
+| 同上 + 点击间隔随机抖动 ±200ms（避免与 60Hz 锁相）+ CPU 节流 4x | 30 | 无异常帧 |
+| headless=old（旧无头合成路径） | 12 | 无异常帧 |
+| headful Chrome（真实窗口/vsync） | 待补（首轮因 Windows 原生遮挡检测导致窗口不被认为可见、转场被跳过、screencast 0 帧；已加 `--disable-features=CalculateNativeWinOcclusion` 重跑） | — |
+
+每帧指标：全帧平均亮度跳变、|ΔL|>100 的像素数（整块翻转）、行亮度剖面的**横带**离群（用户描述的形状）、孤立像素 ppm、纯色占比。以上均在噪声本底内。
+
+**结论**：这类撕裂需要真实呈现路径（窗口/vsync/栅格截止时间），无头环境不产生"某块瓷砖没跟上就呈现上一帧"的压力，所以测不到。它属于**逐帧重栅格化全屏蒙版的代价**：收起时被蒙版的是**旧快照层且被 `z-index: 1` 顶到最上层**，等于每帧都要重新栅格化/上传一张全屏蒙版贴图，一旦某一行瓷砖没赶上截止时间，那一带呈现的就是上一帧的蒙版位置 → 横带/撕裂；亮暗高对比圆弧把它放大。（`CIRCLE` 走的是"蒙版挂新层、层序默认"，用户反馈干净——这是唯一的结构差异。）
+
+### 已落库的修复（本次已实现 + 回归验证）
+
+把**收起的蒙版从"旧层 + z-index:1"改成"新层 + 反向蒙版（掏洞）"**，层序回到 UA 默认，与 `CIRCLE` 结构完全一致；同时把蒙版盒子**完全静止**（`mask-size: 100% 100%` / `mask-position: 0 0`），只让洞的半径变化（`@property` 注册半径 + `radial-gradient`）——顺带把附录五测到的 0.5px 像素对齐抖动一起消掉。
+
+```css
+@property --ts-radius { syntax: '<length>'; inherits: false; initial-value: 0px; }
+@keyframes shrink { from { --ts-radius: 1986px } to { --ts-radius: 0px } }
+/* 注意：挂 ::view-transition-new(root)，不再需要 z-index */
+::view-transition-new(root) {
+  --ts-cx: 854px; --ts-cy: 294px;
+  mask-image: radial-gradient(circle at var(--ts-cx) var(--ts-cy),
+    transparent calc(var(--ts-radius) - 0.5px), #000 calc(var(--ts-radius) + 0.5px));
+  mask-size: 100% 100%; mask-position: 0 0; mask-repeat: no-repeat;
+  animation: shrink var(--theme-switch-duration) var(--theme-switch-easing) both;
+}
+```
+
+**等价性实测（已落库，改前 vs 改后，同一批 seek 时刻逐像素对比，clean 实验台 2560×1400 @dsf=1）**：
+
+| t(ms) | 平均\|Δ\|(0-255) | 最大\|Δ\| | >2 的像素占比 |
+|---|---|---|---|
+| 0 / 50 / 100 / 750 | **0.000（逐位相同）** | 0 | 0.00% |
+| 150–700（中段） | 0.001–0.068 | 50–236 | 0.00–0.13% |
+
+平均差 ≤0.068/255，差异只出现在圆弧那 1px 抗锯齿边上（两种实现生成边缘的方式略有不同）——**视觉等价**。
+
+**圆心抖动同步消除（同一回归的几何测量）**：
+
+| 指标 | 改前（旧层蒙版 + z-index） | 改后（新层反向蒙版 + 静止盒子） |
+|---|---|---|
+| Δcx | σ **0.329px**（min −0.84 / max +0.31） | σ **0.011px**（min −0.01 / max +0.03） |
+| Δcy | σ **0.180px** | σ **0.001px** |
+
+### 落库改动（本次已实现，不再是"待定"）
+
+| 文件 | 改动 |
+|---|---|
+| `packages/core/src/masks.ts` | 新增 `getCircleRevertHoleGeometry`（洞心 + 起始半径）与 `CircleHoleGeometry`；旧 `getCircleRevertMaskGeometry` 保留为公开 API / 降级路径 |
+| `packages/core/src/styles.ts` | 新增 `HOLE_RADIUS_VAR`；`buildAnimationCSS` 新增可选 `holeGeometry`，命中时输出"静止蒙版盒子 + `@property --theme-switch-radius` 动画 + 新层反向蒙版"（不再输出 `z-index` / `will-change` / `mask-size`·`mask-position` 关键帧） |
+| `packages/core/src/orchestrate.ts` | 收起方向改用 `getCircleRevertHoleGeometry`（扩散方向与其余类型路径不变） |
+| 测试 | 新增 2 个用例（`buildAnimationCSS` 的 hole 分支、`runThemeTransition` 收起注入的 CSS 结构），公开导出面测试同步；**178 tests / tsc / eslint 全绿** |
+| playgrounds/react | 已重建产物（开发服务器请重启以拾取新的 `dist/`） |
+
+**仍需真机复测**：无头环境复现不到横带，所以"改了之后横带是否消失"只能由真机判断（20% → 期望 0%）。若仍出现，说明撕裂与"哪一层被蒙版"无关，而是"逐帧全屏蒙版重栅格"本身，下一步要换掉 mask 路线（transform 化 / `clip-path`，Safari 兼容性重新评估）。另：`@property` 虽然覆盖全部支持 VT 的版本，但"在 VT 伪元素上动画注册自定义属性"**未在 Safari 真机验证**，发布前需补一次 Safari 18+ 复测。
+
+**本附录 commit**：
+```
+fix(core): CIRCLE_REVERT 收起改为"新层反向蒙版（洞）+ 静止蒙版盒子"，消除 z-index 置顶旧层与逐帧蒙版像素对齐抖动
+docs: 附录六——收起横带/撕裂判定为逐帧全屏蒙版重栅格的合成器伪影；记录落库改动与像素级等价性回归
+```
+
+
+
