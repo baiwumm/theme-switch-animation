@@ -36,7 +36,10 @@ export default function RootLayout({
   return (
     // suppressHydrationWarning：next-themes 依 class 方案在首帧前同步改 <html>，属预期不一致
     <html lang="zh-CN" suppressHydrationWarning>
-      <body className="font-sans antialiased">
+      {/* custom_scrollbar：::-webkit-scrollbar 自绘滚动条（中性灰双主题通用）。自绘滚动条属于
+          页面渲染的一部分，会被 View Transitions 快照捕获、跟随蒙版动画；原生滚动条是浏览器
+          UI 层绘制的，不在快照内，主题切换时会瞬间变色（ogimg 同款做法） */}
+      <body className="font-sans custom_scrollbar antialiased">
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
           {children}
         </ThemeProvider>
