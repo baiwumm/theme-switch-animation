@@ -1,4 +1,4 @@
-import { getCircleRevertMaskGeometry, getMaskGeometry, getTriggerCenter } from './masks'
+import { getCircleRevertHoleGeometry, getMaskGeometry, getTriggerCenter } from './masks'
 import type { RectProvider, Size } from './masks'
 import { buildAnimationCSS, injectAnimationStyle, removeAnimationStyle } from './styles'
 import { THEME_ANIMATION_STYLE_ID, ThemeAnimationType, resolveAnimationOptions } from './types'
@@ -123,14 +123,15 @@ export function runThemeTransition(params: RunThemeTransitionParams): RunThemeTr
   const nextIsDark = !hasThemeClass(doc, resolved.darkClassName)
   const isRevert = resolved.animationType === ThemeAnimationType.CIRCLE_REVERT
   const revertDirection = isRevert ? (nextIsDark ? 'expand' : 'collapse') : undefined
-  const geometry =
-    isRevert && revertDirection === 'collapse'
-      ? getCircleRevertMaskGeometry(center, viewport)
-      : getMaskGeometry(resolved.animationType, center, viewport, resolved.blurAmount)
+  // 收起方向：蒙版挂新截图层、掏一个收缩的"洞"（层序与 CIRCLE 一致，不需要给旧层 z-index），
+  // 蒙版盒子静止、只有注册半径在动（详见 §附录六）。
+  const holeGeometry = isRevert && revertDirection === 'collapse' ? getCircleRevertHoleGeometry(center, viewport) : undefined
+  const geometry = getMaskGeometry(resolved.animationType, center, viewport, resolved.blurAmount)
   const css = buildAnimationCSS({
     animationType: resolved.animationType,
     geometry,
     revertDirection,
+    holeGeometry,
     duration: resolved.duration,
     easing: resolved.easing,
   })

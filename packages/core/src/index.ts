@@ -34,6 +34,7 @@ export {
   TRIANGLE_MASK_IMAGE,
   getCircleMaskGeometry,
   getBlurCircleMaskGeometry,
+  getCircleRevertHoleGeometry,
   getCircleRevertMaskGeometry,
   getDiamondMaskGeometry,
   getDirectionalMaskGeometry,
@@ -49,11 +50,12 @@ export {
   isDirectionalAnimationType,
   isShapeAnimationType,
 } from './masks'
-export type { MaskGeometry, Point, RectProvider, Size } from './masks'
+export type { CircleHoleGeometry, MaskGeometry, Point, RectProvider, Size } from './masks'
 
 export {
   DURATION_VAR,
   EASING_VAR,
+  HOLE_RADIUS_VAR,
   buildAnimationCSS,
   getAnimationName,
   injectAnimationStyle,

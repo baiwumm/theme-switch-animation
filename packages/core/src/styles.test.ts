@@ -10,6 +10,7 @@ import {
 import {
   DURATION_VAR,
   EASING_VAR,
+  HOLE_RADIUS_VAR,
   buildAnimationCSS,
   getAnimationName,
   injectAnimationStyle,
@@ -165,6 +166,33 @@ describe('buildAnimationCSS（CIRCLE_REVERT：方向感知）', () => {
       easing: 'ease',
     })
     expect(blockOf(css, '::view-transition-old(root)')).toContain('z-index: 1;')
+  })
+
+  it('传 holeGeometry 时收起改走"新层反向蒙版 + 静止蒙版盒子"（§附录六）', () => {
+    const css = buildAnimationCSS({
+      animationType: ThemeAnimationType.CIRCLE_REVERT,
+      geometry: revertGeometry,
+      holeGeometry: { cx: 120, cy: 60, startRadius: 1602.5 },
+      revertDirection: 'collapse',
+      duration: 400,
+      easing: 'linear',
+    })
+    // 注册属性 + 只动画半径的 keyframes
+    expect(css).toContain('@property --theme-switch-radius {')
+    expect(css).toContain('syntax: "<length>";')
+    expect(css).toContain(`${HOLE_RADIUS_VAR}: 1602.5px;`)
+    expect(css).toContain(`${HOLE_RADIUS_VAR}: 0px;`)
+    // 蒙版挂新层、盒子静止、无 z-index
+    const block = blockOf(css, '::view-transition-new(root)')
+    expect(block).toContain('mask-image: radial-gradient(circle at 120px 60px, transparent calc(var(--theme-switch-radius) - 0.5px), #000 calc(var(--theme-switch-radius) + 0.5px));')
+    expect(block).toContain('mask-size: 100% 100%;')
+    expect(block).toContain('mask-position: 0 0;')
+    expect(css).not.toContain('z-index')
+    expect(css).not.toContain('will-change')
+    // 旧层只出现在重置规则里（不再被蒙版）
+    expect(css.match(/::view-transition-old\(root\)\s*\{/g) ?? []).toHaveLength(0)
+    // 缓存兜底与变量两条动画声明仍在
+    expect(block.match(/animation: theme-switch-circle-revert /g)).toHaveLength(2)
   })
 })
 

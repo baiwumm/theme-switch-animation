@@ -259,10 +259,37 @@ export function getStarMaskGeometry(center: Point, viewport: Size): MaskGeometry
 }
 
 /**
+ * CIRCLE_REVERT 收起方向（切回亮色）的"反向蒙版（洞）"参数：
+ * 蒙版改挂 `::view-transition-new(root)`（层序回到 UA 默认，不再需要 z-index 置顶旧层），
+ * 用"圆内透明、圆外不透明"的洞露出下面的旧主题，视觉上与"旧层圆形蒙版"等价
+ * （见 docs/phase-6-report.md 附录六的逐像素等价性实测）。
+ * 洞的圆心恒在触发点，起始半径 = CIRCLE 终尺寸的一半（保证初始整屏都是旧主题）。
+ */
+export interface CircleHoleGeometry {
+  /** 洞心 x（视口坐标，直接写进 radial-gradient，不做像素对齐） */
+  cx: number
+  /** 洞心 y */
+  cy: number
+  /** 起始半径 px（动画结束收缩到 0） */
+  startRadius: number
+}
+
+export function getCircleRevertHoleGeometry(center: Point, viewport: Size): CircleHoleGeometry {
+  return {
+    cx: roundTo(center.x, 2),
+    cy: roundTo(center.y, 2),
+    startRadius: (getMaxRadiusToCorners(center, viewport) * CIRCLE_SIZE_FACTOR) / 2,
+  }
+}
+
+/**
  * CIRCLE_REVERT 收起方向（切回亮色）的几何：暗色圆从全覆盖收缩到触发点 0。
  * 起始尺寸与 CIRCLE 的终尺寸相同（2.1 × maxRadius，保证初始盖住整个视口），
  * 钉扎方向与 CIRCLE 相反：from 全尺寸居中 → to 触发点 0。
  * 扩散方向（切到暗色）直接复用 getCircleMaskGeometry（暗色圆从 0 长出）。
+ *
+ * 注：V1.6 起收起方向默认走上面的 `getCircleRevertHoleGeometry`（新层反向蒙版）；
+ * 此函数保留为公开 API 与降级路径。
  */
 export function getCircleRevertMaskGeometry(center: Point, viewport: Size): MaskGeometry {
   const side = getMaxRadiusToCorners(center, viewport) * CIRCLE_SIZE_FACTOR

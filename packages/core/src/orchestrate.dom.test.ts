@@ -116,6 +116,33 @@ describe('runThemeTransition 动画路径（jsdom + 模拟 startViewTransition�
     expect(styleNode()!.textContent).toContain('mask-position: 400px 300px;')
   })
 
+  it('REVERT 收起：注入"新层反向蒙版（洞）"CSS——静止蒙版盒子、无 z-index、无 mask-size 关键帧（§附录六）', () => {
+    installFakeViewTransition()
+    vi.spyOn(window, 'innerWidth', 'get').mockReturnValue(800)
+    vi.spyOn(window, 'innerHeight', 'get').mockReturnValue(600)
+    const trigger = { getBoundingClientRect: () => ({ left: 100, top: 50, width: 40, height: 20 }) }
+    // 起始主题为亮色 → toggle 后为暗色？不：hasThemeClass 为 false 时 nextIsDark = true（扩散）。
+    // 要拿到收起，先让 <html> 处于暗色。
+    document.documentElement.classList.add('dark')
+
+    runThemeTransition({
+      domUpdate: () => {},
+      trigger,
+      options: { animationType: ThemeAnimationType.CIRCLE_REVERT },
+    })
+
+    const css = styleNode()!.textContent!
+    expect(css).toContain('@property --theme-switch-radius')
+    expect(css).toContain('transparent calc(var(--theme-switch-radius) - 0.5px), #000 calc(var(--theme-switch-radius) + 0.5px)')
+    expect(css).toContain('mask-size: 100% 100%;')
+    expect(css).toContain('mask-position: 0 0;')
+    expect(css).not.toContain('z-index')
+    // 洞的起始半径 = hypot(680,540) × 2.1 / 2，圆心是触发点中心 (120, 60)
+    expect(css).toContain(`--theme-switch-radius: ${(Math.hypot(680, 540) * 2.1) / 2}px;`)
+    expect(css).toContain('circle at 120px 60px')
+    document.documentElement.classList.remove('dark')
+  })
+
   it('快速连点：新一轮注入替换旧样式，旧一轮的清理定时器不会误删新样式', async () => {
     const { calls } = installFakeViewTransition({ manualFinish: true })
 

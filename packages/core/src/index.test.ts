@@ -34,6 +34,7 @@ describe('core 公开导出', () => {
         'getBlurCircleMaskGeometry',
         'getBlurCircleMaskImage',
         'getCircleMaskGeometry',
+        'getCircleRevertHoleGeometry',
         'getCircleRevertMaskGeometry',
         'getDiamondMaskGeometry',
         'getDirectionalMaskGeometry',
@@ -51,6 +52,7 @@ describe('core 公开导出', () => {
         // styles
         'DURATION_VAR',
         'EASING_VAR',
+        'HOLE_RADIUS_VAR',
         'buildAnimationCSS',
         'getAnimationName',
         'injectAnimationStyle',

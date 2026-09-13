@@ -1,4 +1,4 @@
-import type { MaskGeometry } from './masks'
+import type { CircleHoleGeometry, MaskGeometry } from './masks'
 import { THEME_ANIMATION_DEFAULTS, THEME_ANIMATION_STYLE_ID, ThemeAnimationType } from './types'
 
 /** 时长变量名；用户 duration 写进 `:root`，动画声明只引用变量 */
@@ -6,6 +6,12 @@ export const DURATION_VAR = '--theme-switch-duration'
 
 /** 缓动变量名；用户 easing 原样写进 `:root`，动画声明只引用变量（零字符串拼接） */
 export const EASING_VAR = '--theme-switch-easing'
+
+/**
+ * 收起方向"洞"半径的注册自定义属性名。
+ * 注册后是全局的（`@property` 无法注销），因此加 `--theme-switch-` 前缀避免撞名。
+ */
+export const HOLE_RADIUS_VAR = '--theme-switch-radius'
 
 export function getAnimationName(type: ThemeAnimationType): string {
   return `theme-switch-${type}`
@@ -20,6 +26,51 @@ export interface BuildAnimationCSSParams {
   easing: string
   /** 仅 CIRCLE_REVERT 使用：collapse = 切回亮色，暗色圆收起（挂旧截图层并置顶）；expand = 切到暗色，暗色圆扩散（挂新截图层）。缺省按 collapse */
   revertDirection?: 'collapse' | 'expand'
+  /**
+   * CIRCLE_REVERT 收起方向改用"新层反向蒙版（洞）"时传入；给了它就忽略 geometry，
+   * 生成静止蒙版盒子 + 动画半径的 CSS（见 §附录六）。
+   */
+  holeGeometry?: CircleHoleGeometry
+}
+
+/**
+ * 收起方向的"洞"式 CSS：蒙版挂新截图层（层序与 CIRCLE 完全一致，不需要 z-index），
+ * 蒙版盒子完全静止（`mask-size: 100% 100%` / `mask-position: 0 0`），
+ * 只有注册属性 `--theme-switch-radius` 在动——盒子不动，就不会被合成器的像素对齐推着走。
+ */
+function buildHoleAnimationCSS(hole: CircleHoleGeometry, duration: number, easing: string, name: string): string {
+  const safeDuration = Number.isFinite(duration) && duration >= 0 ? duration : THEME_ANIMATION_DEFAULTS.duration
+  return `:root {
+  ${DURATION_VAR}: ${safeDuration}ms;
+  ${EASING_VAR}: ${easing};
+}
+@property ${HOLE_RADIUS_VAR} {
+  syntax: "<length>";
+  inherits: false;
+  initial-value: 0px;
+}
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation: none;
+  mix-blend-mode: normal;
+}
+@keyframes ${name} {
+  from {
+    ${HOLE_RADIUS_VAR}: ${hole.startRadius}px;
+  }
+  to {
+    ${HOLE_RADIUS_VAR}: 0px;
+  }
+}
+::view-transition-new(root) {
+  mask-image: radial-gradient(circle at ${hole.cx}px ${hole.cy}px, transparent calc(var(${HOLE_RADIUS_VAR}) - 0.5px), #000 calc(var(${HOLE_RADIUS_VAR}) + 0.5px));
+  mask-size: 100% 100%;
+  mask-position: 0 0;
+  mask-repeat: no-repeat;
+  animation: ${name} var(${DURATION_VAR}, ${THEME_ANIMATION_DEFAULTS.duration}ms) ease-in-out both;
+  animation: ${name} var(${DURATION_VAR}, ${THEME_ANIMATION_DEFAULTS.duration}ms) var(${EASING_VAR}, ease-in-out) both;
+}
+`
 }
 
 /**
@@ -33,7 +84,8 @@ export interface BuildAnimationCSSParams {
  * 4. 动画声明写两遍：第一遍硬编码 `ease-in-out` 作为不支持 `var()` 的兜底，
  *    第二遍引用变量，支持 `var()` 的浏览器按后者生效，用户传 `linear()` / `steps()` 直接生效；
  * 5. CIRCLE_REVERT 方向感知（§7）：collapse 挂旧截图层并置顶（z-index: 1，暗色圆收起），
- *    expand 与其余类型一样挂新截图层（暗色圆扩散）。
+ *    expand 与其余类型一样挂新截图层（暗色圆扩散）；传了 `holeGeometry` 时收起方向走
+ *    "新层反向蒙版（洞）+ 静止蒙版盒子"（§附录六），层序与 CIRCLE 一致。
  */
 export function buildAnimationCSS({
   animationType,
@@ -41,8 +93,10 @@ export function buildAnimationCSS({
   duration,
   easing,
   revertDirection,
+  holeGeometry,
 }: BuildAnimationCSSParams): string {
   const name = getAnimationName(animationType)
+  if (holeGeometry) return buildHoleAnimationCSS(holeGeometry, duration, easing, name)
   const safeDuration = Number.isFinite(duration) && duration >= 0 ? duration : THEME_ANIMATION_DEFAULTS.duration
   const onOld = animationType === ThemeAnimationType.CIRCLE_REVERT && revertDirection !== 'expand'
   const selector = onOld ? '::view-transition-old(root)' : '::view-transition-new(root)'
