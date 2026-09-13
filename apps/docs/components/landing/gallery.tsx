@@ -132,7 +132,7 @@ function GalleryCard({
       whileInView={{ opacity: 1, y: 0 }}
       viewport={{ once: true, margin: '-40px' }}
       transition={{ duration: 0.4, delay: (index % 3) * 0.06 }}
-      className="group flex flex-col items-center rounded-3xl border bg-card/80 p-6 shadow-sm backdrop-blur transition-all duration-300 hover:-translate-y-1 hover:shadow-xl hover:shadow-primary/5"
+      className="glass-card group flex flex-col items-center rounded-3xl p-6 transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_16px_48px_rgba(0,0,0,0.12)] dark:hover:shadow-[0_16px_48px_rgba(0,0,0,0.5)]"
     >
       {/* 渐变图标砖 */}
       <div className={`mb-3 flex size-14 items-center justify-center rounded-2xl bg-gradient-to-br ${tile}`}>
@@ -218,7 +218,7 @@ export function GallerySection() {
           </p>
         </div>
 
-        <div className="mx-auto mb-10 flex max-w-3xl flex-col items-center gap-2.5 rounded-3xl border bg-card/50 p-5 backdrop-blur">
+        <div className="glass-card mx-auto mb-10 flex max-w-3xl flex-col items-center gap-2.5 rounded-3xl p-5">
           <PresetRow label="duration" presets={DURATION_PRESETS} value={duration} onChange={(v) => setDuration(v)} />
           <PresetRow label="easing" presets={EASING_PRESETS} value={easing} onChange={(v) => setEasing(v)} />
         </div>

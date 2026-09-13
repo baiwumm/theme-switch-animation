@@ -159,6 +159,30 @@ html {
   }
 }
 
+
+/*
+ * Apple 风格毛玻璃卡片（visionOS / macOS 材质语言）：
+ * 低不透明度渐变底 + 重 backdrop-blur + 饱和提升 + 内侧 1px 高光 + 柔和大阴影。
+ * 页面 fixed 层的 LightRays 与彩色光斑透过玻璃产生真实的磨砂折射。
+ */
+.glass-card {
+  position: relative;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.5), rgba(255, 255, 255, 0.18));
+  -webkit-backdrop-filter: blur(24px) saturate(170%);
+  backdrop-filter: blur(24px) saturate(170%);
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.4),
+    0 8px 32px rgba(0, 0, 0, 0.06);
+}
+.dark .glass-card {
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.09), rgba(255, 255, 255, 0.03));
+  border-color: rgba(255, 255, 255, 0.12);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.08),
+    0 8px 32px rgba(0, 0, 0, 0.35);
+}
+
 .custom_scrollbar::-webkit-scrollbar {
   width: 10px;
   height: 100px;
