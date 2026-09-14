@@ -52,7 +52,8 @@ function useMounted() {
 /**
  * 受控模式 × next-themes（需求 §6.1）：
  * 库不碰 localStorage、不自行改 class；转场回调内调用 onChange 触发 setTheme，
- * 并经 §5.4 协议等待 next-themes 真实写入 <html> class 后再截图。
+ * 并经 §5.4 协议等待 next-themes 真实写入 <html> class 后再截图；
+ * 300ms 未同步到位时跳过动画直切（SKIP_TRANSITION，不播放"旧→旧"空转）。
  */
 function ThemeButton({
   animationType,
@@ -117,7 +118,8 @@ export function ThemeSwitcher() {
       </p>
       <p>
         13 个按钮各自是独立的受控 <code>useThemeAnimation</code> 实例：库不写 localStorage、不改 class，
-        在转场回调内调用 <code>setTheme</code> 并等待 next-themes 写入 class 后截图。中心扩散类动画的起收点是按钮中心，可验证点击位置跟随。
+        在转场回调内调用 <code>setTheme</code> 并等待 next-themes 写入 class 后截图（300ms 未同步则自动直切）。
+        中心扩散类动画的起收点是按钮中心，可验证点击位置跟随。
       </p>
       <div className="presets" role="group" aria-label="duration 预设">
         <span>duration</span>
@@ -152,7 +154,7 @@ export function ThemeSwitcher() {
         验收提示（§9-2）：每次切换蒙版下都应是目标主题截图（不允许“新蒙版展开但底下是旧主题”或白闪）；
         快速连点后 resolvedTheme / isDark / html class 三者应一致。
         DevTools → Rendering → Emulate prefers-reduced-motion 或 CPU 4x/6x throttling + Slow 3G
-        可实测 §5.4 协议：dev 环境下超时兜底会输出 console.warn。
+        可实测 §5.4 协议：dev 环境下超时兜底输出 console.warn，且转场直接跳过（不再播放旧→旧空转动画）。
       </p>
     </main>
   )

@@ -14,11 +14,15 @@ const FAQS = [
   },
   {
     q: '受控模式怎么接入 next-themes？',
-    a: '同时传 isDark 与 onChange 即进入受控模式：库不碰 localStorage、不自行改 class，在转场回调内调用 onChange 并等待外部主题系统真实写入 <html> 后再截图。next-themes 与 @nuxtjs/color-mode 的完整接线示例见 GitHub README。',
+    a: '同时传 isDark 与 onChange 即进入受控模式：库不碰 localStorage、不自行改 class，在转场回调内调用 onChange 并等待外部主题系统真实写入 <html> 后再截图；外部系统 300ms 内未同步到位时自动跳过动画直切（不播放旧→旧空转），状态永远正确。next-themes 与 @nuxtjs/color-mode 的完整接线示例见 GitHub README。',
+  },
+  {
+    q: '同一个页面挂多个切换按钮，状态会同步吗？',
+    a: '会。非受控模式下所有实例的 isDark 以 <html> 暗色类名为事实源镜像（observeThemeClass）：任一按钮切换后其它按钮立即同步，其它标签页的切换也经 storage 事件同步。页面级"全局主题指示器"等场景可直接复用这个导出。',
   },
   {
     q: 'Vue 里受控模式的 isDark 不更新？',
-    a: 'options 必须是响应式来源：用 reactive() 包装并以 watchEffect 同步外部状态。传普通对象字面量会让 isDark 冻结在初始值——这是最常见的接入错误。',
+    a: 'options 必须是响应式来源：用 reactive() 包装并以 watchEffect 同步外部状态。传普通对象字面量会按 setup 时的快照工作（模式判定已改为动态 computed，但仍需响应式来源才能随后续更新走）——这是最常见的接入错误。',
   },
   {
     q: '为什么 STAR 的最终覆盖范围比 magicui 大？',
@@ -26,7 +30,7 @@ const FAQS = [
   },
   {
     q: 'Firefox 下没有动画？',
-    a: 'Firefox 144+ 才支持 View Transitions，且自动化测试矩阵（Playwright）只覆盖 Chromium 与 WebKit——Playwright 自带的 Firefox 内核可能未默认启用。请在真机 Firefox 上手动验证。',
+    a: 'Firefox 144+ 支持完整动画（本库已在 Firefox 155 实测：13 种动画类型全部推进，收起/扩散方向的蒙版半径逐帧插值）。更低版本自动降级为直接切换，状态照常正确。',
   },
 ] as const
 

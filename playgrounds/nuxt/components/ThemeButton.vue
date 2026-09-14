@@ -1,6 +1,6 @@
 <script setup lang="ts">
 // 按钮组件：每个实例持有自己的 useThemeAnimation（动画类型互不影响）。
-// useThemeAnimation / ThemeAnimationType 由本库 nuxt 模块自动导入，无需 import。
+// useThemeAnimation / ThemeAnimationType 等由本库 nuxt 模块自动导入，无需 import。
 const props = defineProps<{
   animationType: ThemeAnimationType
   label: string
@@ -12,7 +12,8 @@ const props = defineProps<{
 const colorMode = useColorMode()
 
 // options 必须是响应式来源（reactive）：受控模式下 isDark 才能随外部状态更新；
-// 传普通对象字面量会让 isDark 冻结在初始值（Phase 4 报告 §3.1）。
+// 普通对象字面量会按 setup 时的快照工作（模式判定本身是动态 computed，但字面量
+// 里的 isDark/onChange 不会随后续更新走）——这是最常见的接入错误。
 // duration / easing 同样经 reactive 承接全局预设，点击时读取当前值。
 const options = reactive({
   animationType: props.animationType,

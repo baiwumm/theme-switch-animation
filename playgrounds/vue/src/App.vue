@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { onMounted, onUnmounted, ref } from 'vue'
 
-import { ThemeAnimationType, useThemeAnimation } from 'theme-switch-animation/vue'
+import { ThemeAnimationType, observeThemeClass, useThemeAnimation } from 'theme-switch-animation/vue'
 
 import ThemeButton from './ThemeButton.vue'
 
@@ -39,20 +39,17 @@ const EASING_PRESETS = [
 const duration = ref(750)
 const easing = ref('ease-in-out')
 
-/** 全局指示器：直接监听 html class，任何实例切换后所有指示器同步 */
+/** 全局指示器：复用库导出的 observeThemeClass——html class 事实源观察器（非受控多实例同步同款机制） */
 const htmlIsDark = ref(false)
-let observer: MutationObserver | undefined
+let stopObserving: (() => void) | undefined
 
 onMounted(() => {
-  const read = () => {
-    htmlIsDark.value = document.documentElement.classList.contains('dark')
-  }
-  read()
-  observer = new MutationObserver(read)
-  observer.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] })
+  stopObserving = observeThemeClass(document, 'dark', (dark) => {
+    htmlIsDark.value = dark
+  })
 })
 
-onUnmounted(() => observer?.disconnect())
+onUnmounted(() => stopObserving?.())
 </script>
 
 <template>
@@ -64,8 +61,9 @@ onUnmounted(() => observer?.disconnect())
       }}</b>
     </p>
     <p>
-      13 个按钮各自是一个独立的 <code>useThemeAnimation</code> 实例（状态以 <code>&lt;html&gt;</code>
-      class 为准，互相不会失步）。中心扩散类动画的起收点都是按钮中心：在不同位置点击可验证跟随效果。
+      13 个按钮各自是一个独立的 <code>useThemeAnimation</code> 实例——非受控模式下所有实例的
+      <code>isDark</code> 以 <code>&lt;html&gt;</code> class 为事实源自动镜像（库内
+      <code>observeThemeClass</code>），其它标签页的切换经 storage 事件同步。中心扩散类动画的起收点都是按钮中心：在不同位置点击可验证跟随效果。
     </p>
     <div class="presets" role="group" aria-label="duration 预设">
       <span>duration</span>
@@ -102,8 +100,7 @@ onUnmounted(() => observer?.disconnect())
     </div>
     <p class="note">
       View Transitions API 支持范围：Chrome / Edge 111+、Safari 18+、Firefox 144+；不支持的浏览器或系统开启
-      “减少动态效果”时自动降级为直接切换（状态仍然正确）。Playwright 的 Firefox 内核可能未启用 View
-      Transitions，Firefox 请用真机手动验证。
+      “减少动态效果”时自动降级为直接切换（状态仍然正确）。
     </p>
   </main>
 </template>

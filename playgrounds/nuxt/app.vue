@@ -1,5 +1,5 @@
 <script setup lang="ts">
-// §9-9：useThemeAnimation / ThemeAnimationType 由本库 nuxt 模块自动导入，无需 import；
+// §9-9：useThemeAnimation / ThemeAnimationType / observeThemeClass 等由本库 nuxt 模块自动导入，无需 import；
 // ThemeButton 由 Nuxt 组件自动导入扫描 components/ 目录
 const colorMode = useColorMode()
 
@@ -37,21 +37,18 @@ const EASING_PRESETS = [
 const duration = ref(750)
 const easing = ref('ease-in-out')
 
-// 全局指示器：直接监听 html class，任何实例切换后同步（受控模式，状态源是 color-mode）
+// 全局指示器：复用库自动导入的 observeThemeClass（受控模式，状态源是 color-mode 写入的 html class）
 const htmlIsDark = ref(false)
-let observer: MutationObserver | undefined
+let stopObserving: (() => void) | undefined
 
 const darkClassName = useRuntimeConfig().public.darkClassName as string
 
 onMounted(() => {
-  const read = () => {
-    htmlIsDark.value = document.documentElement.classList.contains(darkClassName)
-  }
-  read()
-  observer = new MutationObserver(read)
-  observer.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] })
+  stopObserving = observeThemeClass(document, darkClassName, (dark) => {
+    htmlIsDark.value = dark
+  })
 })
-onUnmounted(() => observer?.disconnect())
+onUnmounted(() => stopObserving?.())
 </script>
 
 <template>
@@ -63,7 +60,8 @@ onUnmounted(() => observer?.disconnect())
     </p>
     <p>
       13 个按钮各持有一个受控 <code>useThemeAnimation</code> 实例（自动导入，无 import）；
-      库在转场回调内调用 <code>colorMode.preference = …</code> 并等待 color-mode 写入 class 后截图。
+      库在转场回调内调用 <code>colorMode.preference = …</code> 并等待 color-mode 写入 class 后截图，
+      300ms 未同步到位时自动跳过动画直切（不播放“旧→旧”空转）。
       每个按钮使用自己声明的动画类型（中心扩散类动画的起收点是按钮中心，可验证点击位置跟随）。
     </p>
     <div class="presets" role="group" aria-label="duration 预设">

@@ -1,6 +1,6 @@
 'use client'
 
-import { Layers, PlugZap, ShieldCheck, Sparkles } from 'lucide-react'
+import { Layers, Link2, PlugZap, ShieldCheck, Sparkles } from 'lucide-react'
 import { motion } from 'motion/react'
 
 const FEATURES = [
@@ -21,9 +21,16 @@ const FEATURES = [
   {
     icon: PlugZap,
     title: '受控模式',
-    description: '不独占主题状态：next-themes 与 @nuxtjs/color-mode 用户直接接入，库只负责动画。',
+    description: '不独占主题状态：next-themes 与 @nuxtjs/color-mode 用户直接接入，300ms 未同步自动直切。',
     tags: ['next-themes', '@nuxtjs/color-mode'],
     tile: 'from-emerald-500 to-teal-500',
+  },
+  {
+    icon: Link2,
+    title: '多实例同步',
+    description: '同页多个实例的 isDark 以 html class 为事实源镜像，其它标签页经 storage 事件同步。',
+    tags: ['observeThemeClass', 'finished'],
+    tile: 'from-violet-500 to-purple-500',
   },
   {
     icon: ShieldCheck,
@@ -45,7 +52,7 @@ export function FeaturesSection() {
           <h2 className="text-3xl font-bold tracking-tight md:text-4xl">小而完整的动画层</h2>
           <p className="mt-3 text-muted-foreground">约 95% 代码与框架无关，两个薄适配层覆盖 React 与 Vue 生态。</p>
         </div>
-        <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-5">
           {FEATURES.map((feature, index) => (
             <motion.div
               key={feature.title}

@@ -19,8 +19,9 @@ const FRAMEWORKS = [
 import { ThemeAnimationType, useThemeAnimation } from 'theme-switch-animation/react'
 
 export function ThemeToggle() {
-  // 非受控：库内部管理 localStorage + <html> class
-  const { ref, toggleTheme, isDark } = useThemeAnimation({
+  // 非受控：库管理 localStorage + <html> class
+  // 多实例 / 跨标签页的 isDark 自动同步（以 html class 为事实源）
+  const { ref, toggleTheme, isDark, finished } = useThemeAnimation({
     animationType: ThemeAnimationType.CIRCLE,
     duration: 750,
   })
@@ -28,6 +29,7 @@ export function ThemeToggle() {
   return (
     <button ref={ref} onClick={toggleTheme}>
       {isDark ? '🌙' : '☀️'}
+      {/* finished：本次动画结束 Promise，可 await 做动画期间禁用 */}
     </button>
   )
 }`,
@@ -43,7 +45,8 @@ import { useTheme } from 'next-themes'
 import { ThemeAnimationType, useThemeAnimation } from 'theme-switch-animation/react'
 
 export function ThemeToggle() {
-  // 受控模式 × next-themes（§6.1）：App Router 组件需 'use client'
+  // 受控模式 × next-themes：App Router 组件需 'use client'
+  // 库等待 next-themes 写入 <html> 后再截图；300ms 未同步则跳过动画直切
   const { resolvedTheme, setTheme } = useTheme()
   const { ref, toggleTheme, isDark } = useThemeAnimation({
     animationType: ThemeAnimationType.CIRCLE,
@@ -69,7 +72,8 @@ export function ThemeToggle() {
 import { ThemeAnimationType, useThemeAnimation } from 'theme-switch-animation/vue'
 
 // 非受控模式；转场回调内 await nextTick()，浏览器等 Vue DOM 更新后截图
-const { triggerRef, toggleTheme, isDark } = useThemeAnimation<HTMLButtonElement>({
+// finished 是 shallowRef：每次切换更新 .value，watch / await 它拿最新一轮
+const { triggerRef, toggleTheme, isDark, finished } = useThemeAnimation<HTMLButtonElement>({
   animationType: ThemeAnimationType.CIRCLE,
   duration: 750,
 })
@@ -88,7 +92,9 @@ const { triggerRef, toggleTheme, isDark } = useThemeAnimation<HTMLButtonElement>
     Icon: NuxtIcon,
     iconClass: '',
     install: INSTALL_CMD,
-    code: `// nuxt.config.ts —— 仅注册模块，useThemeAnimation / ThemeAnimationType 自动导入
+    code: `// nuxt.config.ts —— 仅注册模块
+// useThemeAnimation / ThemeAnimationType / SKIP_TRANSITION /
+// observeThemeClass / THEME_STORAGE_KEY 全部自动导入
 export default defineNuxtConfig({
   modules: ['theme-switch-animation/nuxt'],
 })

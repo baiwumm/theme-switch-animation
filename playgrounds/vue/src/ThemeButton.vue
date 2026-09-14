@@ -13,7 +13,9 @@ const props = defineProps<{
 
 // options 用 reactive 承接全局 duration / easing 预设的变化：适配层在点击时读取
 // optionsRef.value 的当前属性，watchEffect 同步 props 后下一次切换立即生效。
-// （Phase 4 报告 §3.1 的同款约定：options 必须是响应式来源，普通对象字面量会快照化。）
+// （Phase 4 报告 §3.1 的同款约定：options 传普通对象字面量会按 setup 时的快照工作——
+// 模式判定本身是动态 computed，但字面量里的字段不会随后续更新走。）
+// 返回值 finished（shallowRef）亦可解构使用：watch / await 它拿最新一轮动画的结束时机。
 const options = reactive({
   animationType: props.animationType,
   duration: props.duration,

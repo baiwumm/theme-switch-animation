@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { ThemeAnimationType, useThemeAnimation } from 'theme-switch-animation/react'
+import { ThemeAnimationType, observeThemeClass, useThemeAnimation } from 'theme-switch-animation/react'
 
 const ANIMATION_TYPES: Array<{
   type: ThemeAnimationType
@@ -33,15 +33,11 @@ const EASING_PRESETS = [
   { value: 'linear', label: 'linear · 匀速' },
 ]
 
-/** 全局指示器：直接监听 html class，任何实例切换后所有指示器同步 */
+/** 全局指示器：复用库导出的 observeThemeClass——html class 事实源观察器（非受控多实例同步同款机制） */
 function useHtmlIsDark(className = 'dark') {
   const [isDark, setIsDark] = useState(() => document.documentElement.classList.contains(className))
   useEffect(() => {
-    const read = () => setIsDark(document.documentElement.classList.contains(className))
-    read()
-    const observer = new MutationObserver(read)
-    observer.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] })
-    return () => observer.disconnect()
+    return observeThemeClass(document, className, setIsDark)
   }, [className])
   return isDark
 }
@@ -84,8 +80,10 @@ export default function App() {
         当前主题（MutationObserver 读取 <code>&lt;html&gt;</code> class）：<b>{isDark ? '🌙 暗色' : '☀️ 亮色'}</b>
       </p>
       <p>
-        13 个按钮各自是一个独立的 <code>useThemeAnimation</code> 实例（状态以 <code>&lt;html&gt;</code> class
-        为准，互相不会失步）。中心扩散类动画（CIRCLE / 形状 / BLUR / REVERT）的起收点都是按钮中心：在不同位置点击可验证跟随效果。
+        13 个按钮各自是一个独立的 <code>useThemeAnimation</code> 实例——非受控模式下所有实例的{' '}
+        <code>isDark</code> 以 <code>&lt;html&gt;</code> class 为事实源自动镜像（库内{' '}
+        <code>observeThemeClass</code>），其它标签页的切换经 storage 事件同步。中心扩散类动画（CIRCLE /
+        形状 / BLUR / REVERT）的起收点都是按钮中心：在不同位置点击可验证跟随效果。
       </p>
       <div className="presets" role="group" aria-label="duration 预设">
         <span>duration</span>

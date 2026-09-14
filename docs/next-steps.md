@@ -9,7 +9,8 @@
 - [x] 1. 跑正式验收 `pnpm test:acceptance`（2026-09-14 完成，7/7 PASS + §9-3 组二补跑 PASS）
 - [x] 2. Safari / 真机验证（2026-09-14 本机可自动化部分已全绿，见 §2；**macOS Safari + iOS 真机**
       无设备，转交用户手动清单（§2 末尾），PC 端矩阵 WebKit/Chrome/Edge/Firefox 四引擎已全绿）
-- [ ] 3. 文档更新（README + docs 站 + playground 文案）
+- [x] 3. 文档更新（2026-09-14 完成：README 重写为完整文档 + docs 站 5 处 + playground 四个全部
+      更新，验证全过；顺带修复 observeThemeClass 四入口导出缺失，详见 §3）
 - [ ] 4. 发布（changeset 已就位）
 
 ---
@@ -177,26 +178,35 @@ iPhone 与 Mac 同一局域网访问 `http://<mac-ip>:5224/`（或直接把 `pla
 9. 系统缩放调到 125%，Chrome / Edge 打开 React playground，连点 CIRCLE_REVERT 收起 ~20 次，
    看有没有"电视故障式闪一下 + 横带"（附录六原症状，期望 0 次）；150% 再来一遍。
 
-## 3. 文档更新（README + docs 站 + playground 文案）
+## 3. 文档更新（README + docs 站 + playground 文案）——2026-09-14 完成
 
-`551bdde` 的用户可见变更还没进任何面向用户的文档：
+`551bdde` 的用户可见变更全部落进面向用户的文档：
 
-- **新 API**：
-  - `useThemeAnimation` 返回值新增 `finished`（React：`result.finished`，最近一次切换
-    动画的结束 Promise，可用于动画期间禁用按钮；Vue：`finished` 是 shallowRef）。
-  - 新公开导出 `SKIP_TRANSITION`（`domUpdate` 返回它 → 立即跳过转场）与
-    `observeThemeClass`（以 `<html>` 暗色类名为事实源的观察器，含 storage 跨标签同步）。
-  - `runThemeTransition` 新增 `nextIsDark` 参数（受控模式下 CIRCLE_REVERT 方向感知用）。
-- **行为变更**：
-  - 非受控模式多实例同步：同页多个实例的 `isDark` 以 html class 为事实源镜像，
-    其它标签页经 storage 事件同步（此前各自为政）。
-  - 受控模式超时：外部系统 300ms 未同步时跳过动画直切（不再播"旧→旧"空转）。
-  - iframe / 多文档场景样式清理按 document 记账。
-- **位置**：`README.md`（目前很简短）、`apps/docs` 文档站、playgrounds 页面说明段落
-  （React / Vue playground 的说明文字写着"互相不会失步"——现在实例间是真实同步
-  `isDark` 了，文案可以顺手更新成更准确的描述；`playgrounds/nuxt` 的
-  `app.vue` / `components/ThemeButton.vue` 同样有页面说明文案要过一遍）。
-- 文档站工具链独立（`apps/docs` 用 Biome，不进根 eslint），改完在那边单独 lint。
+- **README.md**：从 27 行简介重写为完整文档——安装、各框架快速开始（React 非受控含 `finished`
+  用法示例 / Next 受控接线 / Vue 含 shallowRef 说明 / Nuxt 模块注册）、options 与返回值 API 表、
+  底层导出（`runThemeTransition` 的 `SKIP_TRANSITION` / `nextIsDark`、`observeThemeClass`）、
+  行为契约（降级 / 受控 300ms 超时 / iframe / Vue 转场路线）。
+- **apps/docs 文档站**（5 处）：hero 副标题 + site.ts SEO description 补"多实例与跨标签页状态
+  自动同步"；features 新增"多实例同步"卡（5 卡改 `lg:grid-cols-5`），受控卡补 300ms 直切；
+  quick-start 四个框架代码块更新（React 加 `finished`、Next/Nuxt 注释补新语义、Vue 点出
+  shallowRef、Nuxt 列全自动导入清单）；FAQ 受控答案补超时语义、新增"多按钮会同步吗"条目、
+  Firefox 条目更新为已实测（155 全绿，替换掉"Playwright Firefox 未启用"的过时说法）。
+- **playgrounds**（四个全部）：React/Vue 说明段落由"互相不会失步"改为"库内 observeThemeClass
+  自动镜像 + storage 跨标签同步"，两处全局指示器改用库导出的 `observeThemeClass`（原手写
+  MutationObserver）；Next/Nuxt 受控说明与验收提示补 300ms 直切语义；Vue/Nuxt ThemeButton 的
+  "字面量冻结"注释校准为动态 computed 后的准确表述。
+- **验证**：根 eslint / tsc / 196 单测 / pnpm build 全过；docs 站 next build 过；react / vue /
+  next / nuxt 四个 playground build（含 vue-tsc）全过。
+- **存量问题（不属本次范围，另行处理）**：`apps/docs` 的 `pnpm lint`（Biome）自始跑不通——
+  `biome.json` 配了 `vcs.useIgnoreFile: true` 但该目录下没有 ignore 文件（报 internalError），
+  且全站代码风格与 biome 格式化规则（lineWidth 80 等）不符（39 项存量 format/lint）。本次
+  改动经 before/after 诊断 diff 确认零新增。修复需决策（补 .gitignore + 全站 format 或关
+  formatter），留待单独处理。
+- **顺带的实质修复**（`6588d12`）：`observeThemeClass` 此前只在 core 导出，react/vue 包 import
+  了却未转发，Nuxt 用户也拿不到（vue.mjs 复制进 nuxt-runtime 时被 tree-shake 掉）——四入口
+  对齐 + nuxt composables 重导出 + `copy-nuxt-runtime.mjs` 支持多个共享类型块（rollup 新拆出
+  `uncontrolled-<hash>` 块打破了"恰好 1 个"不变量）并滤掉 `.js';` 结尾的 chunk 转发行。
+  `nuxi prepare` 实测自动导入列表已含 `SKIP_TRANSITION` / `observeThemeClass`。
 
 ## 4. 发布
 
