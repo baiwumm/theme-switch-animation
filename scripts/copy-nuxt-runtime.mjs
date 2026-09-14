@@ -32,24 +32,29 @@ for (const file of ['vue.mjs', 'vue.d.ts', 'nuxt.mjs']) {
 }
 
 // vue.d.ts 通过共享 chunk 引用 core 类型；其声明需要内联进自包含产物。
-// 共享块名不固定（rollup 按归属模块命名，曾为 types-<hash>，现为 orchestrate-<hash>），
-// 按"除四个入口 facade 外的 .d.ts"识别，保持"恰好 1 个"的不变量校验。
+// 共享块名与数量不固定（rollup 按归属模块命名，曾为单个 types-<hash>，现按值导出归属
+// 拆成 orchestrate-<hash> / uncontrolled-<hash> 等），按"除四个入口 facade 外的 .d.ts"
+// 识别，排序后全部内联（vue.d.ts 里被引用的顺序无关紧要，声明提升语义下先后不冲突）。
 const entryChunks = new Set(['index.d.ts', 'react.d.ts', 'vue.d.ts', 'nuxt.d.ts'])
-const sharedTypeChunks = readdirSync(dist).filter((f) => f.endsWith('.d.ts') && !entryChunks.has(f))
-if (sharedTypeChunks.length !== 1) {
-  console.error(`[copy-nuxt-runtime] 期望恰好 1 个共享类型块，实际 ${sharedTypeChunks.length} 个：${sharedTypeChunks.join(', ')}`)
+const sharedTypeChunks = readdirSync(dist)
+  .filter((f) => f.endsWith('.d.ts') && !entryChunks.has(f))
+  .sort()
+if (sharedTypeChunks.length < 1) {
+  console.error('[copy-nuxt-runtime] 没有共享类型块，构建产物异常')
   process.exit(1)
 }
 
 rmSync(runtimeDir, { recursive: true, force: true })
 mkdirSync(composablesDir, { recursive: true })
 
-/** 把 tsup 产物转成自包含声明：去掉 import / 合并 export 语句，给顶层声明加 export */
+/** 把 tsup 产物转成自包含声明：去掉 import 与 chunk 转发语句，给顶层声明加 export。
+ * 转发行有两种结尾——`};`（合并导出）与 `.js';`（chunk 转发，如 `export { o as x } from './chunk.js'`），
+ * 声明已从 chunk 内联，两种都必须滤掉，否则留下指向未发布文件的悬空引用 */
 function toSelfContainedDeclarations(text) {
   return text
     .split('\n')
     .filter((line) => !/^import .* from ['"].*['"];?$/.test(line))
-    .filter((line) => !/^export \{.*\};$/.test(line))
+    .filter((line) => !/^export \{.*\}(?: from ['"].*['"])?;?$/.test(line))
     .map((line) =>
       /^(declare const|declare function|type |interface )/.test(line) ? `export ${line}` : line,
     )
@@ -61,8 +66,7 @@ const declarations = [
   '// 自动生成（scripts/copy-nuxt-runtime.mjs）——请勿手改',
   "import type { Ref } from 'vue'",
   '',
-  toSelfContainedDeclarations(readFileSync(join(dist, sharedTypeChunks[0]), 'utf8')),
-  '',
+  ...sharedTypeChunks.flatMap((f) => [toSelfContainedDeclarations(readFileSync(join(dist, f), 'utf8')), '']),
   toSelfContainedDeclarations(readFileSync(join(dist, 'vue.d.ts'), 'utf8')),
   '',
 ].join('\n')

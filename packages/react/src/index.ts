@@ -25,7 +25,7 @@ import type {
 
 // 先 import 再 export（而非 `export … from`）：dts 打包时 core 的类型才会被内联进 react.d.ts，
 // 而不是留下一个指向私有 workspace 包的引用。
-export { SKIP_TRANSITION, THEME_STORAGE_KEY, ThemeAnimationType }
+export { SKIP_TRANSITION, THEME_STORAGE_KEY, ThemeAnimationType, observeThemeClass }
 export type { DirectionalAnimationType, ResolvedAnimationOptions, ThemeAnimationOptions }
 
 export type UseThemeAnimationOptions = ThemeAnimationOptions
