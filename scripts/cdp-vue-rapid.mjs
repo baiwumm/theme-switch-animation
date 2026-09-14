@@ -6,6 +6,7 @@
  *
  * 前置：`playgrounds/vue` 下 `pnpm build` 后 `npx vite preview --port 5224`；
  * 无头 Chromium 以 `--remote-debugging-port=19222` 启动。或运行 `pnpm test:acceptance`。
+ * 按钮数量从 DOM 读取（Phase 6 起为 13 种动画类型矩阵，新增类型无需改本脚本）。
  */
 import { CDP_PORT, connectPage, sleep } from './cdp-lib.mjs'
 
@@ -31,21 +32,23 @@ await ws.send('Runtime.enable')
 await ws.send('Page.navigate', { url: PAGE_URL })
 await sleep(5000)
 
-const mounted = await ws.send('Runtime.evaluate', {
+const countProbe = await ws.send('Runtime.evaluate', {
   expression: `document.querySelectorAll('.switch-button').length`,
   returnByValue: true,
 })
-if (mounted.result.result.value !== 5) {
-  console.error(`FAIL: 按钮数量异常（${mounted.result.result.value}），页面未正常挂载`)
+const buttonCount = countProbe.result.result.value
+if (!buttonCount) {
+  console.error(`FAIL: .switch-button 数量为 ${buttonCount}，页面未正常挂载`)
   ws.close()
   process.exit(1)
 }
+console.log(`页面挂载 ✓（.switch-button × ${buttonCount}）`)
 
 async function burstClicks(rate) {
-  // 3 秒内 10 连击：间隔 = rate（300ms 基准，压到 150ms 加严）
+  // 3 秒内 10 连击：间隔 = rate（300ms 基准，压到 150ms 加严），轮流点击全部实例
   for (let i = 0; i < 10; i++) {
     await ws.send('Runtime.evaluate', {
-      expression: `document.querySelectorAll('.switch-button')[${i % 5}].click()`,
+      expression: `document.querySelectorAll('.switch-button')[${i % buttonCount}].click()`,
       returnByValue: true,
     })
     await sleep(rate)

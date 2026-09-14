@@ -37,12 +37,13 @@ const MIME = {
 }
 
 function parseArgs(argv) {
-  const args = { patch: [] }
+  const args = { patch: [], chromeArg: [] }
   for (const raw of argv) {
     const m = /^--([^=]+)(?:=(.*))?$/.exec(raw)
     if (!m) continue
     const [, key, value] = m
     if (key === 'patch') args.patch.push(value)
+    else if (key === 'chrome-arg') args.chromeArg.push(value)
     else args[key] = value === undefined ? true : value
   }
   return args
@@ -79,7 +80,7 @@ function findChrome() {
   return found
 }
 
-async function launchChrome({ cdpPort, userDataDir, gpu, headless = 'new' }) {
+async function launchChrome({ cdpPort, userDataDir, gpu, headless = 'new', extraArgs = [] }) {
   const args = [
     `--remote-debugging-port=${cdpPort}`,
     `--user-data-dir=${userDataDir}`,
@@ -92,6 +93,9 @@ async function launchChrome({ cdpPort, userDataDir, gpu, headless = 'new' }) {
     '--force-color-profile=srgb',
     '--window-size=1280,800',
     '--hide-crash-restore-bubble',
+    // 透传参数（--chrome-arg=...，可重复）：例如有头模式下用
+    // --force-device-scale-factor=1.25 复刻 Windows 125% 缩放的真实呈现路径
+    ...extraArgs,
     'about:blank',
   ]
   if (headless !== 'off') args.unshift(`--headless=${headless}`)
@@ -258,7 +262,7 @@ async function main() {
 
   const server = await startServer(appPort, args.root ? resolve(String(args.root)) : ROOT)
   const userDataDir = await mkdtemp(join(tmpdir(), 'jitter-lab-'))
-  const chrome = await launchChrome({ cdpPort, userDataDir, gpu, headless: String(args.headless ?? 'new') })
+  const chrome = await launchChrome({ cdpPort, userDataDir, gpu, headless: String(args.headless ?? 'new'), extraArgs: args.chromeArg })
   const { send, onEvent, close } = await connectPage(cdpPort)
 
   try {
@@ -277,6 +281,14 @@ async function main() {
     for (let i = 0; i < 60; i++) {
       if (await evaluate(send, `window.__ready === true || document.readyState === 'complete'`).catch(() => false)) break
       await sleep(250)
+    }
+    // 站点模式：readyState 在 about:blank 上就已是 complete，不足以判断真实 app 就绪，
+    // 轮询到触发按钮真正挂载为止（Vue / React playground 产物是运行时挂载的）
+    if (args.click) {
+      for (let i = 0; i < 40; i++) {
+        if (await evaluate(send, `document.querySelectorAll(${JSON.stringify(args.click)}).length > 0`).catch(() => false)) break
+        await sleep(250)
+      }
     }
 
     const glInfo = await evaluate(

@@ -11,3 +11,6 @@ next-env.d.ts
 *.tsbuildinfo
 .workbuddy/
 out/
+
+# verify-engine/verify-firefox-video 运行时报告输出（--keep 或失败时落盘）
+scripts/.verify-engine-out/
