@@ -23,3 +23,7 @@
 - 样式注入 / 清理只匹配 `<style>` 节点（固定 id 与页面元素撞名时不误删）；转场样式身份判定改用节点引用。
 - `startViewTransition` 同步抛错时回滚已注入样式，`domUpdate` 仍按降级语义执行一次，错误原样冒泡。
 - 修正 `CIRCLE_BLUR` 的注释漂移（模糊蒙版只挂新截图层，旧层完整垫底）。
+
+**打包**
+
+- peerDependencies 补 **`react-dom: ">=18"`**（optional，与 `react` 同级）：`theme-switch-animation/react` 在转场回调内经 `react-dom` 的 `flushSync` 同步渲染，此前只声明了 `react`，pnpm 严格隔离（`node-linker=isolated` + `hoist=false`）等布局下子路径可能解析不到 `react-dom`。npm / yarn 与 pnpm 默认布局不受影响。
