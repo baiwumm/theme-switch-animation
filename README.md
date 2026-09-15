@@ -72,7 +72,7 @@ const { triggerRef, toggleTheme, isDark, finished } = useThemeAnimation<HTMLButt
 </script>
 
 <template>
-  <button :ref="triggerRef" @click="toggleTheme">{{ isDark ? '🌙' : '☀️' }}</button>
+  <button ref="triggerRef" @click="toggleTheme">{{ isDark ? '🌙' : '☀️' }}</button>
 </template>
 ```
 
