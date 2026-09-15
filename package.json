@@ -1,6 +1,6 @@
 {
   "name": "theme-switch-animation",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "description": "Theme switch animation library built on the View Transitions API. Works with React 18+, Vue 3+, Next.js and Nuxt 3+.",
   "type": "module",
   "packageManager": "pnpm@11.24.0",
