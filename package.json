@@ -72,6 +72,14 @@
     "nuxt"
   ],
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/baiwumm/theme-switch-animation.git"
+  },
+  "homepage": "https://theme-switch-animation.baiwumm.com",
+  "bugs": {
+    "url": "https://github.com/baiwumm/theme-switch-animation/issues"
+  },
   "devDependencies": {
     "@changesets/cli": "^3.0.2",
     "@eslint/js": "^10.0.1",
