@@ -1,23 +1,36 @@
-# theme-switch-animation
+# 🌗 theme-switch-animation
 
-基于浏览器 View Transitions API 的主题切换动画库：切换 light / dark 主题时，新主题以指定形状（圆形扩散 / 四向擦除 / 多边形）"揭开"覆盖旧主题，而不是生硬跳变。
+[![npm version](https://img.shields.io/npm/v/theme-switch-animation.svg)](https://www.npmjs.com/package/theme-switch-animation)
+[![npm downloads](https://img.shields.io/npm/dm/theme-switch-animation.svg)](https://www.npmjs.com/package/theme-switch-animation)
+[![minzipped size](https://img.shields.io/bundlephobia/minzip/theme-switch-animation.svg)](https://bundlephobia.com/package/theme-switch-animation)
+[![node](https://img.shields.io/node/v/theme-switch-animation.svg)](https://www.npmjs.com/package/theme-switch-animation)
+[![CI](https://github.com/baiwumm/theme-switch-animation/actions/workflows/ci.yml/badge.svg)](https://github.com/baiwumm/theme-switch-animation/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](./LICENSE)
 
-- 跨框架：React 18+、Vue 3+、Next.js（App Router）、Nuxt 3+
-- 13 种动画类型：圆形扩散 / 收起 / 模糊（`CIRCLE` / `CIRCLE_REVERT` / `CIRCLE_BLUR`）、四向擦除（`LTR` / `RTL` / `TTB` / `BTT`）、形状扩散（`SQUARE` / `DIAMOND` / `RECTANGLE` / `HEXAGON` / `TRIANGLE` / `STAR`）
-- 受控模式：不独占主题状态管理，`next-themes`、`@nuxtjs/color-mode` 用户可直接接入
-- 非受控多实例同步：同页多个实例的 `isDark` 以 `<html>` 暗色类名为事实源镜像，其它标签页经 storage 事件同步
-- 不支持 View Transitions 或 `prefers-reduced-motion: reduce` 时自动降级为直接切换（状态永远正确）
+✨ 基于浏览器 View Transitions API 的主题切换动画库：切换 light / dark 主题时，新主题以指定形状（圆形扩散 / 四向擦除 / 多边形）"揭开"覆盖旧主题，而不是生硬跳变。
 
-## 安装
+## 📸 预览
+
+![theme-switch-animation 文档站首页](./assets/screen.jpg)
+
+## ✨ 特性
+
+- 🔀 **跨框架**：React 18+、Vue 3+、Next.js（App Router）、Nuxt 3+
+- 🎨 **13 种动画类型**：圆形扩散 / 收起 / 模糊（`CIRCLE` / `CIRCLE_REVERT` / `CIRCLE_BLUR`）、四向擦除（`LTR` / `RTL` / `TTB` / `BTT`）、形状扩散（`SQUARE` / `DIAMOND` / `RECTANGLE` / `HEXAGON` / `TRIANGLE` / `STAR`）
+- 🔌 **受控模式**：不独占主题状态管理，`next-themes`、`@nuxtjs/color-mode` 用户可直接接入
+- 🔄 **非受控多实例同步**：同页多个实例的 `isDark` 以 `<html>` 暗色类名为事实源镜像，其它标签页经 storage 事件同步
+- 🛟 **自动降级**：不支持 View Transitions 或 `prefers-reduced-motion: reduce` 时自动降级为直接切换（状态永远正确）
+
+## 📦 安装
 
 ```bash
 pnpm add theme-switch-animation
 # React / Vue / Next.js 从主入口导入；Nuxt 3+ 走模块（自动导入，无需 import）
 ```
 
-## 快速开始
+## 🚀 快速开始
 
-### React / Next.js（App Router 组件加 `'use client'`）
+### ⚛️ React / Next.js（App Router 组件加 `'use client'`）
 
 ```tsx
 import { useState } from 'react'
@@ -61,7 +74,7 @@ const { ref, toggleTheme } = useThemeAnimation({
 })
 ```
 
-### Vue 3
+### 💚 Vue 3
 
 ```vue
 <script setup lang="ts">
@@ -78,7 +91,7 @@ const { triggerRef, toggleTheme, isDark, finished } = useThemeAnimation<HTMLButt
 
 受控模式下 options 需传**响应式来源**（`reactive()` 包装并以 `watchEffect` 同步外部状态）；传普通对象字面量会按 setup 时的快照工作。模式判定是动态的（computed）——先按非受控使用、后补上 `isDark` + `onChange` 转受控时，切换路径与返回值都会随最新模式走。
 
-### Nuxt 3+
+### 💚 Nuxt 3+
 
 ```ts
 // nuxt.config.ts
@@ -89,7 +102,7 @@ export default defineNuxtConfig({
 
 `useThemeAnimation` / `ThemeAnimationType` / `SKIP_TRANSITION` / `observeThemeClass` / `THEME_STORAGE_KEY` 全部自动导入，无需 import。
 
-## API
+## 🧩 API
 
 ### `useThemeAnimation(options)`
 
@@ -119,13 +132,13 @@ export default defineNuxtConfig({
 - `supportsViewTransition()` / `prefersReducedMotion()` / `shouldSkipTransition()`：降级判定。
 - 蒙版几何与样式构建（`getMaskGeometry` / `buildAnimationCSS` 等）亦从主入口公开导出，自定义动画 / SSR 预注入等场景可用。
 
-## 行为契约
+## ✅ 行为契约
 
 - **降级**：不支持 View Transitions（Safari < 18、Firefox < 144 等）、`prefers-reduced-motion: reduce`、SSR 渲染阶段——均直接切换，状态照常正确。
 - **受控超时**：外部系统 300ms 内未把 DOM 同步到位时跳过动画直切，不播放"旧→旧"的空转动画；超时结算前会复查一次目标状态。
 - **iframe / 多文档**：转场样式清理按 document 记账，互不干扰。
 - **Vue 转场路线**：`startViewTransition` 回调内 `await nextTick()`，截图前 DOM 已更新。
 
-## License
+## 📄 License
 
 [MIT](./LICENSE)
