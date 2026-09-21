@@ -272,8 +272,9 @@ iPhone 与 Mac 同一局域网访问 `http://<mac-ip>:5224/`（或直接把 `pla
         `--theme-switch-reveal` 在 VT 伪元素上逐帧插值（机制同 CIRCLE_REVERT 收起，WebKit 路线见 §2 A）。
       - 软边观感判读：方块/叶片软边 = 尺寸 × `BLINDS_FEATHER_RATIO`(0.28) 封顶 20px，QR_GRID 格距
         `QR_GRID_CELL_PX` = 64 → 约 18px。真机若觉得方块偏糊，调低该比例（一处常量，三类型共用）。
-- [ ] 5. 文档站部署与出图：画廊已变（12 张卡、三张带 direction 行），`assets/screen.jpg` 需重新截图，
-      `apps/docs` 重新 `next build` + `wrangler deploy`。
+- [ ] 5. 文档站上线：画廊卡片与 hero 文案已变（12 张卡、三张带 direction 行、BLINDS 带叶宽行），
+      需 push 触发自动部署。README 首页截图 `assets/screen.jpg` 已重出（`8fa1beb`，1910×911 亮色，
+      hero 文案改为「12 种形状 / 试玩 12 种动画」）。
 - [ ] 6. 发布 0.2.0：`pnpm changeset version` → `pnpm build && pnpm lint && pnpm typecheck && pnpm test`
       → `pnpm exec changeset publish` → 推 commit 与 tag。破坏性变更在 0.x 阶段按 changesets 语义仍落
       minor，CHANGELOG 需保留"移除四向类型 + 迁移写法"的叙述（现 changeset 正文已含）。
