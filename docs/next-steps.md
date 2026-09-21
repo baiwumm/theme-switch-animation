@@ -1,4 +1,4 @@
-# 发布前待办（2026-09-14 记录）
+# 发布前待办（2026-09-14 记录 · 2026-09-21 更新进度）
 
 背景：`551bdde` 提交了转场可靠性修复与状态同步增强（单测 178 → 196 全绿，typecheck / lint / build
 全过）。手动浏览器实测覆盖了 React / Vue / Next 三个 playground；**Nuxt playground 本轮未手动
@@ -6,12 +6,20 @@
 （cdp-nuxt93 / cdp-nuxt-animtypes），所以待办 1 对 Nuxt 尤其重要。本文档记录发布前剩余事项，
 按优先级排序，做完一项勾一项。
 
+> 2026-09-21 更新：0.1.0 已发布（待办 1–4 全部完成，见下），待办 2 的真机手动清单仍需你的设备。
+> 本轮 v0.2（`direction` 选项 + BLINDS / SCAN / QR_GRID 三类型 + 移除四向类型，破坏性）的剩余事项
+> 集中在 §5。
+
 - [x] 1. 跑正式验收 `pnpm test:acceptance`（2026-09-14 完成，7/7 PASS + §9-3 组二补跑 PASS）
 - [x] 2. Safari / 真机验证（2026-09-14 本机可自动化部分已全绿，见 §2；**macOS Safari + iOS 真机**
-      无设备，转交用户手动清单（§2 末尾），PC 端矩阵 WebKit/Chrome/Edge/Firefox 四引擎已全绿）
+      无设备，转交用户手动清单（§2 末尾），PC 端矩阵 WebKit/Chrome/Edge/Firefox 四引擎已全绿；
+      **手动清单本身仍未执行**，且 v0.2 新增项见 §5）
 - [x] 3. 文档更新（2026-09-14 完成：README 重写为完整文档 + docs 站 5 处 + playground 四个全部
       更新，验证全过；顺带修复 observeThemeClass 四入口导出缺失，详见 §3）
-- [ ] 4. 发布（changeset 已就位）
+- [x] 4. 发布（2026-09-15 完成：`changeset version` → `changeset publish`，npm 上 `0.1.0`
+      发布于 2026-09-15T01:55:56Z，tag `theme-switch-animation@0.1.0` 已在远端，`main` 与
+      `origin/main` 同步；步骤清单与发布记录见 `docs/release-0.1.0-smoke-report.md` 附录 B——
+      该报告第 7 步"给本项打勾"当时漏做，本次补上）
 
 ---
 
@@ -70,7 +78,8 @@ docs 里多处标注"需真机验证"的事项，无头环境（dpr=1、桌面�
 - **Windows 分数缩放（125% / 150%）真机**：历史 hairline 抖动问题
   （docs/phase-6-report.md 附录二/附录六），无头 dpr=1 复现不了。收起方向已改为
   "蒙版盒子静止、只有注册半径在动"来规避合成器像素对齐，确认实际观感。
-- **iOS Safari**：13 种动画类型顺带过一遍。
+- **iOS Safari**：12 种动画类型顺带过一遍（v0.2 起含 BLINDS / SCAN / QR_GRID，重点看 `QR_GRID` 的
+  `mask-composite: intersect` 是否命中，见 §5-4）。
 
 ### 2026-09-14 本机自动化验证结果（Windows 11，双 1080p @100%，RTX 5060；无 Safari / iOS 设备）
 
@@ -163,7 +172,8 @@ iPhone 与 Mac 同一局域网访问 `http://<mac-ip>:5224/`（或直接把 `pla
 **macOS Safari 18+（重点）**
 1. 点 CIRCLE_REVERT 两次：切到暗色应是暗色圆从按钮**扩散**；切回亮色应是暗色圆**收起进按钮**，
    全程平滑约 750ms。失败形态：瞬间切换（`@property` 失效）或前半段不动、50% 处一跳（属性未注册、离散插值）。
-2. 13 个按钮各点一次：每个都有自己的形状/方向动画，没有"全部播同一个圆"。
+2. 12 个按钮各点一次：每个都有自己的形状/方向动画，没有"全部播同一个圆"（v0.2 起按钮矩阵由 13
+   改为 12，新增 BLINDS / SCAN / QR_GRID 三卡，见 §5 补测项）。
 3. 3 秒内在不同按钮上连点 10 次：结束后 `<html>` class、按钮文案（🌙/☀️）、`localStorage['theme-switch-animation']`
    三者一致；Web Inspector 控制台无红色报错、无 unhandled rejection。
 4. 切 duration 1000ms + easing linear 再点一次 CIRCLE_REVERT 收起：确认 `var()` 缓动生效（匀速，非先慢后快）。
@@ -215,3 +225,60 @@ iPhone 与 Mac 同一局域网访问 `http://<mac-ip>:5224/`（或直接把 `pla
 - 流程（见 `.changeset/README.md`）：`pnpm changeset version` → `pnpm build` →
   `changeset publish`。只有根包 `theme-switch-animation` 会发布。
 - 前置：1–3 完成后再走。
+- **2026-09-15 已按此流程发布 0.1.0**（步骤与结果见 `docs/release-0.1.0-smoke-report.md` 附录 B）。
+
+## 5. v0.2 待办（2026-09-21 记录）
+
+变更范围：新增 `direction` / `slatWidth` 选项与 `BLINDS` / `SCAN` / `QR_GRID` 三种属性驱动类型；
+**破坏性**移除 `ThemeAnimationType.LTR / RTL / TTB / BTT` 与 `DirectionalAnimationType`、
+`BAR_MASK_IMAGE` / `BAR_START_PX` / `getDirectionalMaskGeometry` / `isDirectionalAnimationType`。
+需求文档 v1.6（`docs/requirements.md` §10）与 README「从 0.1.x 升级（0.2.0 破坏性变更）」已记录迁移写法。
+
+- [x] 1. 开发与文档同步（2026-09-21）：core（types / masks / styles / orchestrate）+ react / vue /
+      nuxt 四入口导出 `ThemeAnimationDirection`；文档站画廊删四向卡、三卡各带独立 direction 选择、
+      BLINDS 卡带叶宽档位（32 / 72 / 128px）；四个 playground 同步类型清单与 direction / slatWidth
+      选择（触发按钮外裹 `.switch-card`，控件与触发按钮同级）；
+      README 新增「动画类型」表与升级节；需求文档 v1.6；changeset `.changeset/three-scan-types.md`。
+      验证：根 eslint / tsc / 208 单测 / `pnpm build` / docs `next build` 与四个 playground typecheck 全过。
+- [x] 2. 无头 Chrome CDP 实测 12 组（3 类型 × 4 方向）：注入 CSS 的渐变角、平铺尺寸、
+      `@supports (mask-composite: intersect)` 逐组核对 + 截图确认观感（QR_GRID 方块格子生长、
+      BLINDS 竖叶揭开、SCAN 硬边带前缘光束）；方向按钮不嵌套、点方向不触发切换、三卡状态互不影响。
+- [x] 3. **重跑 `pnpm test:acceptance`（2026-09-21 完成，7/7 PASS）**：无头 Chrome 19222，三个
+      playground 生产构建 + preview（Next `next start` 5222 / Vue `vite preview --host 127.0.0.1` 5224 /
+      Nuxt `.output/server/index.mjs`）。
+
+      | 脚本 | 结果 |
+      | --- | --- |
+      | cdp-consistency（§9-2） | PASS：10 连点 + 同帧 5 连击后存储 / html class / 按钮文案三者一致 |
+      | cdp-darkcycle | PASS：dark 存储挂载与受控切回正向断言 |
+      | cdp-hydration（§9-5） | PASS：dark / light 两种初始存储下 hydration 错误 0 |
+      | cdp-measure（§9-7） | PASS：四档位各 25 样本，>300ms 超时 0 次，p95 16 / 20 / 24 / 24ms（max 25ms） |
+      | cdp-vue-rapid（§9-1） | PASS：挂载断言读到 **12 个** `.switch-button`（矩阵已从 13 变 12），基线 + CPU 4x 两轮报错 0、状态一致 |
+      | cdp-nuxt93（§9-3 组一） | PASS：preference / html class / 按钮文案三源一致翻转 |
+      | cdp-nuxt-animtypes（§9 类型独立性） | PASS：**12 个按钮**各自播放声明的类型，含 `theme-switch-blinds` / `-scan` / `-qr-grid` 三个新 keyframes 名 |
+
+      实操注意：本机 3000 端口被另一项目的 Nest 服务占用（`better-admin/apps/nest`），Nuxt 产物改用
+      `PORT=3100 node .output/server/index.mjs` 起、以 `ACCEPTANCE_NUXT_URL=http://127.0.0.1:3100/`
+      跑这两个脚本（脚本本身支持该环境变量，无需改代码）；`pnpm test:acceptance` 的串联命令走默认
+      3000，端口被占时会误测到别的进程，需注意。
+      另：本轮 BLINDS 卡的 `slatWidth` 档位已实测生效——32 / 72 / 128px 分别产出
+      `mask-size: 32px 100%` / `72px 100%` / `128px 100%`，软边 `-9 / -20 / -20px`
+      （`min(20, round(w × 0.28))` 公式一致），文档站画廊两行控件无横向溢出。
+- [ ] 4. **真机补测（与 §2 手动清单一起做）**：
+      - **`QR_GRID` 的 `@supports (mask-composite: intersect)` 在 macOS Safari / iOS Safari / Firefox
+        上是否命中**——命中才是方块格子，未命中落推进轴单层条带（观感同百叶窗，状态仍正确）。这是本轮
+        唯一"引擎差异会改变观感"的点；jsdom 单测只断言了 CSS 生成分支，覆盖不到真实引擎的命中情况。
+      - `BLINDS` / `SCAN` / `QR_GRID` 各切一次四个 direction，确认注册属性
+        `--theme-switch-reveal` 在 VT 伪元素上逐帧插值（机制同 CIRCLE_REVERT 收起，WebKit 路线见 §2 A）。
+      - 软边观感判读：方块/叶片软边 = 尺寸 × `BLINDS_FEATHER_RATIO`(0.28) 封顶 20px，QR_GRID 格距
+        `QR_GRID_CELL_PX` = 64 → 约 18px。真机若觉得方块偏糊，调低该比例（一处常量，三类型共用）。
+- [ ] 5. 文档站部署与出图：画廊已变（12 张卡、三张带 direction 行），`assets/screen.jpg` 需重新截图，
+      `apps/docs` 重新 `next build` + `wrangler deploy`。
+- [ ] 6. 发布 0.2.0：`pnpm changeset version` → `pnpm build && pnpm lint && pnpm typecheck && pnpm test`
+      → `pnpm exec changeset publish` → 推 commit 与 tag。破坏性变更在 0.x 阶段按 changesets 语义仍落
+      minor，CHANGELOG 需保留"移除四向类型 + 迁移写法"的叙述（现 changeset 正文已含）。
+
+**长期遗留（不属本轮）**：Playwright e2e 矩阵（需求 §9-8 只跑 Chromium + WebKit）至今未正式建立，
+引擎覆盖靠 `scripts/verify-engine.mjs` 手动跑，Playwright 仍是 `%TEMP%/pw-webkit` 的临时安装；
+`apps/docs` 的 Biome（`biome.json` 配了 `vcs.useIgnoreFile` 但目录内无 ignore 文件）自始跑不通，
+见 §3 存量问题。

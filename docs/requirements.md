@@ -2,8 +2,8 @@
 
 | 项目 | 内容 |
 |---|---|
-| 版本 | v1.5（动画类型扩展，见 §10 修订记录） |
-| 日期 | 2026-09-12 |
+| 版本 | v1.6（新增三种属性驱动类型 + `direction` 选项，移除四向类型，见 §10 修订记录） |
+| 日期 | 2026-09-21 |
 | 状态 | 已评审通过，待开发指令 |
 | 仓库 / npm 包名 | `theme-switch-animation`（npm 已确认未注册） |
 | 支持框架 | React 18+、Vue 3+、Next.js（App Router）、Nuxt 3+ |
@@ -15,7 +15,7 @@
 做一个**主题切换动画库**：用户点击按钮切换 light / dark 主题时，新主题以指定形状"揭开"覆盖旧主题，而不是生硬跳变。定位参考 `react-theme-switch-animation`（React-only），差异点：
 
 1. **跨框架**：同时支持 React、Vue、Next.js、Nuxt.js（参考库仅 React）。
-2. **自定义图案**：13 种动画类型（`CIRCLE` / `CIRCLE_REVERT` / `CIRCLE_BLUR` / `LTR` / `RTL` / `TTB` / `BTT` / `SQUARE` / `DIAMOND` / `RECTANGLE` / `HEXAGON` / `TRIANGLE` / `STAR`，形状观感对齐 magicui 的 animated-theme-toggler，技术路线仅用 mask），后续可扩展。
+2. **自定义图案**：12 种动画类型（`CIRCLE` / `CIRCLE_REVERT` / `CIRCLE_BLUR` / `SQUARE` / `DIAMOND` / `RECTANGLE` / `HEXAGON` / `TRIANGLE` / `STAR` / `BLINDS` / `SCAN` / `QR_GRID`，形状观感对齐 magicui 的 animated-theme-toggler，技术路线仅用 mask；`BLINDS` / `SCAN` / `QR_GRID` 由 `direction` 选项控制四方向，v1.6），后续可扩展。
 3. **受控模式**：不独占主题状态管理，`next-themes`、`@nuxtjs/color-mode` 用户可直接接入复用动画能力。
 
 ## 2. 可行性评估（调研结论复述）
@@ -42,7 +42,7 @@ theme-switch-animation/                  # 仓库名 = 包名
 │   ├── core/                           # 私有包（不发布），框架无关核心
 │   │   └── src/
 │   │       ├── types.ts                # ThemeAnimationType、options、返回值类型
-│   │       ├── masks.ts                # 5 种蒙版生成（circle SVG、四向 gradient 条）
+│   │       ├── masks.ts                # 蒙版几何与规格（circle/多边形 SVG、BLINDS/SCAN/QR_GRID 渐变模板）
 │   │       ├── styles.ts               # 样式注入/清理，CSS 变量化声明
 │   │       ├── orchestrate.ts          # startViewTransition 编排 + 降级判断
 │   │       ├── uncontrolled.ts         # 非受控状态：localStorage 读写 + darkClassName 同步（v1.3 补，React / Vue 适配层共用）
@@ -106,15 +106,17 @@ theme-switch-animation/                  # 仓库名 = 包名
 
 | 参数 | 类型 | 默认值 | 说明 |
 |---|---|---|---|
-| `animationType` | `ThemeAnimationType` | `CIRCLE` | 动画类型：`CIRCLE` \| `CIRCLE_REVERT` \| `CIRCLE_BLUR` \| `LTR` \| `RTL` \| `TTB` \| `BTT` \| `SQUARE` \| `DIAMOND` \| `RECTANGLE` \| `HEXAGON` \| `TRIANGLE` \| `STAR` |
+| `animationType` | `ThemeAnimationType` | `CIRCLE` | 动画类型：`CIRCLE` \| `CIRCLE_REVERT` \| `CIRCLE_BLUR` \| `SQUARE` \| `DIAMOND` \| `RECTANGLE` \| `HEXAGON` \| `TRIANGLE` \| `STAR` \| `BLINDS` \| `SCAN` \| `QR_GRID`（v1.6：四向类型 `LTR`/`RTL`/`TTB`/`BTT` 移除，改由 `direction` 承接） |
 | `darkClassName` | `string` | `'dark'` | 暗色类名，可配置 |
 | `duration` | `number` | `750` | 动画时长 ms |
 | `easing` | `string` | `'ease-in-out'` | 任意合法 CSS timing-function |
 | `blurAmount` | `number` | `2` | 模糊强度（仅 `CIRCLE_BLUR` 生效，v1.5 新增） |
+| `direction` | `ThemeAnimationDirection` | `'ltr'` | 扫描方向（仅 `BLINDS` / `SCAN` / `QR_GRID` 生效，其余类型忽略；非法值回落默认，v1.6 新增） |
+| `slatWidth` | `number` | `72` | 百叶窗叶片宽度 px，合法区间 `[16, 200]`（仅 `BLINDS` 生效；越界静默回落默认，v1.6 新增） |
 | `isDark` | `boolean` | 可选 | 受控模式：外部暗色状态 |
 | `onChange` | `(next: boolean) => void` | 可选 | 受控模式：状态变更回调 |
 
-前四项两种模式共用；`blurAmount` 亦为普通动画参数（非法值回落默认）；后两项仅受控模式出现。
+前四项两种模式共用；`blurAmount` / `direction` / `slatWidth` 亦为普通动画参数（非法值回落默认）；后两项仅受控模式出现。
 
 ### 5.2 模式判定
 
@@ -193,9 +195,10 @@ export default defineNuxtConfig({
 <script setup lang="ts">
 const colorMode = useColorMode()   // @nuxtjs/color-mode
 
-// useThemeAnimation / ThemeAnimationType 由本库 nuxt 模块自动导入，无需 import
+// useThemeAnimation / ThemeAnimationType / ThemeAnimationDirection 由本库 nuxt 模块自动导入，无需 import
 const { triggerRef, toggleTheme, isDark } = useThemeAnimation({
-  animationType: ThemeAnimationType.LTR,
+  animationType: ThemeAnimationType.SCAN,
+  direction: ThemeAnimationDirection.TTB,   // 仅 BLINDS / SCAN / QR_GRID 消费
   // @nuxtjs/color-mode 的暗色类名取决于 classPrefix 和 classSuffix 配置，
   // 默认两者都是空串，所以是 dark。如果你的项目配置了 classSuffix: '-mode'，
   // 请把 darkClassName 改成 'dark-mode'。
@@ -235,7 +238,7 @@ export default defineNuxtModule({
 ```ts
 // packages/nuxt/src/runtime/composables/index.ts
 export { useThemeAnimation } from '@theme-switch-animation/vue'   // vue 适配层的 composable
-export { ThemeAnimationType } from '@theme-switch-animation/core'
+export { ThemeAnimationType, ThemeAnimationDirection } from '@theme-switch-animation/core'
 export type { ThemeAnimationOptions, ... } from '@theme-switch-animation/core'
 ```
 
@@ -247,7 +250,10 @@ export type { ThemeAnimationOptions, ... } from '@theme-switch-animation/core'
 - **形状家族（v1.5：SQUARE / DIAMOND / RECTANGLE / HEXAGON / TRIANGLE / STAR）**：与 CIRCLE 同构（SVG data-URI 多边形蒙版从触发点 0 长到终尺寸），形状观感对齐 magicui（六边形/三角形/星形顶点朝上、星形内顶点半径比 0.42）。终尺寸按各形状**内切半径盖住视口最远角**计算：SQUARE/RECTANGLE 用轴对齐半边界 × 1.05；DIAMOND/HEXAGON 用 `√2 × 1.05 × maxRadius` 外接圆；TRIANGLE 外接圆 `2.2 × maxRadius`（内切半径 1.1×）；STAR 外接圆 `2.5 × maxRadius`（内凹谷半径 0.42 × 2.5 = 1.05×）——**有意大于 magicui**：它的星形凹谷盖不住视口角落（clip-path 随转场组销毁所以它可接受），本库 mask 在样式移除前持续生效（fill both），必须保证完全覆盖。RECTANGLE 贴合视口宽高比（实心矩形蒙版 `preserveAspectRatio="none"`）。
 - **CIRCLE_REVERT（v1.5，桌面真机反馈两轮后定稿）**：**方向感知的暗色圆**——切到暗色：暗色圆从点击点**扩散**（复用 CIRCLE 几何，蒙版挂新截图层）；切回亮色：暗色圆**收起**进点击点（蒙版挂旧截图层并置顶 `z-index: 1`，从全覆盖收缩到 0）。方向由 core 在转场前读取 `<html>` 类名推导（toggle 后必为取反），来回切换自然产生一次扩散、一次收起；无点击奇偶等隐藏状态。仍纯 mask 实现，Safari 约束不变。**单次点击内"收起 → 扩散"两段不可行**：收起结束时屏幕已是新主题，紧随的扩散圆与背景重合不可见（transform 整页缩放与双层蒙版两种实现试错后，与需求方确认本方案）。
 - **CIRCLE_BLUR（v1.5，桌面真机反馈后修正）**：`feGaussianBlur` **烘焙进 SVG data-URI 蒙版本身**（非 CSS filter，Safari 兼容性同其余类型）；模糊蒙版**只挂新截图层**，旧截图层完整垫底——蒙版外是旧主题，直到模糊圆扫过（若两层同蒙版，透明区露出的是已翻转的实时页面，主题会瞬间全变）。强度由 `blurAmount`（默认 2，×1.2 得 stdDeviation）控制；终尺寸 `max(4 × (长边+200), 2.5 × maxRadius)` 封顶 8000px 防超大屏 GPU 纹理过大。技术参考 `useBlurCircleTheme`（next-daily-hot；其 old 层的 maskScale 动画无 mask-image，实为无效代码，勿照抄"双层同蒙版"的误读）。
-- **LTR / RTL / TTB / BTT**：`linear-gradient(white, white)` 实心条蒙版，起始 4px 细条，`mask-position` 钉在对应边（LTR `0% 0%`、RTL `100% 0%`、TTB `0% 0%`、BTT `0% 100%`），蒙版条沿对应方向从起始边缘生长到 `100% 100%`（keyframes 只改 `mask-size`，被钉住的边由百分比 `mask-position` 固定不动）。
+- **BLINDS / SCAN / QR_GRID（v1.6，属性驱动揭开）**：仓库首批"注册属性驱动"的常规类型，与 CIRCLE_REVERT 收起方向的洞式蒙版同一机制——`@property --theme-switch-reveal`（`REVEAL_VAR`，`syntax: "<length>"`、`inherits: false`）注册后，蒙版盒子完全静止、keyframes 只动该属性，引用它的 `mask-image` 渐变逐帧重新解析（`mask-image` 本身不可动画）。三者均**无触发点、不消费 `ref` 中心**；旧截图层完整垫底、蒙版挂新层。
+- **BLINDS**：叶片宽 `slatWidth`（默认 72）的条带平铺（`mask-repeat: repeat`），每根叶片的不透明段从 `-feather` 长到 `slatWidth`；软边 `feather = min(20, round(slatWidth × 0.28))`（`BLINDS_FEATHER_RATIO` / `BLINDS_MAX_FEATHER_PX`），超出叶片边界的部分被平铺裁掉，形成相邻叶片硬边相接的百叶窗观感。`direction` 决定渐变角与平铺轴（LTR/RTL 竖条沿 x、TTB/BTT 横条沿 y）。
+- **SCAN**：单层满铺（`no-repeat`），实心段之后跟一条 12px、α=0.4 的前缘光束 + 4px 渐隐尾（`SCAN_BAND_WIDTH_PX` / `SCAN_BAND_ALPHA` / `SCAN_FADE_WIDTH_PX`）；`to = 推进轴全长 + 光束总宽`，保证末帧实心段盖满视口、光束整体扫出画面（覆盖余量同 CIRCLE 的哲学）。
+- **QR_GRID**：百叶窗的二维版——"列约束 ∩ 行约束"两条渐变以 `mask-composite: intersect` 求交，交集即每格一个方块（格距 `QR_GRID_CELL_PX` = 64，软边比例同 BLINDS）；推进轴层从格子起始边生长、垂直轴层从格子中心对称生长，`direction` 决定锚定方位（LTR 左上 / RTL 右上 / TTB 顶边中点 / BTT 底边中点）。双层交集写在 `@supports (mask-composite: intersect)` 内，不支持的引擎落回基线的推进轴单层条带（观感同百叶窗），状态始终正确；**不写 `-webkit-mask-composite`**——仅支持旧语法的引擎落入基线即可，避免新旧两套 composite 关键字的级联歧义。
 - **Safari 兼容**：只用 mask 动画，不碰 view-transition 伪元素上的 clip-path 和 WAAPI；`will-change: mask-size, mask-position`。
 - **duration / easing 变量化注入**：注入的临时 `<style>` 中动画声明一律写
   `animation: <name> var(--theme-switch-duration, 750ms) var(--theme-switch-easing, ease-in-out) both;`
@@ -277,10 +283,21 @@ export type { ThemeAnimationOptions, ... } from '@theme-switch-animation/core'
 7. **受控协议超时压力测试**（v1.1 修订 #1、v1.2 微调 #2）：在 Chrome DevTools 中开启 CPU 4x/6x throttling + Slow 3G 网络节流，实测 next-themes / color-mode 的 300ms 超时触发频率；若频繁触发，按 §5.4 备选方案改混合模式（库回调内直接改 class + 同步通知外部状态），并重测。
 8. **Playwright e2e 矩阵**（v1.1 修订 #5）：**只跑 Chromium 和 WebKit**。理由：Playwright 的 WebKit 引擎与 Safari 存在差异；Firefox 的 View Transitions 自 144 才支持，Playwright 自带的 Firefox 版本可能未默认启用。Firefox 用**真机手动测试**，暂时跳过，并在文档（README + 文档站）注明。
 9. **Nuxt 自动导入完整性**（v1.1 修订 #2 新增）：全新 Nuxt 项目仅加 `modules: ['theme-switch-animation/nuxt']`，`useThemeAnimation`、`ThemeAnimationType` 及所有类型**无需 import 即可使用且有完整类型提示**（`nuxt prepare` 通过、TS 无报错）。
-10. **单测**：mask 几何（四角最大距离、终尺寸、四向起始位置/尺寸）全覆盖；TS strict 通过。
+10. **单测**：mask 几何（四角最大距离、终尺寸）与 v1.6 的属性驱动规格（BLINDS / SCAN / QR_GRID 的起止值、渐变角、平铺尺寸、`@supports` 双层与降级基线）全覆盖；TS strict 通过。
 11. **发布清单**：`npm pack` 内容 = dist（含 nuxt-runtime 目录）+ LICENSE + README；四个子路径（`.` / `./react` / `./vue` / `./nuxt`）exports 均可解析。
 
 ## 10. 修订记录
+
+### v1.6（2026-09-21）
+
+需求方两点意见：四向类型并入 `direction`；`QR_GRID` 的观感应是"方块格子"而非二维码图案。
+
+1. **动画类型 13 → 12 种，四向类型并入 `direction` 选项（§1 / §5.1 / §7）——破坏性**：移除 `ThemeAnimationType.LTR` / `RTL` / `TTB` / `BTT` 四个类型值与 `DirectionalAnimationType` 类型、`BAR_MASK_IMAGE` / `BAR_START_PX` / `getDirectionalMaskGeometry` / `isDirectionalAnimationType` 四个导出；新增 `direction` 选项（`ThemeAnimationDirection` 常量 + 同名类型，默认 `'ltr'`，非法值静默回落）。四向扫开能力由 `SCAN` + `direction` 承接，观感差异仅前缘 12px 半透明光束带。迁移写法见 README「从 0.1.x 升级」。
+2. **新增三种属性驱动类型（§7）**：`BLINDS`（配套新增 `slatWidth` 选项，合法区间 `[16, 200]`、默认 72，越界静默回落）、`SCAN`、`QR_GRID`（方块格子，格距常量 `QR_GRID_CELL_PX` = 64）。三者为仓库首批"注册属性驱动"的常规类型（机制同 CIRCLE_REVERT 收起方向的洞式蒙版），均无触发点、不消费 `ref` 中心。
+3. **`QR_GRID` 观感定稿（需求方第二轮反馈）**：初版按二维码图案思路实现，与预期不符；改为"列约束 ∩ 行约束"双层渐变 `mask-composite: intersect` 求交出逐格方块，`@supports` 门控 + 推进轴单层条带降级（降级后观感同百叶窗，状态始终正确）。
+4. **`direction` 定为通用选项而非某类型专属**：命名取 `direction` 而非 `scanDirection`，后续新增类型可复用；它与 `ThemeAnimationType` 同样是"常量对象 + 同名类型"双含义，Nuxt 侧 `addTypeTemplate` 需一并补全局类型别名（§6.3），四个入口（`.` / `./react` / `./vue` / `./nuxt`）同步导出。
+5. **验收范围调整（§9-8 / §9-10）**：Playwright 矩阵与真机视觉验收的类型清单改为 12 种；新增三类型的 4 方向 × 3 = 12 组注入 CSS（渐变角、平铺尺寸、`mask-composite`）与逐帧观感已在无头 Chrome CDP 逐组核对 + 截图。**Safari / iOS 真机需重点覆盖 `QR_GRID` 的 `mask-composite: intersect` 支持面**——不支持时落条带降级，功能与状态不受影响，但观感与百叶窗无差别。
+6. **文档同步**：README 新增「动画类型」一览表与「从 0.1.x 升级（破坏性变更）」节；文档站画廊删四向卡、BLINDS / SCAN / QR_GRID 三卡各带**独立**的 direction 选择（卡片级状态，互不影响），BLINDS 卡另带叶宽档位选择（32 / 72 / 128px），features / hero / FAQ / `site.ts` 的"13 种"表述改为 12 种；四个 playground 同步类型清单与 direction / slatWidth 选择（触发按钮外裹 `.switch-card`，方向按钮与触发按钮同级以避免嵌套 button）。
 
 ### v1.5（2026-09-12）
 
@@ -320,4 +337,4 @@ export type { ThemeAnimationOptions, ... } from '@theme-switch-animation/core'
 
 ---
 
-**等待开发指令。当前状态：环境已验证（Node 24.15 / pnpm 11.24 / git 2.53），npm 包名已确认可注册，尚未创建任何代码。**
+**当前状态（2026-09-21）**：0.1.0 已发布（npm + tag `theme-switch-animation@0.1.0`），本文档随实现推进到 v1.6。v0.2（`direction` 选项 + BLINDS / SCAN / QR_GRID 三类型，含四向类型移除的破坏性变更）开发与文档已同步、无头 Chrome 实测通过，剩余真机验证与发版事项见 `docs/next-steps.md` §5。

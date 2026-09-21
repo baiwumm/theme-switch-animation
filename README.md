@@ -7,7 +7,7 @@
 [![CI](https://github.com/baiwumm/theme-switch-animation/actions/workflows/ci.yml/badge.svg)](https://github.com/baiwumm/theme-switch-animation/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](./LICENSE)
 
-✨ 基于浏览器 View Transitions API 的主题切换动画库：切换 light / dark 主题时，新主题以指定形状（圆形扩散 / 四向擦除 / 多边形）"揭开"覆盖旧主题，而不是生硬跳变。
+✨ 基于浏览器 View Transitions API 的主题切换动画库：切换 light / dark 主题时，新主题以指定形状（圆形扩散 / 多边形 / 百叶窗 / 方块格子）"揭开"覆盖旧主题，而不是生硬跳变。
 
 ## 📸 预览
 
@@ -16,7 +16,7 @@
 ## ✨ 特性
 
 - 🔀 **跨框架**：React 18+、Vue 3+、Next.js（App Router）、Nuxt 3+
-- 🎨 **13 种动画类型**：圆形扩散 / 收起 / 模糊（`CIRCLE` / `CIRCLE_REVERT` / `CIRCLE_BLUR`）、四向擦除（`LTR` / `RTL` / `TTB` / `BTT`）、形状扩散（`SQUARE` / `DIAMOND` / `RECTANGLE` / `HEXAGON` / `TRIANGLE` / `STAR`）
+- 🎨 **12 种动画类型**：圆形扩散 / 收起 / 模糊（`CIRCLE` / `CIRCLE_REVERT` / `CIRCLE_BLUR`）、形状扩散（`SQUARE` / `DIAMOND` / `RECTANGLE` / `HEXAGON` / `TRIANGLE` / `STAR`）、条带与格子（`BLINDS` / `SCAN` / `QR_GRID`，由 `direction` 控制四方向）
 - 🔌 **受控模式**：不独占主题状态管理，`next-themes`、`@nuxtjs/color-mode` 用户可直接接入
 - 🔄 **非受控多实例同步**：同页多个实例的 `isDark` 以 `<html>` 暗色类名为事实源镜像，其它标签页经 storage 事件同步
 - 🛟 **自动降级**：不支持 View Transitions 或 `prefers-reduced-motion: reduce` 时自动降级为直接切换（状态永远正确）
@@ -102,16 +102,32 @@ export default defineNuxtConfig({
 
 `useThemeAnimation` / `ThemeAnimationType` / `SKIP_TRANSITION` / `observeThemeClass` / `THEME_STORAGE_KEY` 全部自动导入，无需 import。
 
+## 🎬 动画类型
+
+| 类型 | 观感 | 起收点 | 消费的选项 |
+| --- | --- | --- | --- |
+| `CIRCLE` | 圆形扩散 | 触发元素中心 | — |
+| `CIRCLE_REVERT` | 切暗扩散、切亮收起进触发点 | 触发元素中心 | — |
+| `CIRCLE_BLUR` | 边缘高斯模糊的圆形扩散 | 触发元素中心 | `blurAmount` |
+| `SQUARE` / `DIAMOND` / `RECTANGLE` / `HEXAGON` / `TRIANGLE` / `STAR` | 多边形从触发点扩散（朝向见文档站画廊） | 触发元素中心 | — |
+| `BLINDS` | 百叶窗：叶片逐条揭开 | 无触发点（全屏按叶宽平铺） | `direction` / `slatWidth` |
+| `SCAN` | 硬边扫开 + 前缘半透明光束 | 无触发点（沿推进轴） | `direction` |
+| `QR_GRID` | 方块格子逐格生长、末帧融为整屏 | 无触发点（按 `direction` 锚定方位） | `direction` |
+
+`BLINDS` / `SCAN` / `QR_GRID` 是属性驱动蒙版（`@property --theme-switch-reveal` + 静止蒙版盒子），不读触发元素几何——`ref` 只用于点击与状态。`QR_GRID` 的"列 ∩ 行"双层蒙版交集经 `@supports (mask-composite: intersect)` 门控，不支持的引擎自动降级为推进轴单层条带（观感同百叶窗），状态始终正确。
+
 ## 🧩 API
 
 ### `useThemeAnimation(options)`
 
 | 选项 | 类型 | 说明 |
 | --- | --- | --- |
-| `animationType` | `ThemeAnimationType` | 13 种动画类型之一，默认 `CIRCLE` |
+| `animationType` | `ThemeAnimationType` | 12 种动画类型之一，默认 `CIRCLE` |
 | `duration` | `number` | 动画时长 ms，默认 750 |
 | `easing` | `string` | 任意合法 CSS timing-function，默认 `ease-in-out` |
 | `blurAmount` | `number` | 模糊蒙版强度系数，默认 2。仅 `CIRCLE_BLUR` 生效 |
+| `direction` | `'ltr' \| 'rtl' \| 'ttb' \| 'btt'` | 扫描方向，默认 `ltr`。仅 `BLINDS` / `SCAN` / `QR_GRID` 生效（可用 `ThemeAnimationDirection` 常量），非法值静默回落默认 |
+| `slatWidth` | `number` | 百叶窗叶片宽度 px，范围 `[16, 200]`，默认 72。仅 `BLINDS` 生效，越界静默回落默认 |
 | `darkClassName` | `string` | 暗色类名，默认 `dark`（与 next-themes / color-mode 默认一致） |
 | `isDark` + `onChange` | — | 同时提供 → 受控模式；都缺省 → 非受控（localStorage key 为 `THEME_STORAGE_KEY` 常量 `theme-switch-animation`，`observeThemeClass` 可带自定义 key）；只提供其一 → 契约不完整（开发环境 console.warn，按非受控工作） |
 
@@ -131,6 +147,31 @@ export default defineNuxtConfig({
 - `waitForThemeSync(params)`：受控模式的等待协议（300ms 超时，`THEME_SYNC_TIMEOUT_MS`）。
 - `supportsViewTransition()` / `prefersReducedMotion()` / `shouldSkipTransition()`：降级判定。
 - 蒙版几何与样式构建（`getMaskGeometry` / `buildAnimationCSS` 等）亦从主入口公开导出，自定义动画 / SSR 预注入等场景可用。
+
+## ⚠️ 从 0.1.x 升级（0.2.0 破坏性变更）
+
+0.2.0 把"四个方向"从**动画类型**降级为**普通选项** `direction`，并新增三种条带 / 格子类动画。
+
+**移除**：`ThemeAnimationType.LTR / RTL / TTB / BTT` 四个类型值，`DirectionalAnimationType` 类型，以及 `BAR_MASK_IMAGE` / `BAR_START_PX` / `getDirectionalMaskGeometry` / `isDirectionalAnimationType` 四个导出。
+
+**迁移**：原四向擦除 → `SCAN` + `direction`。
+
+```tsx
+// 0.1.x
+useThemeAnimation({ animationType: ThemeAnimationType.RTL })
+
+// 0.2.0
+useThemeAnimation({
+  animationType: ThemeAnimationType.SCAN,
+  direction: ThemeAnimationDirection.RTL, // 或字符串 'rtl'
+})
+```
+
+观感差异只有一处：`SCAN` 的揭开前缘多了一条 12px 半透明光束带（带宽与透明度是导出常量 `SCAN_BAND_WIDTH_PX` / `SCAN_BAND_ALPHA`，未开放为选项）。除此之外逐帧扫开效果与原四向类型一致。
+
+**新增**：`BLINDS`（`slatWidth` 控叶宽 16–200px，默认 72）、`SCAN`、`QR_GRID`（方块格子，格距 `QR_GRID_CELL_PX` = 64）三种类型；`direction` / `slatWidth` 两个选项；`ThemeAnimationDirection` 常量与同名类型（`.` / `./react` / `./vue` / `./nuxt` 四个入口均可用，Nuxt 侧自动导入含同名类型别名）。
+
+`direction` 对未消费它的类型（`CIRCLE` 家族与形状家族）静默无效，这些类型的行为与 0.1.x 完全一致。
 
 ## ✅ 行为契约
 
