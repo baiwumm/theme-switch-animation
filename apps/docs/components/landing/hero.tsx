@@ -71,7 +71,7 @@ export function HeroSection() {
               className="mb-4 justify-center text-4xl font-bold tracking-tight text-balance md:text-6xl lg:text-7xl"
             />
             <TextGenerateEffect
-              words="主题切换动画库：新主题以 13 种形状揭开旧主题，而不是生硬跳变。支持 React / Vue / Next.js / Nuxt；受控模式无缝接入 next-themes / @nuxtjs/color-mode，多实例与跨标签页状态自动同步。"
+              words="主题切换动画库：新主题以 12 种形状揭开旧主题，而不是生硬跳变。支持 React / Vue / Next.js / Nuxt；受控模式无缝接入 next-themes / @nuxtjs/color-mode，多实例与跨标签页状态自动同步。"
               className="mx-auto max-w-2xl leading-relaxed text-pretty text-muted-foreground md:text-lg"
               duration={0.5}
             />
@@ -89,7 +89,7 @@ export function HeroSection() {
                 href="#gallery"
                 className="inline-flex h-10 items-center justify-center rounded-xl bg-primary px-6 text-sm font-medium text-primary-foreground shadow transition-colors hover:bg-primary/90"
               >
-                在下方试玩 13 种动画
+                在下方试玩 12 种动画
               </a>
               <a
                 href={REPO_URL}

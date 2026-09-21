@@ -7,7 +7,24 @@ const props = defineProps<{
   hint: string
   duration: number
   easing: string
+  /** 消费 direction 的类型才传入；卡片下方的方向按钮初始选中项 */
+  initialDirection?: ThemeAnimationDirection
+  /** 仅 BLINDS：卡片下方的叶宽按钮初始值（px） */
+  initialSlatWidth?: number
 }>()
+
+const DIRECTION_OPTIONS = [
+  ThemeAnimationDirection.LTR,
+  ThemeAnimationDirection.RTL,
+  ThemeAnimationDirection.TTB,
+  ThemeAnimationDirection.BTT,
+] as const
+
+const SLAT_OPTIONS = [32, 72, 128] as const
+
+/** 方向：每张卡片独立持有，互不影响 */
+const direction = ref<ThemeAnimationDirection>(props.initialDirection ?? ThemeAnimationDirection.LTR)
+const slatWidth = ref(props.initialSlatWidth ?? 72)
 
 const colorMode = useColorMode()
 
@@ -20,6 +37,8 @@ const options = reactive({
   darkClassName: 'dark',
   duration: props.duration,
   easing: props.easing,
+  direction: direction.value,
+  slatWidth: slatWidth.value,
   isDark: false,
   onChange: (next: boolean) => {
     colorMode.preference = next ? 'dark' : 'light'
@@ -31,6 +50,8 @@ watchEffect(() => {
   options.isDark = colorMode.value === 'dark'
   options.duration = props.duration
   options.easing = props.easing
+  options.direction = direction.value
+  options.slatWidth = slatWidth.value
 })
 
 const { triggerRef, toggleTheme, isDark } = useThemeAnimation<HTMLButtonElement>(options)
@@ -42,9 +63,35 @@ const setTrigger = (el: unknown) => {
 </script>
 
 <template>
-  <button :ref="setTrigger" class="switch-button" :data-animation-type="animationType" @click="toggleTheme">
-    <strong>{{ props.label }}</strong>
-    <span class="hint">{{ props.hint }}</span>
-    <span class="state">{{ isDark ? '🌙 切到亮色' : '☀️ 切到暗色' }}</span>
-  </button>
+  <div class="switch-card">
+    <button :ref="setTrigger" class="switch-button" :data-animation-type="animationType" @click="toggleTheme">
+      <strong>{{ props.label }}</strong>
+      <span class="hint">{{ props.hint }}</span>
+      <span class="state">{{ isDark ? '🌙 切到亮色' : '☀️ 切到暗色' }}</span>
+    </button>
+    <div v-if="initialDirection" class="directions" :aria-label="`${label} direction`" role="group">
+      <span>direction</span>
+      <button
+        v-for="d in DIRECTION_OPTIONS"
+        :key="d"
+        type="button"
+        :class="['chip', 'chip-sm', { active: direction === d }]"
+        @click="direction = d"
+      >
+        {{ d.toUpperCase() }}
+      </button>
+    </div>
+    <div v-if="initialSlatWidth" class="slats" :aria-label="`${label} slatWidth`" role="group">
+      <span>slatWidth</span>
+      <button
+        v-for="s in SLAT_OPTIONS"
+        :key="s"
+        type="button"
+        :class="['chip', 'chip-sm', { active: slatWidth === s }]"
+        @click="slatWidth = s"
+      >
+        {{ s }}px
+      </button>
+    </div>
+  </div>
 </template>

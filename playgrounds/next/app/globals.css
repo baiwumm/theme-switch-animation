@@ -102,6 +102,38 @@ code {
   font-weight: 600;
 }
 
+/* 卡片容器：触发按钮 + 该类型专属的 direction 选择行（每张卡片状态独立，互不影响） */
+.switch-card {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.switch-card .switch-button {
+  flex: 1;
+}
+
+.directions,
+.slats {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  padding: 0 4px;
+}
+
+.directions > span,
+.slats > span {
+  opacity: 0.65;
+  font-size: 12px;
+  margin-right: 2px;
+}
+
+.chip-sm {
+  padding: 2px 9px;
+  font-size: 12px;
+}
+
 .switch-button {
   display: flex;
   flex-direction: column;

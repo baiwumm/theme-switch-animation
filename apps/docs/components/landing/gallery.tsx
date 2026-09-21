@@ -4,7 +4,7 @@ import { Moon, Sun } from 'lucide-react'
 import { useTheme } from 'next-themes'
 import { useEffect, useState } from 'react'
 import { motion } from 'motion/react'
-import { ThemeAnimationType, useThemeAnimation } from 'theme-switch-animation/react'
+import { ThemeAnimationDirection, ThemeAnimationType, useThemeAnimation } from 'theme-switch-animation/react'
 import type { JSX, SVGProps } from 'react'
 
 /** 每张卡片的迷你图形标（stroke 风格，颜色走渐变图标砖的 currentColor） */
@@ -35,16 +35,6 @@ function IcoBlur(props: SVGProps<SVGSVGElement>) {
     </svg>
   )
 }
-function IcoArrow({ deg = 0, ...props }: SVGProps<SVGSVGElement> & { deg?: number }) {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.9} {...props}>
-      <g transform={`rotate(${deg} 12 12)`}>
-        <path d="M4 12h13" />
-        <path d="m12 6 6 6-6 6" />
-      </g>
-    </svg>
-  )
-}
 function IcoShape(points: string) {
   return function Shape(props: SVGProps<SVGSVGElement>) {
     return (
@@ -61,11 +51,41 @@ function IcoRect(props: SVGProps<SVGSVGElement>) {
     </svg>
   )
 }
+function IcoBlinds(props: SVGProps<SVGSVGElement>) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.9} {...props}>
+      <path d="M5 4v16M12 4v16M19 4v16" />
+    </svg>
+  )
+}
+function IcoScan(props: SVGProps<SVGSVGElement>) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.9} {...props}>
+      <path d="M4 5.5h16" strokeWidth={2.6} />
+      <path d="M4 12h16" strokeDasharray="3 3" />
+      <path d="M4 18.5h16" strokeWidth={1.2} />
+    </svg>
+  )
+}
+function IcoQrGrid(props: SVGProps<SVGSVGElement>) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.9} {...props}>
+      <rect x="4" y="4" width="6" height="6" />
+      <rect x="14" y="4" width="6" height="6" />
+      <rect x="4" y="14" width="6" height="6" />
+      <path d="M14 14h3v3h-3zM20 14v0.01M14 20v0.01M20 20v0.01M17.5 20v0.01M20 17.5v0.01" strokeLinecap="round" />
+    </svg>
+  )
+}
 
 const ANIMATION_TYPES: Array<{
   type: ThemeAnimationType
   label: string
   hint: string
+  /** 消费 direction 的类型：卡片内渲染独立的方向选择按钮（初始方向） */
+  initialDirection?: ThemeAnimationDirection
+  /** 仅 BLINDS：卡片内渲染叶宽选择器（初始宽度 px） */
+  initialSlatWidth?: number
   Icon: (props: SVGProps<SVGSVGElement>) => JSX.Element
   /** 渐变图标砖：亮 / 暗两套底色 + 图标色（写全类名，避免动态拼接被 Tailwind 摇掉） */
   tile: string
@@ -73,16 +93,15 @@ const ANIMATION_TYPES: Array<{
   { type: ThemeAnimationType.CIRCLE, label: 'CIRCLE', hint: '圆形扩散 · 圆心 = 点击位置', Icon: IcoCircle, tile: 'from-rose-100 to-rose-200 text-rose-600 dark:from-rose-500/15 dark:to-rose-500/5 dark:text-rose-400' },
   { type: ThemeAnimationType.CIRCLE_REVERT, label: 'CIRCLE_REVERT', hint: '切暗扩散、切亮收起', Icon: IcoRevert, tile: 'from-orange-100 to-orange-200 text-orange-600 dark:from-orange-500/15 dark:to-orange-500/5 dark:text-orange-400' },
   { type: ThemeAnimationType.CIRCLE_BLUR, label: 'CIRCLE_BLUR', hint: '圆形模糊扩散', Icon: IcoBlur, tile: 'from-amber-100 to-amber-200 text-amber-600 dark:from-amber-500/15 dark:to-amber-500/5 dark:text-amber-400' },
-  { type: ThemeAnimationType.LTR, label: 'LTR', hint: '从左向右擦除', Icon: (p) => <IcoArrow {...p} />, tile: 'from-sky-100 to-sky-200 text-sky-600 dark:from-sky-500/15 dark:to-sky-500/5 dark:text-sky-400' },
-  { type: ThemeAnimationType.RTL, label: 'RTL', hint: '从右向左擦除', Icon: (p) => <IcoArrow deg={180} {...p} />, tile: 'from-indigo-100 to-indigo-200 text-indigo-600 dark:from-indigo-500/15 dark:to-indigo-500/5 dark:text-indigo-400' },
-  { type: ThemeAnimationType.TTB, label: 'TTB', hint: '从上向下擦除', Icon: (p) => <IcoArrow deg={90} {...p} />, tile: 'from-violet-100 to-violet-200 text-violet-600 dark:from-violet-500/15 dark:to-violet-500/5 dark:text-violet-400' },
-  { type: ThemeAnimationType.BTT, label: 'BTT', hint: '从下向上擦除', Icon: (p) => <IcoArrow deg={-90} {...p} />, tile: 'from-purple-100 to-purple-200 text-purple-600 dark:from-purple-500/15 dark:to-purple-500/5 dark:text-purple-400' },
   { type: ThemeAnimationType.SQUARE, label: 'SQUARE', hint: '正方形扩散', Icon: IcoShape('5,5 19,5 19,19 5,19'), tile: 'from-emerald-100 to-emerald-200 text-emerald-600 dark:from-emerald-500/15 dark:to-emerald-500/5 dark:text-emerald-400' },
   { type: ThemeAnimationType.DIAMOND, label: 'DIAMOND', hint: '菱形扩散', Icon: IcoShape('12,3.5 20.5,12 12,20.5 3.5,12'), tile: 'from-teal-100 to-teal-200 text-teal-600 dark:from-teal-500/15 dark:to-teal-500/5 dark:text-teal-400' },
   { type: ThemeAnimationType.RECTANGLE, label: 'RECTANGLE', hint: '矩形 · 贴合视口比例', Icon: IcoRect, tile: 'from-cyan-100 to-cyan-200 text-cyan-600 dark:from-cyan-500/15 dark:to-cyan-500/5 dark:text-cyan-400' },
   { type: ThemeAnimationType.HEXAGON, label: 'HEXAGON', hint: '六边形 · 尖顶朝上', Icon: IcoShape('12,2.8 19.8,7.4 19.8,16.6 12,21.2 4.2,16.6 4.2,7.4'), tile: 'from-blue-100 to-blue-200 text-blue-600 dark:from-blue-500/15 dark:to-blue-500/5 dark:text-blue-400' },
   { type: ThemeAnimationType.TRIANGLE, label: 'TRIANGLE', hint: '三角形 · 顶点朝上', Icon: IcoShape('12,4 20,19 4,19'), tile: 'from-fuchsia-100 to-fuchsia-200 text-fuchsia-600 dark:from-fuchsia-500/15 dark:to-fuchsia-500/5 dark:text-fuchsia-400' },
   { type: ThemeAnimationType.STAR, label: 'STAR', hint: '五角星 · 顶点朝上', Icon: IcoShape('12,2.8 14.7,9 21.5,9.6 16.3,14 17.9,20.7 12,17 6.1,20.7 7.7,14 2.5,9.6 9.3,9'), tile: 'from-pink-100 to-pink-200 text-pink-600 dark:from-pink-500/15 dark:to-pink-500/5 dark:text-pink-400' },
+  { type: ThemeAnimationType.BLINDS, label: 'BLINDS', hint: '百叶窗 · direction 控方向 / slatWidth 控叶宽', initialDirection: ThemeAnimationDirection.LTR, initialSlatWidth: 72, Icon: IcoBlinds, tile: 'from-lime-100 to-lime-200 text-lime-600 dark:from-lime-500/15 dark:to-lime-500/5 dark:text-lime-400' },
+  { type: ThemeAnimationType.SCAN, label: 'SCAN', hint: '扫描 · 硬边扫开 + 前缘光束', initialDirection: ThemeAnimationDirection.TTB, Icon: IcoScan, tile: 'from-green-100 to-green-200 text-green-600 dark:from-green-500/15 dark:to-green-500/5 dark:text-green-400' },
+  { type: ThemeAnimationType.QR_GRID, label: 'QR_GRID', hint: '方块格子 · 方块逐格生长揭开', initialDirection: ThemeAnimationDirection.LTR, Icon: IcoQrGrid, tile: 'from-stone-100 to-stone-200 text-stone-600 dark:from-stone-500/15 dark:to-stone-500/5 dark:text-stone-400' },
 ]
 
 const DURATION_PRESETS = [
@@ -96,10 +115,27 @@ const EASING_PRESETS = [
   { value: 'linear', label: 'linear · 匀速' },
 ]
 
+/** 方向选择按钮：四个方向，每张卡片独立持有状态，互不影响 */
+const DIRECTION_OPTIONS: ReadonlyArray<{ value: ThemeAnimationDirection; label: string }> = [
+  { value: ThemeAnimationDirection.LTR, label: 'LTR' },
+  { value: ThemeAnimationDirection.RTL, label: 'RTL' },
+  { value: ThemeAnimationDirection.TTB, label: 'TTB' },
+  { value: ThemeAnimationDirection.BTT, label: 'BTT' },
+]
+
+/** 叶宽档位（px，合法区间 [16, 200]）：仅 BLINDS 卡片展示，同样卡片级独立 */
+const SLAT_OPTIONS: ReadonlyArray<{ value: number; label: string }> = [
+  { value: 32, label: '32px' },
+  { value: 72, label: '72px' },
+  { value: 128, label: '128px' },
+]
+
 function GalleryCard({
   animationType,
   label,
   hint,
+  initialDirection,
+  initialSlatWidth,
   Icon,
   tile,
   duration,
@@ -109,6 +145,8 @@ function GalleryCard({
   animationType: ThemeAnimationType
   label: string
   hint: string
+  initialDirection?: ThemeAnimationDirection
+  initialSlatWidth?: number
   Icon: (props: SVGProps<SVGSVGElement>) => JSX.Element
   tile: string
   duration: number
@@ -116,9 +154,14 @@ function GalleryCard({
   index: number
 }) {
   const [mounted, setMounted] = useState(false)
+  // direction 每张卡片独立（初始值来自配置），只在该类型消费 direction 时展示选择器
+  const [direction, setDirection] = useState<ThemeAnimationDirection>(initialDirection ?? ThemeAnimationDirection.LTR)
+  const [slatWidth, setSlatWidth] = useState(initialSlatWidth ?? 72)
   const { resolvedTheme, setTheme } = useTheme()
   const { ref, toggleTheme, isDark } = useThemeAnimation<HTMLButtonElement>({
     animationType,
+    direction,
+    slatWidth,
     duration,
     easing,
     isDark: resolvedTheme === 'dark',
@@ -153,7 +196,7 @@ function GalleryCard({
         {mounted && isDark ? <Moon size={22} /> : <Sun size={22} />}
       </button>
 
-      {/* 参数行（全局预设的当前值） */}
+      {/* 参数行（全局预设的当前值 + 卡片独立的方向选择） */}
       <div className="w-full space-y-1.5 border-t pt-4 text-xs">
         <div className="flex items-center justify-between">
           <span className="text-muted-foreground">Duration</span>
@@ -163,6 +206,48 @@ function GalleryCard({
           <span className="text-muted-foreground">Easing</span>
           <span className="truncate font-mono">{easing}</span>
         </div>
+        {initialDirection !== undefined && (
+          <div className="flex items-center justify-between gap-2 pt-0.5">
+            <span className="text-muted-foreground">Direction</span>
+            <div className="flex gap-1">
+              {DIRECTION_OPTIONS.map((d) => (
+                <button
+                  key={d.value}
+                  type="button"
+                  onClick={() => setDirection(d.value)}
+                  className={`rounded-md px-1.5 py-0.5 font-mono text-[10px] transition-colors ${
+                    direction === d.value
+                      ? 'bg-primary font-semibold text-primary-foreground'
+                      : 'border bg-card/60 text-muted-foreground hover:text-foreground'
+                  }`}
+                >
+                  {d.label}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+        {initialSlatWidth !== undefined && (
+          <div className="flex items-center justify-between gap-2">
+            <span className="text-muted-foreground">Slat</span>
+            <div className="flex gap-1">
+              {SLAT_OPTIONS.map((s) => (
+                <button
+                  key={s.value}
+                  type="button"
+                  onClick={() => setSlatWidth(s.value)}
+                  className={`rounded-md px-1.5 py-0.5 font-mono text-[10px] transition-colors ${
+                    slatWidth === s.value
+                      ? 'bg-primary font-semibold text-primary-foreground'
+                      : 'border bg-card/60 text-muted-foreground hover:text-foreground'
+                  }`}
+                >
+                  {s.label}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
     </motion.div>
   )
@@ -200,7 +285,7 @@ function PresetRow<T extends number | string>({
   )
 }
 
-/** 13 种动画的可交互画廊：卡片中央圆形按钮触发（受控模式 × next-themes，与站点主题联动） */
+/** 12 种动画的可交互画廊：卡片中央圆形按钮触发（受控模式 × next-themes，与站点主题联动） */
 export function GallerySection() {
   const [duration, setDuration] = useState(750)
   const [easing, setEasing] = useState('ease-in-out')
@@ -214,7 +299,7 @@ export function GallerySection() {
           </span>
           <h2 className="text-3xl font-bold tracking-tight md:text-4xl">Try Different Animations</h2>
           <p className="mt-3 text-muted-foreground">
-            点击卡片中央的切换按钮体验对应动画（切换右上角主题也可以）。中心扩散类动画的起收点 = 按钮中心。
+            点击卡片中央的切换按钮体验对应动画（切换右上角主题也可以）。中心扩散类动画的起收点 = 按钮中心；BLINDS / SCAN / QR_GRID 可在卡片内切换 direction，各卡片互不影响。
           </p>
         </div>
 
@@ -230,6 +315,8 @@ export function GallerySection() {
               animationType={t.type}
               label={t.label}
               hint={t.hint}
+              initialDirection={t.initialDirection}
+              initialSlatWidth={t.initialSlatWidth}
               Icon={t.Icon}
               tile={t.tile}
               duration={duration}
