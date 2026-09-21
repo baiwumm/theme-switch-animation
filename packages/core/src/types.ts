@@ -9,14 +9,6 @@ export const ThemeAnimationType = {
   CIRCLE_REVERT: 'circle-revert',
   /** 圆形模糊扩散：边缘高斯模糊的圆形蒙版（只挂新截图层，旧层完整垫底） */
   CIRCLE_BLUR: 'circle-blur',
-  /** 从左到右擦除 */
-  LTR: 'ltr',
-  /** 从右到左擦除 */
-  RTL: 'rtl',
-  /** 从上到下擦除 */
-  TTB: 'ttb',
-  /** 从下到上擦除 */
-  BTT: 'btt',
   /** 正方形，从触发点扩散 */
   SQUARE: 'square',
   /** 菱形，从触发点扩散 */
@@ -29,16 +21,15 @@ export const ThemeAnimationType = {
   TRIANGLE: 'triangle',
   /** 五角星（顶点朝上），从触发点扩散 */
   STAR: 'star',
+  /** 百叶窗：叶片逐条揭开（属性驱动蒙版，无触发点），direction 控制叶片方向与扫开方向，slatWidth 控制叶片宽度 */
+  BLINDS: 'blinds',
+  /** 扫描：硬边扫开 + 前缘半透明光束（属性驱动蒙版，无触发点），direction 控制扫开方向 */
+  SCAN: 'scan',
+  /** 方块格子：新主题以方块格子逐格生长揭开（类似百叶窗的二维版），direction 控制生长方位 */
+  QR_GRID: 'qr-grid',
 } as const
 
 export type ThemeAnimationType = (typeof ThemeAnimationType)[keyof typeof ThemeAnimationType]
-
-/** 四向擦除类型（条形蒙版沿对应方向生长） */
-export type DirectionalAnimationType =
-  | typeof ThemeAnimationType.LTR
-  | typeof ThemeAnimationType.RTL
-  | typeof ThemeAnimationType.TTB
-  | typeof ThemeAnimationType.BTT
 
 /** 中心扩散形状类：蒙版从触发点以 0 尺寸长到覆盖视口（几何形状与 CIRCLE 同构，仅蒙版图形不同） */
 export type ShapeAnimationType =
@@ -49,6 +40,19 @@ export type ShapeAnimationType =
   | typeof ThemeAnimationType.HEXAGON
   | typeof ThemeAnimationType.TRIANGLE
   | typeof ThemeAnimationType.STAR
+
+/**
+ * 扫描方向，供 `direction` 选项使用（当前由 BLINDS / SCAN / QR_GRID 消费，后续类型可扩展）。
+ * 四向擦除类型已并入此选项（v0.2 起不再有 LTR/RTL/TTB/BTT 类型）。
+ */
+export const ThemeAnimationDirection = {
+  LTR: 'ltr',
+  RTL: 'rtl',
+  TTB: 'ttb',
+  BTT: 'btt',
+} as const
+
+export type ThemeAnimationDirection = (typeof ThemeAnimationDirection)[keyof typeof ThemeAnimationDirection]
 
 export interface ThemeAnimationOptions {
   /** 动画类型，默认 `CIRCLE` */
@@ -61,6 +65,10 @@ export interface ThemeAnimationOptions {
   easing?: string
   /** 模糊蒙版的模糊强度（`feGaussianBlur` 的视觉强度系数），默认 `2`。仅 `CIRCLE_BLUR` 生效 */
   blurAmount?: number
+  /** 扫描方向，默认 `'ltr'`。仅 BLINDS / SCAN / QR_GRID 生效，其余类型忽略 */
+  direction?: ThemeAnimationDirection
+  /** 百叶窗叶片宽度（px），合法范围 `[16, 200]`，默认 `72`。仅 `BLINDS` 生效，非法值静默回落默认 */
+  slatWidth?: number
   /** 受控模式：外部暗色状态。与 `onChange` 同时提供才进入受控模式 */
   isDark?: boolean
   /** 受控模式：状态变更回调。与 `isDark` 同时提供才进入受控模式 */
@@ -74,7 +82,14 @@ export interface ResolvedAnimationOptions {
   duration: number
   easing: string
   blurAmount: number
+  direction: ThemeAnimationDirection
+  slatWidth: number
 }
+
+/** 百叶窗叶片宽度的默认值与合法区间（超出区间静默回落默认，与 blurAmount 同策略） */
+export const SLAT_WIDTH_DEFAULT = 72
+export const MIN_SLAT_WIDTH = 16
+export const MAX_SLAT_WIDTH = 200
 
 export const THEME_ANIMATION_DEFAULTS: Readonly<ResolvedAnimationOptions> = Object.freeze({
   animationType: ThemeAnimationType.CIRCLE,
@@ -82,6 +97,8 @@ export const THEME_ANIMATION_DEFAULTS: Readonly<ResolvedAnimationOptions> = Obje
   duration: 750,
   easing: 'ease-in-out',
   blurAmount: 2,
+  direction: ThemeAnimationDirection.LTR,
+  slatWidth: SLAT_WIDTH_DEFAULT,
 })
 
 /** 非受控模式持久化到 localStorage 的 key（v1.2：避免与 next-themes 等库的 `'theme'` 冲突） */
@@ -89,6 +106,13 @@ export const THEME_STORAGE_KEY = 'theme-switch-animation'
 
 /** 注入 `<head>` 的临时 `<style>` 的固定 id，重复注入时先移除旧节点 */
 export const THEME_ANIMATION_STYLE_ID = 'theme-switch-animation'
+
+/**
+ * 属性驱动揭开（BLINDS / SCAN）的注册自定义属性名。
+ * 注册后是全局的（`@property` 无法注销），因此加 `--theme-switch-` 前缀避免撞名。
+ * 放在本模块而非 styles.ts：masks.ts 构建引用它的渐变模板时不与 styles.ts 产生循环导入。
+ */
+export const REVEAL_VAR = '--theme-switch-reveal'
 
 /** 用户传入的 `undefined` 视为未提供，回落到默认值 */
 export function resolveAnimationOptions(options: ThemeAnimationOptions = {}): ResolvedAnimationOptions {
@@ -98,10 +122,23 @@ export function resolveAnimationOptions(options: ThemeAnimationOptions = {}): Re
     duration: options.duration ?? THEME_ANIMATION_DEFAULTS.duration,
     easing: options.easing ?? THEME_ANIMATION_DEFAULTS.easing,
     blurAmount: isValidBlurAmount(options.blurAmount) ? options.blurAmount : THEME_ANIMATION_DEFAULTS.blurAmount,
+    direction: isValidDirection(options.direction) ? options.direction : THEME_ANIMATION_DEFAULTS.direction,
+    slatWidth: isValidSlatWidth(options.slatWidth) ? options.slatWidth : THEME_ANIMATION_DEFAULTS.slatWidth,
   }
 }
 
 /** blurAmount 仅在 CIRCLE_BLUR 下有意义，非法值（非正 / NaN / 无穷）静默回落默认 */
 function isValidBlurAmount(value: number | undefined): value is number {
   return value !== undefined && Number.isFinite(value) && value > 0
+}
+
+/** direction 仅 BLINDS / SCAN / QR_GRID 消费；字面量逐一比对（不查表），非法值静默回落默认 */
+function isValidDirection(value: ThemeAnimationDirection | undefined): value is ThemeAnimationDirection {
+  return value === ThemeAnimationDirection.LTR || value === ThemeAnimationDirection.RTL
+    || value === ThemeAnimationDirection.TTB || value === ThemeAnimationDirection.BTT
+}
+
+/** slatWidth 仅 BLINDS 消费；越界 / NaN / 无穷静默回落默认 */
+function isValidSlatWidth(value: number | undefined): value is number {
+  return value !== undefined && Number.isFinite(value) && value >= MIN_SLAT_WIDTH && value <= MAX_SLAT_WIDTH
 }

@@ -1,31 +1,39 @@
 import { describe, expect, it } from 'vitest'
 
 import {
+  MAX_SLAT_WIDTH,
+  MIN_SLAT_WIDTH,
+  SLAT_WIDTH_DEFAULT,
   THEME_ANIMATION_DEFAULTS,
   THEME_ANIMATION_STYLE_ID,
   THEME_STORAGE_KEY,
+  ThemeAnimationDirection,
   ThemeAnimationType,
   resolveAnimationOptions,
 } from './types'
-
 describe('ThemeAnimationType', () => {
-  it('提供且仅提供 13 种动画类型（5 基础 + 6 形状 + 收起/模糊）', () => {
+  it('提供且仅提供 12 种动画类型（3 基础 + 6 形状 + 百叶窗/扫描/方块格子；四向擦除已并入 direction）', () => {
     expect(ThemeAnimationType).toEqual({
       CIRCLE: 'circle',
       CIRCLE_REVERT: 'circle-revert',
       CIRCLE_BLUR: 'circle-blur',
-      LTR: 'ltr',
-      RTL: 'rtl',
-      TTB: 'ttb',
-      BTT: 'btt',
       SQUARE: 'square',
       DIAMOND: 'diamond',
       RECTANGLE: 'rectangle',
       HEXAGON: 'hexagon',
       TRIANGLE: 'triangle',
       STAR: 'star',
+      BLINDS: 'blinds',
+      SCAN: 'scan',
+      QR_GRID: 'qr-grid',
     })
-    expect(new Set(Object.values(ThemeAnimationType)).size).toBe(13)
+    expect(new Set(Object.values(ThemeAnimationType)).size).toBe(12)
+  })
+})
+
+describe('ThemeAnimationDirection', () => {
+  it('方向值域为字面量（四向擦除类型已移除，direction 是唯一入口）', () => {
+    expect(ThemeAnimationDirection).toEqual({ LTR: 'ltr', RTL: 'rtl', TTB: 'ttb', BTT: 'btt' })
   })
 })
 
@@ -37,6 +45,8 @@ describe('resolveAnimationOptions', () => {
       duration: 750,
       easing: 'ease-in-out',
       blurAmount: 2,
+      direction: 'ltr',
+      slatWidth: 72,
     })
     expect(resolveAnimationOptions()).toEqual(THEME_ANIMATION_DEFAULTS)
   })
@@ -44,18 +54,22 @@ describe('resolveAnimationOptions', () => {
   it('逐项覆盖，undefined 视为未提供', () => {
     expect(
       resolveAnimationOptions({
-        animationType: ThemeAnimationType.RTL,
+        animationType: ThemeAnimationType.BLINDS,
         duration: 600,
         easing: 'linear(0, 0.25, 1)',
         darkClassName: undefined,
         blurAmount: 3,
+        direction: ThemeAnimationDirection.BTT,
+        slatWidth: 100,
       }),
     ).toEqual({
-      animationType: 'rtl',
+      animationType: 'blinds',
       darkClassName: 'dark',
       duration: 600,
       easing: 'linear(0, 0.25, 1)',
       blurAmount: 3,
+      direction: 'btt',
+      slatWidth: 100,
     })
   })
 
@@ -65,14 +79,30 @@ describe('resolveAnimationOptions', () => {
     }
   })
 
-  it('忽略受控模式字段，只返回五个动画参数', () => {
+  it('direction 非法值静默回落默认 ltr（JS 侧无类型约束）', () => {
+    for (const direction of ['up', '', 'diagonal', 123, null] as unknown as ThemeAnimationDirection[]) {
+      expect(resolveAnimationOptions({ direction }).direction).toBe('ltr')
+    }
+  })
+
+  it('slatWidth 越界 / NaN / 无穷回落默认，区间边界值有效', () => {
+    for (const slatWidth of [0, 15, 201, -72, Number.NaN, Number.POSITIVE_INFINITY]) {
+      expect(resolveAnimationOptions({ slatWidth }).slatWidth).toBe(SLAT_WIDTH_DEFAULT)
+    }
+    expect(resolveAnimationOptions({ slatWidth: MIN_SLAT_WIDTH }).slatWidth).toBe(MIN_SLAT_WIDTH)
+    expect(resolveAnimationOptions({ slatWidth: MAX_SLAT_WIDTH }).slatWidth).toBe(MAX_SLAT_WIDTH)
+  })
+
+  it('忽略受控模式字段，只返回七个动画参数', () => {
     const resolved = resolveAnimationOptions({ isDark: true, onChange: () => {} })
     expect(Object.keys(resolved).sort()).toEqual([
       'animationType',
       'blurAmount',
       'darkClassName',
+      'direction',
       'duration',
       'easing',
+      'slatWidth',
     ])
   })
 })

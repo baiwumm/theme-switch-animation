@@ -1,8 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
 import {
-  BAR_MASK_IMAGE,
-  BAR_START_PX,
   BLUR_MASK_DEVIATION_FACTOR,
   BLUR_MAX_MASK_SIZE,
   CIRCLE_MASK_IMAGE,
@@ -10,6 +8,10 @@ import {
   DIAMOND_COVERAGE_FACTOR,
   HEXAGON_COVERAGE_FACTOR,
   RECTANGLE_COVERAGE_MARGIN,
+  QR_GRID_CELL_PX,
+  SCAN_BAND_ALPHA,
+  SCAN_BAND_WIDTH_PX,
+  SCAN_FADE_WIDTH_PX,
   SOLID_RECT_MASK_IMAGE,
   SQUARE_COVERAGE_MARGIN,
   STAR_CIRCUMRADIUS_FACTOR,
@@ -18,24 +20,29 @@ import {
   TRIANGLE_CIRCUMRADIUS_FACTOR,
   getBlurCircleMaskGeometry,
   getBlurCircleMaskImage,
+  getBlindsFeatherPx,
+  getBlindsRevealSpec,
   getCircleMaskGeometry,
   getCircleRevertMaskGeometry,
   getDiamondMaskGeometry,
-  getDirectionalMaskGeometry,
   getHexagonMaskGeometry,
   getMaskGeometry,
   getMaxRadiusToCorners,
+  getQrGridMaskSpec,
   getRectangleMaskGeometry,
+  getRevealMaskSpec,
+  getScanRevealSpec,
   getSquareMaskGeometry,
   getStarMaskGeometry,
   getTriggerCenter,
   getTriangleMaskGeometry,
   isBlurAnimationType,
-  isDirectionalAnimationType,
+  isQrGridAnimationType,
+  isRevealAnimationType,
   isShapeAnimationType,
 } from './masks'
 import type { RectProvider } from './masks'
-import { ThemeAnimationType } from './types'
+import { ThemeAnimationDirection, ThemeAnimationType } from './types'
 
 const viewport = { width: 800, height: 600 }
 
@@ -119,27 +126,6 @@ describe('getCircleMaskGeometry（CIRCLE 终尺寸与圆心钉扎）', () => {
     expect(geometry.maskImage).toBe(CIRCLE_MASK_IMAGE)
     expect(geometry.maskImage).toMatch(/^url\("data:image\/svg\+xml,/)
     expect(decodeURIComponent(geometry.maskImage)).toContain('<circle')
-  })
-})
-
-describe('getDirectionalMaskGeometry（四向起始位置 / 尺寸）', () => {
-  it('起始细条厚度为 4px', () => {
-    expect(BAR_START_PX).toBe(4)
-  })
-
-  it.each([
-    [ThemeAnimationType.LTR, '4px 100%', '0% 0%'],
-    [ThemeAnimationType.RTL, '4px 100%', '100% 0%'],
-    [ThemeAnimationType.TTB, '100% 4px', '0% 0%'],
-    [ThemeAnimationType.BTT, '100% 4px', '0% 100%'],
-  ] as const)('%s：起始尺寸 %s，钉在 %s', (type, startSize, position) => {
-    const geometry = getDirectionalMaskGeometry(type)
-    expect(geometry.startSize).toBe(startSize)
-    expect(geometry.startPosition).toBe(position)
-    expect(geometry.endSize).toBe('100% 100%')
-    expect(geometry.endPosition).toBe(position)
-    expect(geometry.maskImage).toBe(BAR_MASK_IMAGE)
-    expect(geometry.maskImage).toMatch(/^linear-gradient\(/)
   })
 })
 
@@ -312,13 +298,6 @@ describe('getMaskGeometry（按类型分发）', () => {
     )
   })
 
-  it('四向类型走条形几何，与触发点无关', () => {
-    const a = getMaskGeometry(ThemeAnimationType.LTR, { x: 0, y: 0 }, viewport)
-    const b = getMaskGeometry(ThemeAnimationType.LTR, { x: 800, y: 600 }, viewport)
-    expect(a).toEqual(b)
-    expect(a).toEqual(getDirectionalMaskGeometry(ThemeAnimationType.LTR))
-  })
-
   it('形状类型分发给各自的几何函数', () => {
     expect(getMaskGeometry(ThemeAnimationType.SQUARE, { x: 400, y: 300 }, viewport)).toEqual(
       getSquareMaskGeometry({ x: 400, y: 300 }, viewport),
@@ -342,19 +321,11 @@ describe('getMaskGeometry（按类型分发）', () => {
 
   it('未知类型按 CIRCLE 处理', () => {
     const unknown = 'spiral' as unknown as ThemeAnimationType
-    expect(isDirectionalAnimationType(unknown)).toBe(false)
     expect(isShapeAnimationType(unknown)).toBe(false)
     expect(getMaskGeometry(unknown, { x: 400, y: 300 }, viewport).maskImage).toBe(CIRCLE_MASK_IMAGE)
   })
 
-  it('isDirectionalAnimationType 只对四向类型为 true', () => {
-    expect(isDirectionalAnimationType(ThemeAnimationType.CIRCLE)).toBe(false)
-    for (const type of [ThemeAnimationType.LTR, ThemeAnimationType.RTL, ThemeAnimationType.TTB, ThemeAnimationType.BTT]) {
-      expect(isDirectionalAnimationType(type)).toBe(true)
-    }
-  })
-
-  it('isShapeAnimationType 对 CIRCLE 与全部几何形状为 true，对四向类型为 false', () => {
+  it('isShapeAnimationType 对 CIRCLE 与全部几何形状为 true，对属性驱动类型为 false', () => {
     for (const type of [
       ThemeAnimationType.CIRCLE,
       ThemeAnimationType.SQUARE,
@@ -366,8 +337,116 @@ describe('getMaskGeometry（按类型分发）', () => {
     ]) {
       expect(isShapeAnimationType(type)).toBe(true)
     }
-    for (const type of [ThemeAnimationType.LTR, ThemeAnimationType.RTL, ThemeAnimationType.TTB, ThemeAnimationType.BTT]) {
+    for (const type of [ThemeAnimationType.BLINDS, ThemeAnimationType.SCAN, ThemeAnimationType.QR_GRID]) {
       expect(isShapeAnimationType(type)).toBe(false)
+    }
+  })
+})
+
+describe('属性驱动揭开（BLINDS / SCAN）', () => {
+  it('BLINDS LTR：竖叶片 72px 平铺、渐变角 90deg、from = -feather / to = 叶片宽', () => {
+    const spec = getBlindsRevealSpec(ThemeAnimationDirection.LTR, 72)
+    expect(spec.from).toBe(-20)
+    expect(spec.to).toBe(72)
+    expect(spec.maskImage).toBe(
+      'linear-gradient(90deg, #000 0 var(--theme-switch-reveal), transparent calc(var(--theme-switch-reveal) + 20px))',
+    )
+    expect(spec.maskSize).toBe('72px 100%')
+    expect(spec.maskRepeat).toBe('repeat')
+  })
+
+  it('BLINDS 方向表：TTB/BTT 横叶片（100% × 高）且渐变角 180deg/0deg，RTL 270deg', () => {
+    expect(getBlindsRevealSpec(ThemeAnimationDirection.TTB, 72).maskSize).toBe('100% 72px')
+    expect(getBlindsRevealSpec(ThemeAnimationDirection.TTB, 72).maskImage).toContain('linear-gradient(180deg')
+    expect(getBlindsRevealSpec(ThemeAnimationDirection.BTT, 72).maskImage).toContain('linear-gradient(0deg')
+    expect(getBlindsRevealSpec(ThemeAnimationDirection.RTL, 72).maskImage).toContain('linear-gradient(270deg')
+    expect(getBlindsRevealSpec(ThemeAnimationDirection.RTL, 72).maskSize).toBe('72px 100%')
+  })
+
+  it('软边按比例收缩且封顶 20px（小叶片配大软边会导致起始帧遮不全）', () => {
+    expect(getBlindsFeatherPx(16)).toBe(4)
+    expect(getBlindsFeatherPx(50)).toBe(14)
+    expect(getBlindsFeatherPx(72)).toBe(20)
+    expect(getBlindsFeatherPx(200)).toBe(20)
+  })
+
+  it('SCAN LTR：from 0、to = 视口宽 + 光束总宽、单层 no-repeat', () => {
+    const spec = getScanRevealSpec(ThemeAnimationDirection.LTR, viewport)
+    expect(spec.from).toBe(0)
+    expect(spec.to).toBe(viewport.width + SCAN_BAND_WIDTH_PX + SCAN_FADE_WIDTH_PX)
+    expect(spec.maskSize).toBe('100% 100%')
+    expect(spec.maskRepeat).toBe('no-repeat')
+    expect(spec.maskImage).toContain('linear-gradient(90deg')
+    expect(spec.maskImage).toContain(`rgba(0, 0, 0, ${SCAN_BAND_ALPHA})`)
+  })
+
+  it('SCAN TTB：推进轴切到 y，to 用视口高', () => {
+    const spec = getScanRevealSpec(ThemeAnimationDirection.TTB, viewport)
+    expect(spec.to).toBe(viewport.height + SCAN_BAND_WIDTH_PX + SCAN_FADE_WIDTH_PX)
+    expect(spec.maskImage).toContain('linear-gradient(180deg')
+  })
+
+  it('分发与守卫：仅 BLINDS / SCAN 命中 reveal，其余类型不命中', () => {
+    for (const type of [ThemeAnimationType.BLINDS, ThemeAnimationType.SCAN]) {
+      expect(isRevealAnimationType(type)).toBe(true)
+    }
+    for (const type of [
+      ThemeAnimationType.CIRCLE,
+      ThemeAnimationType.SQUARE,
+      ThemeAnimationType.STAR,
+      ThemeAnimationType.CIRCLE_REVERT,
+    ] as const) {
+      expect(isRevealAnimationType(type)).toBe(false)
+    }
+    expect(getRevealMaskSpec(ThemeAnimationType.BLINDS, ThemeAnimationDirection.LTR, 72, viewport)).toEqual(
+      getBlindsRevealSpec(ThemeAnimationDirection.LTR, 72),
+    )
+    expect(getRevealMaskSpec(ThemeAnimationType.SCAN, ThemeAnimationDirection.TTB, 72, viewport)).toEqual(
+      getScanRevealSpec(ThemeAnimationDirection.TTB, viewport),
+    )
+  })
+})
+
+describe('QR_GRID（方块格子）', () => {
+  it('LTR 规格：行层自顶中心生长 × 列层自左生长的交叉双层，from = -2×软边 / to = 格距', () => {
+    const spec = getQrGridMaskSpec(ThemeAnimationDirection.LTR)
+    const feather = 18 // min(20, round(64 × 0.28))
+    expect(spec.from).toBe(-2 * feather)
+    expect(spec.to).toBe(QR_GRID_CELL_PX)
+    expect(spec.baselineImage).toBe(
+      'linear-gradient(90deg, #000 0 var(--theme-switch-reveal), transparent calc(var(--theme-switch-reveal) + 18px))',
+    )
+    expect(spec.baselineSize).toBe('64px 100%')
+    expect(spec.cellImage).toBe(
+      'linear-gradient(180deg, transparent calc(50% - var(--theme-switch-reveal) / 2 - 18px),' +
+      ' #000 calc(50% - var(--theme-switch-reveal) / 2) calc(50% + var(--theme-switch-reveal) / 2),' +
+      ' transparent calc(50% + var(--theme-switch-reveal) / 2 + 18px)), ' +
+      'linear-gradient(90deg, #000 0 var(--theme-switch-reveal), transparent calc(var(--theme-switch-reveal) + 18px))',
+    )
+    expect(spec.cellSize).toBe('100% 64px, 64px 100%')
+  })
+
+  it('方向表：RTL 列层 270deg；TTB 行层 180deg 推进（基线即行层）；BTT 行层 0deg', () => {
+    expect(getQrGridMaskSpec(ThemeAnimationDirection.RTL).baselineImage).toContain('linear-gradient(270deg')
+    expect(getQrGridMaskSpec(ThemeAnimationDirection.RTL).baselineSize).toBe('64px 100%')
+    const ttb = getQrGridMaskSpec(ThemeAnimationDirection.TTB)
+    expect(ttb.baselineImage).toContain('linear-gradient(180deg')
+    expect(ttb.baselineSize).toBe('100% 64px')
+    // TTB 垂直轴（列）为中心生长，推进轴（行）为起始边生长
+    expect(ttb.cellImage).toContain('linear-gradient(90deg, transparent calc(50%')
+    expect(ttb.cellImage).toContain(', linear-gradient(180deg')
+    expect(getQrGridMaskSpec(ThemeAnimationDirection.BTT).baselineImage).toContain('linear-gradient(0deg')
+  })
+
+  it('守卫：仅 QR_GRID 命中 isQrGridAnimationType', () => {
+    expect(isQrGridAnimationType(ThemeAnimationType.QR_GRID)).toBe(true)
+    for (const type of [
+      ThemeAnimationType.BLINDS,
+      ThemeAnimationType.SCAN,
+      ThemeAnimationType.CIRCLE,
+      ThemeAnimationType.SQUARE,
+    ] as const) {
+      expect(isQrGridAnimationType(type)).toBe(false)
     }
   })
 })

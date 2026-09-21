@@ -34,7 +34,7 @@ function makeHost(initial: UseThemeAnimationOptions = {}) {
 function makeControlledHost(onChangeSpy?: (next: boolean) => void) {
   const external = reactive({ dark: false })
   const options = reactive({
-    animationType: ThemeAnimationType.LTR,
+    animationType: ThemeAnimationType.CIRCLE,
     darkClassName: 'dark',
     isDark: false,
     onChange: (next: boolean) => {
@@ -344,8 +344,8 @@ describe('useThemeAnimation（Vue composable）', () => {
 
     it('同一页面多个实例：任一实例切换后，所有实例的 isDark 同步（html class 事实源）', async () => {
       installFakeViewTransition({ autoRun: true })
-      const { Host: HostA } = makeHost({ animationType: ThemeAnimationType.LTR })
-      const { Host: HostB } = makeHost({ animationType: ThemeAnimationType.RTL })
+      const { Host: HostA } = makeHost({ animationType: ThemeAnimationType.CIRCLE })
+      const { Host: HostB } = makeHost({ animationType: ThemeAnimationType.STAR })
       document.body.innerHTML = '<div id="app"></div><div id="app-b"></div>'
       const wa = mount(HostA, { attachTo: '#app' })
       const wb = mount(HostB, { attachTo: '#app-b' })
@@ -373,7 +373,7 @@ describe('useThemeAnimation（Vue composable）', () => {
       const probes: Array<{ value: Promise<void> }> = []
       const FinishedHost = defineComponent({
         setup() {
-          const res = useThemeAnimation<HTMLButtonElement>({ animationType: ThemeAnimationType.LTR })
+          const res = useThemeAnimation<HTMLButtonElement>({ animationType: ThemeAnimationType.CIRCLE })
           probes.push(res.finished)
           return () =>
             h('button', { ref: res.triggerRef, onClick: res.toggleTheme, 'data-testid': 'toggle' })

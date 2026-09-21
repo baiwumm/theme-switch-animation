@@ -69,7 +69,7 @@ describe('runThemeTransition 动画路径（jsdom + 模拟 startViewTransition�
 
     const result = runThemeTransition({
       domUpdate,
-      options: { animationType: ThemeAnimationType.LTR, duration: 250, easing: 'steps(4)' },
+      options: { animationType: ThemeAnimationType.CIRCLE, duration: 250, easing: 'steps(4)' },
     })
 
     expect(result.animated).toBe(true)
@@ -82,7 +82,7 @@ describe('runThemeTransition 动画路径（jsdom + 模拟 startViewTransition�
     expect(node).not.toBeNull()
     expect(node!.textContent).toContain('--theme-switch-duration: 250ms;')
     expect(node!.textContent).toContain('--theme-switch-easing: steps(4);')
-    expect(node!.textContent).toContain('@keyframes theme-switch-ltr {')
+    expect(node!.textContent).toContain('@keyframes theme-switch-circle {')
 
     await result.finished
     expect(styleNode()).not.toBeNull()
@@ -144,21 +144,83 @@ describe('runThemeTransition 动画路径（jsdom + 模拟 startViewTransition�
     document.documentElement.classList.remove('dark')
   })
 
+  it('BLINDS：注入"注册属性 + 叶片平铺蒙版"CSS，direction / slatWidth 选项生效', () => {
+    installFakeViewTransition()
+    vi.spyOn(window, 'innerWidth', 'get').mockReturnValue(800)
+    vi.spyOn(window, 'innerHeight', 'get').mockReturnValue(600)
+
+    runThemeTransition({
+      domUpdate: () => {},
+      options: { animationType: ThemeAnimationType.BLINDS, direction: 'rtl', slatWidth: 100 },
+    })
+
+    const css = styleNode()!.textContent!
+    expect(css).toContain('@property --theme-switch-reveal')
+    // RTL：渐变角 270deg；叶片 100px 平铺；软边 = round(100 × 0.28) = 20（上限）
+    expect(css).toContain('linear-gradient(270deg, #000 0 var(--theme-switch-reveal), transparent calc(var(--theme-switch-reveal) + 20px))')
+    expect(css).toContain('mask-size: 100px 100%;')
+    expect(css).toContain('mask-repeat: repeat;')
+    expect(css).toContain('--theme-switch-reveal: -20px;')
+    expect(css).toContain('--theme-switch-reveal: 100px;')
+    // 触发点无关：不消费 center，也没有 mask-size / mask-position 关键帧
+    expect(css).not.toContain('mask-position: 400px')
+    document.documentElement.classList.remove('dark')
+  })
+
+  it('SCAN：光束蒙版终值 = 推进轴视口长 + 光束总宽；direction 切轴', () => {
+    installFakeViewTransition()
+    vi.spyOn(window, 'innerWidth', 'get').mockReturnValue(800)
+    vi.spyOn(window, 'innerHeight', 'get').mockReturnValue(600)
+
+    runThemeTransition({
+      domUpdate: () => {},
+      options: { animationType: ThemeAnimationType.SCAN, direction: 'ttb' },
+    })
+
+    const css = styleNode()!.textContent!
+    expect(css).toContain('linear-gradient(180deg')
+    expect(css).toContain('mask-size: 100% 100%;')
+    expect(css).toContain('mask-repeat: no-repeat;')
+    // TTB 沿 y 轴推进：600 + 12 + 4
+    expect(css).toContain('--theme-switch-reveal: 616px;')
+  })
+
+  it('QR_GRID：蒙版挂新层的方块格子双层，@supports 增强 intersect，无 z-index', () => {
+    installFakeViewTransition()
+    vi.spyOn(window, 'innerWidth', 'get').mockReturnValue(800)
+    vi.spyOn(window, 'innerHeight', 'get').mockReturnValue(600)
+
+    runThemeTransition({
+      domUpdate: () => {},
+      options: { animationType: ThemeAnimationType.QR_GRID },
+    })
+
+    const css = styleNode()!.textContent!
+    expect(css).toContain('@property --theme-switch-reveal')
+    expect(css).toContain('mask-composite: intersect;')
+    expect(css).toContain('@supports (mask-composite: intersect)')
+    expect(css).not.toContain('z-index')
+    // from = -2×软边（-36），to = 格距 64
+    expect(css).toContain('--theme-switch-reveal: -36px;')
+    expect(css).toContain('--theme-switch-reveal: 64px;')
+    expect(css).toContain('@keyframes theme-switch-qr-grid')
+  })
+
   it('快速连点：新一轮注入替换旧样式，旧一轮的清理定时器不会误删新样式', async () => {
     const { calls } = installFakeViewTransition({ manualFinish: true })
 
-    const first = runThemeTransition({ domUpdate: () => {}, options: { duration: 100, animationType: ThemeAnimationType.LTR } })
+    const first = runThemeTransition({ domUpdate: () => {}, options: { duration: 100, animationType: ThemeAnimationType.CIRCLE } })
     calls[0]!.finish.resolve()
     await first.finished // 第一轮清理定时器已排期（100ms 后）
 
-    const second = runThemeTransition({ domUpdate: () => {}, options: { duration: 100, animationType: ThemeAnimationType.RTL } })
+    const second = runThemeTransition({ domUpdate: () => {}, options: { duration: 100, animationType: ThemeAnimationType.STAR } })
     expect(document.querySelectorAll(`#${THEME_ANIMATION_STYLE_ID}`)).toHaveLength(1)
-    expect(styleNode()!.textContent).toContain('theme-switch-rtl')
+    expect(styleNode()!.textContent).toContain('theme-switch-star')
 
     // 第一轮的定时器到点：当前节点已是第二轮的，不得被删
     vi.advanceTimersByTime(100)
     expect(styleNode()).not.toBeNull()
-    expect(styleNode()!.textContent).toContain('theme-switch-rtl')
+    expect(styleNode()!.textContent).toContain('theme-switch-star')
 
     // 第二轮结束后再过 duration 才清理
     calls[1]!.finish.resolve()
@@ -185,16 +247,16 @@ describe('runThemeTransition 动画路径（jsdom + 模拟 startViewTransition�
   it('跳过竞态身份守卫：旧转场以 AbortError 结算时，不得误删新一轮注入的样式（闪屏修复）', async () => {
     const { calls } = installFakeViewTransition({ manualFinish: true })
 
-    const first = runThemeTransition({ domUpdate: () => {}, options: { duration: 100, animationType: ThemeAnimationType.LTR } })
+    const first = runThemeTransition({ domUpdate: () => {}, options: { duration: 100, animationType: ThemeAnimationType.CIRCLE } })
     // 第二轮点击：注入已替换第一轮的节点
-    const second = runThemeTransition({ domUpdate: () => {}, options: { duration: 100, animationType: ThemeAnimationType.RTL } })
-    expect(styleNode()!.textContent).toContain('theme-switch-rtl')
+    const second = runThemeTransition({ domUpdate: () => {}, options: { duration: 100, animationType: ThemeAnimationType.STAR } })
+    expect(styleNode()!.textContent).toContain('theme-switch-star')
 
     // 浏览器跳过第一轮 → finished 以 AbortError 结算；此时 id 上是第二轮的样式，不得被删
     calls[0]!.finish.reject(new DOMException('The view transition was skipped', 'AbortError'))
     await expect(first.finished).resolves.toBeUndefined()
     expect(styleNode()).not.toBeNull()
-    expect(styleNode()!.textContent).toContain('theme-switch-rtl')
+    expect(styleNode()!.textContent).toContain('theme-switch-star')
 
     calls[1]!.finish.resolve()
     await second.finished
@@ -330,7 +392,7 @@ describe('runThemeTransition 新增行为（哨兵 / 跨文档清理 / 显式方
     const first = runThemeTransition({
       domUpdate: () => {},
       doc: docA,
-      options: { duration: 100, animationType: ThemeAnimationType.LTR },
+      options: { duration: 100, animationType: ThemeAnimationType.CIRCLE },
     })
     calls[0]!.finish.resolve()
     await first.finished
@@ -339,7 +401,7 @@ describe('runThemeTransition 新增行为（哨兵 / 跨文档清理 / 显式方
     const second = runThemeTransition({
       domUpdate: () => {},
       doc: docB,
-      options: { duration: 100, animationType: ThemeAnimationType.LTR },
+      options: { duration: 100, animationType: ThemeAnimationType.CIRCLE },
     })
     calls[1]!.finish.resolve()
     await second.finished

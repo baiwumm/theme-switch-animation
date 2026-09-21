@@ -1,20 +1,24 @@
 export {
+  MAX_SLAT_WIDTH,
+  MIN_SLAT_WIDTH,
+  REVEAL_VAR,
+  SLAT_WIDTH_DEFAULT,
   THEME_ANIMATION_DEFAULTS,
   THEME_ANIMATION_STYLE_ID,
   THEME_STORAGE_KEY,
+  ThemeAnimationDirection,
   ThemeAnimationType,
   resolveAnimationOptions,
 } from './types'
 export type {
-  DirectionalAnimationType,
   ResolvedAnimationOptions,
   ShapeAnimationType,
   ThemeAnimationOptions,
 } from './types'
 
 export {
-  BAR_MASK_IMAGE,
-  BAR_START_PX,
+  BLINDS_FEATHER_RATIO,
+  BLINDS_MAX_FEATHER_PX,
   BLUR_MASK_DEVIATION_FACTOR,
   BLUR_MAX_MASK_SIZE,
   CIRCLE_MASK_IMAGE,
@@ -22,9 +26,14 @@ export {
   DIAMOND_COVERAGE_FACTOR,
   DIAMOND_MASK_IMAGE,
   getBlurCircleMaskImage,
+  getBlindsFeatherPx,
   HEXAGON_COVERAGE_FACTOR,
   HEXAGON_MASK_IMAGE,
   RECTANGLE_COVERAGE_MARGIN,
+  QR_GRID_CELL_PX,
+  SCAN_BAND_ALPHA,
+  SCAN_BAND_WIDTH_PX,
+  SCAN_FADE_WIDTH_PX,
   SOLID_RECT_MASK_IMAGE,
   SQUARE_COVERAGE_MARGIN,
   STAR_CIRCUMRADIUS_FACTOR,
@@ -37,20 +46,30 @@ export {
   getCircleRevertHoleGeometry,
   getCircleRevertMaskGeometry,
   getDiamondMaskGeometry,
-  getDirectionalMaskGeometry,
   getHexagonMaskGeometry,
   getMaskGeometry,
   getMaxRadiusToCorners,
+  getQrGridMaskSpec,
   getRectangleMaskGeometry,
+  getRevealMaskSpec,
   getSquareMaskGeometry,
   getStarMaskGeometry,
   getTriggerCenter,
   getTriangleMaskGeometry,
   isBlurAnimationType,
-  isDirectionalAnimationType,
+  isQrGridAnimationType,
+  isRevealAnimationType,
   isShapeAnimationType,
 } from './masks'
-export type { CircleHoleGeometry, MaskGeometry, Point, RectProvider, Size } from './masks'
+export type {
+  CircleHoleGeometry,
+  MaskGeometry,
+  Point,
+  QrGridMaskSpec,
+  RectProvider,
+  RevealMaskSpec,
+  Size,
+} from './masks'
 
 export {
   DURATION_VAR,

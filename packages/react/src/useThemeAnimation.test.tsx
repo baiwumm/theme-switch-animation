@@ -173,8 +173,8 @@ describe('useThemeAnimation（非受控模式）', () => {
 
     it('同一页面多个触发器实例：任一实例切换后，所有实例的 isDark 同步（html class 事实源）', async () => {
       installFakeViewTransition({ autoRun: true })
-      const { container: a } = render(<ThemeButton options={{ animationType: ThemeAnimationType.LTR }} />)
-      const { container: b } = render(<ThemeButton options={{ animationType: ThemeAnimationType.RTL }} />)
+      const { container: a } = render(<ThemeButton options={{ animationType: ThemeAnimationType.CIRCLE }} />)
+      const { container: b } = render(<ThemeButton options={{ animationType: ThemeAnimationType.STAR }} />)
 
       fireEvent.click(getToggle(a))
       // class 翻转 → MutationObserver 微任务 → 镜像 state
@@ -224,7 +224,7 @@ describe('useThemeAnimation（非受控模式）', () => {
      * （对应 next-themes 的 passive effect），库自身不写 class、不碰 localStorage。
      */
     function ControlledToggle({
-      animationType = ThemeAnimationType.LTR,
+      animationType = ThemeAnimationType.CIRCLE,
       onChangeSpy,
     }: {
       animationType?: ThemeAnimationType

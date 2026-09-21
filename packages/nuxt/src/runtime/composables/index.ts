@@ -9,10 +9,9 @@
 export { useThemeAnimation } from '@theme-switch-animation/vue'
 export type { UseThemeAnimationOptions, UseThemeAnimationResult } from '@theme-switch-animation/vue'
 
-export { THEME_STORAGE_KEY, ThemeAnimationType } from '@theme-switch-animation/core'
+export { THEME_STORAGE_KEY, ThemeAnimationDirection, ThemeAnimationType } from '@theme-switch-animation/core'
 export { SKIP_TRANSITION, observeThemeClass } from '@theme-switch-animation/core'
 export type {
-  DirectionalAnimationType,
   ResolvedAnimationOptions,
   ThemeAnimationOptions,
 } from '@theme-switch-animation/core'

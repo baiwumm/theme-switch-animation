@@ -1,4 +1,12 @@
-import { getCircleRevertHoleGeometry, getMaskGeometry, getTriggerCenter } from './masks'
+import {
+  getCircleRevertHoleGeometry,
+  getMaskGeometry,
+  getQrGridMaskSpec,
+  getRevealMaskSpec,
+  getTriggerCenter,
+  isQrGridAnimationType,
+  isRevealAnimationType,
+} from './masks'
 import type { RectProvider, Size } from './masks'
 import { buildAnimationCSS, injectAnimationStyle, removeAnimationStyle } from './styles'
 import { ThemeAnimationType, resolveAnimationOptions } from './types'
@@ -159,10 +167,20 @@ export function runThemeTransition(params: RunThemeTransitionParams): RunThemeTr
   // 收起方向：蒙版挂新截图层、掏一个收缩的"洞"（层序与 CIRCLE 一致，不需要给旧层 z-index），
   // 蒙版盒子静止、只有注册半径在动（详见 §附录六）。
   const holeGeometry = isRevert && revertDirection === 'collapse' ? getCircleRevertHoleGeometry(center, viewport) : undefined
-  const geometry = getMaskGeometry(resolved.animationType, center, viewport, resolved.blurAmount)
+  // 属性驱动揭开（BLINDS / SCAN）：无触发点，蒙版盒子静止、注册属性在动（见 masks.ts RevealMaskSpec）。
+  const reveal = isRevealAnimationType(resolved.animationType)
+    ? getRevealMaskSpec(resolved.animationType, resolved.direction, resolved.slatWidth, viewport)
+    : undefined
+  // QR_GRID：新层"列 ∩ 行"方块格子双层蒙版，同样无触发点。
+  const qrGrid = isQrGridAnimationType(resolved.animationType)
+    ? getQrGridMaskSpec(resolved.direction)
+    : undefined
+  const geometry = reveal || qrGrid ? undefined : getMaskGeometry(resolved.animationType, center, viewport, resolved.blurAmount)
   const css = buildAnimationCSS({
     animationType: resolved.animationType,
     geometry,
+    reveal,
+    qrGrid,
     revertDirection,
     holeGeometry,
     duration: resolved.duration,

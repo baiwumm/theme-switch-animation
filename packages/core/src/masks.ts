@@ -1,5 +1,5 @@
-import { ThemeAnimationType } from './types'
-import type { DirectionalAnimationType, ShapeAnimationType } from './types'
+import { REVEAL_VAR, ThemeAnimationDirection, ThemeAnimationType } from './types'
+import type { ShapeAnimationType } from './types'
 
 export interface Point {
   x: number
@@ -33,17 +33,11 @@ export interface MaskGeometry {
 /** 圆形蒙版终尺寸 = 触发点到视口最远角距离 × 2.1，留余量防角落锯齿 */
 export const CIRCLE_SIZE_FACTOR = 2.1
 
-/** 四向擦除起始细条的厚度（px） */
-export const BAR_START_PX = 4
-
 const CIRCLE_SVG =
   '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 2 2"><circle cx="1" cy="1" r="1" fill="#fff"/></svg>'
 
 /** 圆形蒙版：SVG data-URI，白色实心圆 */
 export const CIRCLE_MASK_IMAGE = `url("data:image/svg+xml,${encodeURIComponent(CIRCLE_SVG)}")`
-
-/** 四向擦除蒙版：实心白色条 */
-export const BAR_MASK_IMAGE = 'linear-gradient(#fff, #fff)'
 
 /**
  * 实心矩形蒙版：供 SQUARE 与 RECTANGLE 共用。
@@ -98,20 +92,6 @@ export const STAR_MASK_IMAGE = polygonMaskImage(
 )
 
 /**
- * 四向擦除的起始尺寸与钉住的边。
- * 百分比 `mask-position` 会把蒙版对应边贴在视口对应边上，因此只让尺寸从细条长到 100%，
- * 被钉住的边保持不动，就得到从该边向对侧擦除的效果：
- * - LTR / RTL：竖直细条（4px 宽、100% 高），分别钉在左边 `0% 0%` 与右边 `100% 0%`；
- * - TTB / BTT：水平细条（100% 宽、4px 高），分别钉在顶边 `0% 0%` 与底边 `0% 100%`。
- */
-const DIRECTIONAL_START: Record<DirectionalAnimationType, { size: string; position: string }> = {
-  [ThemeAnimationType.LTR]: { size: `${BAR_START_PX}px 100%`, position: '0% 0%' },
-  [ThemeAnimationType.RTL]: { size: `${BAR_START_PX}px 100%`, position: '100% 0%' },
-  [ThemeAnimationType.TTB]: { size: `100% ${BAR_START_PX}px`, position: '0% 0%' },
-  [ThemeAnimationType.BTT]: { size: `100% ${BAR_START_PX}px`, position: '0% 100%' },
-}
-
-/**
  * 蒙版几何一律取整到整数 px：Math.hypot 的无理数会产生分数像素，
  * 而对快照层逐帧动画 mask-size / mask-position 时，分数偏移会在 GPU 栅格化
  * （尤其 Windows 分数缩放的 dpr）下暴露 1px 级接缝——表现为收起时边缘偶现"线条抖动"。
@@ -157,18 +137,6 @@ export function getCircleMaskGeometry(center: Point, viewport: Size): MaskGeomet
     startPosition: `${px(center.x)} ${px(center.y)}`,
     endSize: `${px(endSize)} ${px(endSize)}`,
     endPosition: `${px(center.x - endSize / 2)} ${px(center.y - endSize / 2)}`,
-  }
-}
-
-/** LTR / RTL / TTB / BTT：位置钉在对应边不动，尺寸从细条长到 `100% 100%` */
-export function getDirectionalMaskGeometry(type: DirectionalAnimationType): MaskGeometry {
-  const start = DIRECTIONAL_START[type]
-  return {
-    maskImage: BAR_MASK_IMAGE,
-    startSize: start.size,
-    startPosition: start.position,
-    endSize: '100% 100%',
-    endPosition: start.position,
   }
 }
 
@@ -342,6 +310,183 @@ export function getBlurCircleMaskGeometry(center: Point, viewport: Size, blurAmo
   return pinCenterGeometry(getBlurCircleMaskImage(blurAmount), center, { width: endSize, height: endSize })
 }
 
+/**
+ * 属性驱动揭开（BLINDS / SCAN）：蒙版盒子完全静止（不动画 mask-size / mask-position），
+ * 只有注册属性 `REVEAL_VAR` 在动——渐变蒙版引用该属性，属性每帧变化时渐变重新解析。
+ * 与 CIRCLE_REVERT 收起方向的"洞"（buildHoleAnimationCSS）同一机制，CSS 生成见 styles.ts。
+ * 这类动画没有触发点（不消费 center），旧截图层完整垫底、新层挂蒙版。
+ */
+export interface RevealMaskSpec {
+  /** 注册属性的起始值 / 终止值（px），写进 keyframes 的 from / to */
+  from: number
+  to: number
+  /** `mask-image`：引用 `REVEAL_VAR` 的渐变模板 */
+  maskImage: string
+  /** `mask-size`：BLINDS 按叶片尺寸平铺，SCAN 单层满铺 */
+  maskSize: string
+  /** BLINDS 叶片平铺 `repeat`；SCAN 单层 `no-repeat` */
+  maskRepeat: 'no-repeat' | 'repeat'
+}
+
+/** BLINDS / SCAN 共用的方向参数表：渐变角 = 扫开方向（90deg 向右 / 270deg 向左 / 180deg 向下 / 0deg 向上） */
+const REVEAL_DIRECTION: Record<ThemeAnimationDirection, { angle: number; axis: 'x' | 'y' }> = {
+  [ThemeAnimationDirection.LTR]: { angle: 90, axis: 'x' },
+  [ThemeAnimationDirection.RTL]: { angle: 270, axis: 'x' },
+  [ThemeAnimationDirection.TTB]: { angle: 180, axis: 'y' },
+  [ThemeAnimationDirection.BTT]: { angle: 0, axis: 'y' },
+}
+
+/** BLINDS 软边宽度 = 叶片宽 × 此比例（与 beui 的 72/20 同比例），上限 BLINDS_MAX_FEATHER_PX */
+export const BLINDS_FEATHER_RATIO = 0.28
+export const BLINDS_MAX_FEATHER_PX = 20
+
+export function getBlindsFeatherPx(slatWidth: number): number {
+  return Math.min(BLINDS_MAX_FEATHER_PX, Math.round(slatWidth * BLINDS_FEATHER_RATIO))
+}
+
+/**
+ * BLINDS：视口被尺寸 `slatWidth` 的叶片平铺，每根叶片的不透明部分从 0 长到全宽。
+ * from = -feather：渐变的 `#000` 段整体落在叶片左侧之外，起始帧整屏透出旧主题；
+ * to = slatWidth：`#000` 段盖满整个叶片，末帧完全揭开。软边超出叶片的部分被平铺边界裁掉，
+ * 形成"相邻叶片硬边相接"的百叶窗观感（与 beui 一致）。
+ */
+export function getBlindsRevealSpec(direction: ThemeAnimationDirection, slatWidth: number): RevealMaskSpec {
+  const { angle, axis } = REVEAL_DIRECTION[direction]
+  const feather = getBlindsFeatherPx(slatWidth)
+  const v = `var(${REVEAL_VAR})`
+  return {
+    from: -feather,
+    to: slatWidth,
+    maskImage: `linear-gradient(${angle}deg, #000 0 ${v}, transparent calc(${v} + ${feather}px))`,
+    maskSize: axis === 'x' ? `${slatWidth}px 100%` : `100% ${slatWidth}px`,
+    maskRepeat: 'repeat',
+  }
+}
+
+/** SCAN 前缘光束带：实心段之后的半透明"扫描光"宽度与透明度 */
+export const SCAN_BAND_WIDTH_PX = 12
+export const SCAN_BAND_ALPHA = 0.4
+/** 光束带后端的渐隐尾巴宽度 */
+export const SCAN_FADE_WIDTH_PX = 4
+
+/**
+ * SCAN：单层满铺蒙版，揭开前缘带一条半透明光束——硬边实心段 + 平坦半透明带 + 渐隐尾。
+ * to = 推进轴全长 + 光束总宽：实心段末帧盖满视口，光束整体扫出画面（与 CIRCLE 的
+ * 覆盖余量同哲学：蒙版在样式移除前持续生效，末帧必须完全覆盖）。
+ */
+export function getScanRevealSpec(direction: ThemeAnimationDirection, viewport: Size): RevealMaskSpec {
+  const { angle, axis } = REVEAL_DIRECTION[direction]
+  const extent = axis === 'x' ? viewport.width : viewport.height
+  const v = `var(${REVEAL_VAR})`
+  return {
+    from: 0,
+    to: extent + SCAN_BAND_WIDTH_PX + SCAN_FADE_WIDTH_PX,
+    maskImage:
+      `linear-gradient(${angle}deg, #000 0 calc(${v} - ${SCAN_BAND_WIDTH_PX}px),` +
+      ` rgba(0, 0, 0, ${SCAN_BAND_ALPHA}) calc(${v} - ${SCAN_BAND_WIDTH_PX}px),` +
+      ` rgba(0, 0, 0, ${SCAN_BAND_ALPHA}) calc(${v} - ${SCAN_FADE_WIDTH_PX}px),` +
+      ` transparent ${v})`,
+    maskSize: '100% 100%',
+    maskRepeat: 'no-repeat',
+  }
+}
+
+export function isRevealAnimationType(type: ThemeAnimationType): boolean {
+  return type === ThemeAnimationType.BLINDS || type === ThemeAnimationType.SCAN
+}
+
+/** 按动画类型分发属性驱动规格；仅接受 BLINDS / SCAN（QR_GRID 走独立的双层蒙版规格） */
+export function getRevealMaskSpec(
+  type: ThemeAnimationType,
+  direction: ThemeAnimationDirection,
+  slatWidth: number,
+  viewport: Size,
+): RevealMaskSpec {
+  if (type === ThemeAnimationType.BLINDS) return getBlindsRevealSpec(direction, slatWidth)
+  return getScanRevealSpec(direction, viewport)
+}
+
+/**
+ * QR_GRID：方块格子——百叶窗的二维版。新截图层挂"列约束 ∩ 行约束"的双层渐变蒙版：
+ * 列层是按格距平铺的竖条、行层是按格距平铺的横条，intersect 后即每格一个方块，
+ * 方块随注册属性同步生长、末帧相邻方块融为整屏（末帧必须完全覆盖，同 BLINDS 的叶片）。
+ * `direction` 决定方块的锚定角：LTR = 左上（向右下长）、RTL = 右上、TTB = 顶边中点（向下）、
+ * BTT = 底边中点（向上）。不支持 mask-composite 的引擎按 @supports 降级为推进轴单层条带
+ * （观感同百叶窗，见 styles.ts）。
+ */
+export interface QrGridMaskSpec {
+  /** 揭开进度变量的起止值（px）：-2×软边起步（起始帧整屏旧主题），格距收尾（方块融为整屏） */
+  from: number
+  to: number
+  /** 基线（不支持 mask-composite 的引擎）：沿推进轴的单层条带渐变 */
+  baselineImage: string
+  baselineSize: string
+  /** 方块双层蒙版：列约束（x）与行约束（y）两条渐变，逗号拼接 */
+  cellImage: string
+  /** 双层各自的 mask-size，逗号拼接 */
+  cellSize: string
+}
+
+/** QR_GRID 方块格距（px）：每格方块的最大边长，也是双层蒙版各自的平铺周期 */
+export const QR_GRID_CELL_PX = 64
+
+/** QR_GRID 各方向的锚定参数：推进轴（列/行）渐变角 + 垂直轴渐变角 */
+interface QrGridDirectionSpec {
+  /** 推进轴（先揭示的轴）渐变角：LTR/RTL = 90/270（列层），TTB/BTT = 180/0（行层），恒为起始边生长 */
+  leadAngle: 90 | 270 | 180 | 0
+  /** 垂直轴渐变角：水平推进（LTR/RTL）恒为 180（自顶向下）；垂直推进（TTB/BTT）为 90（自左向右） */
+  crossAngle: 90 | 180
+  /** 垂直轴是否为推进轴（决定基线层取哪条渐变与 mask-size 的轴） */
+  leadIsX: boolean
+}
+
+const QR_GRID_DIRECTION: Record<ThemeAnimationDirection, QrGridDirectionSpec> = {
+  [ThemeAnimationDirection.LTR]: { leadAngle: 90, crossAngle: 180, leadIsX: true },
+  [ThemeAnimationDirection.RTL]: { leadAngle: 270, crossAngle: 180, leadIsX: true },
+  [ThemeAnimationDirection.TTB]: { leadAngle: 180, crossAngle: 90, leadIsX: false },
+  [ThemeAnimationDirection.BTT]: { leadAngle: 0, crossAngle: 90, leadIsX: false },
+}
+
+/** 从格子起始边生长的条带渐变（与 BLINDS 叶片同构）：不透明段 0→r，软边 f */
+function qrEdgeGradient(angle: number, feather: number): string {
+  const v = `var(${REVEAL_VAR})`
+  return `linear-gradient(${angle}deg, #000 0 ${v}, transparent calc(${v} + ${feather}px))`
+}
+
+/** 从格子中心向两侧对称生长的条带渐变：不透明段 50%±r/2，两侧各带软边 f */
+function qrCenterGradient(axisAngle: 90 | 180, feather: number): string {
+  const v = `var(${REVEAL_VAR})`
+  return (
+    `linear-gradient(${axisAngle}deg, transparent calc(50% - ${v} / 2 - ${feather}px),` +
+    ` #000 calc(50% - ${v} / 2) calc(50% + ${v} / 2),` +
+    ` transparent calc(50% + ${v} / 2 + ${feather}px))`
+  )
+}
+
+export function getQrGridMaskSpec(direction: ThemeAnimationDirection): QrGridMaskSpec {
+  const spec = QR_GRID_DIRECTION[direction]
+  const feather = getBlindsFeatherPx(QR_GRID_CELL_PX)
+  // 起始值取 -2×软边：edge 锚定只需 -f 即不可见，center 锚定（±r/2）需要 -2f，统一取后者
+  const from = -2 * feather
+  // 推进轴层：LTR/RTL = 列层（竖条），TTB/BTT = 行层（横条）；垂直轴层恒为对称中心生长
+  const leadGradient = qrEdgeGradient(spec.leadAngle, feather)
+  const crossGradient = qrCenterGradient(spec.crossAngle, feather)
+  const leadSize = spec.leadIsX ? `${QR_GRID_CELL_PX}px 100%` : `100% ${QR_GRID_CELL_PX}px`
+  const crossSize = spec.leadIsX ? `100% ${QR_GRID_CELL_PX}px` : `${QR_GRID_CELL_PX}px 100%`
+  return {
+    from,
+    to: QR_GRID_CELL_PX,
+    baselineImage: leadGradient,
+    baselineSize: leadSize,
+    cellImage: `${crossGradient}, ${leadGradient}`,
+    cellSize: `${crossSize}, ${leadSize}`,
+  }
+}
+
+export function isQrGridAnimationType(type: ThemeAnimationType): boolean {
+  return type === ThemeAnimationType.QR_GRID
+}
+
 /** 中心扩散形状的几何函数表（含 CIRCLE）；`type in` 即类型守卫 */
 const SHAPE_GEOMETRY: Record<ShapeAnimationType, (center: Point, viewport: Size) => MaskGeometry> = {
   [ThemeAnimationType.CIRCLE]: getCircleMaskGeometry,
@@ -361,10 +506,6 @@ export function isBlurAnimationType(type: ThemeAnimationType): boolean {
   return type === ThemeAnimationType.CIRCLE_BLUR
 }
 
-export function isDirectionalAnimationType(type: ThemeAnimationType): type is DirectionalAnimationType {
-  return type in DIRECTIONAL_START
-}
-
 /**
  * 按动画类型分发；未知类型按 CIRCLE 处理。blurAmount 仅被 CIRCLE_BLUR 消费。
  * CIRCLE_REVERT 的收起方向由 orchestrate 直接取 getCircleRevertMaskGeometry；
@@ -376,7 +517,6 @@ export function getMaskGeometry(
   viewport: Size,
   blurAmount = 2,
 ): MaskGeometry {
-  if (isDirectionalAnimationType(type)) return getDirectionalMaskGeometry(type)
   if (isShapeAnimationType(type)) return SHAPE_GEOMETRY[type](center, viewport)
   if (isBlurAnimationType(type)) return getBlurCircleMaskGeometry(center, viewport, blurAmount)
   return getCircleMaskGeometry(center, viewport)

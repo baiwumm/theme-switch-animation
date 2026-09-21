@@ -7,6 +7,7 @@ import { flushSync } from 'react-dom'
 import {
   SKIP_TRANSITION,
   THEME_STORAGE_KEY,
+  ThemeAnimationDirection,
   ThemeAnimationType,
   applyThemeClass,
   hasThemeClass,
@@ -18,15 +19,14 @@ import {
   writeStoredTheme,
 } from '@theme-switch-animation/core'
 import type {
-  DirectionalAnimationType,
   ResolvedAnimationOptions,
   ThemeAnimationOptions,
 } from '@theme-switch-animation/core'
 
 // 先 import 再 export（而非 `export … from`）：dts 打包时 core 的类型才会被内联进 react.d.ts，
 // 而不是留下一个指向私有 workspace 包的引用。
-export { SKIP_TRANSITION, THEME_STORAGE_KEY, ThemeAnimationType, observeThemeClass }
-export type { DirectionalAnimationType, ResolvedAnimationOptions, ThemeAnimationOptions }
+export { SKIP_TRANSITION, THEME_STORAGE_KEY, ThemeAnimationDirection, ThemeAnimationType, observeThemeClass }
+export type { ResolvedAnimationOptions, ThemeAnimationOptions }
 
 export type UseThemeAnimationOptions = ThemeAnimationOptions
 

@@ -5,7 +5,13 @@ import {
   getBlurCircleMaskGeometry,
   getCircleMaskGeometry,
   getCircleRevertMaskGeometry,
+  getBlindsRevealSpec,
   getMaskGeometry,
+  getQrGridMaskSpec,
+  getScanRevealSpec,
+  QR_GRID_CELL_PX,
+  SCAN_BAND_WIDTH_PX,
+  SCAN_FADE_WIDTH_PX,
 } from './masks'
 import {
   DURATION_VAR,
@@ -16,7 +22,7 @@ import {
   injectAnimationStyle,
   removeAnimationStyle,
 } from './styles'
-import { THEME_ANIMATION_STYLE_ID, ThemeAnimationType } from './types'
+import { REVEAL_VAR, THEME_ANIMATION_STYLE_ID, ThemeAnimationDirection, ThemeAnimationType } from './types'
 
 const viewport = { width: 800, height: 600 }
 const center = { x: 400, y: 300 }
@@ -90,17 +96,17 @@ describe('buildAnimationCSS（CSS 变量化）', () => {
 
   it('linear() / steps() 等任意 timing-function 原样进入变量', () => {
     for (const easing of ['linear(0, 0.25 75%, 1)', 'steps(4, end)', 'ease']) {
-      const out = buildAnimationCSS({ animationType: ThemeAnimationType.LTR, geometry: circle, duration: 400, easing })
+      const out = buildAnimationCSS({ animationType: ThemeAnimationType.CIRCLE, geometry: circle, duration: 400, easing })
       expect(blockOf(out, ':root')).toContain(`${EASING_VAR}: ${easing};`)
     }
   })
 
   it('非法 duration（NaN / 负数）回落到默认 750ms', () => {
     for (const duration of [Number.NaN, -1, Number.POSITIVE_INFINITY]) {
-      const out = buildAnimationCSS({ animationType: ThemeAnimationType.LTR, geometry: circle, duration, easing: 'ease' })
+      const out = buildAnimationCSS({ animationType: ThemeAnimationType.CIRCLE, geometry: circle, duration, easing: 'ease' })
       expect(blockOf(out, ':root')).toContain(`${DURATION_VAR}: 750ms;`)
     }
-    const zero = buildAnimationCSS({ animationType: ThemeAnimationType.LTR, geometry: circle, duration: 0, easing: 'ease' })
+    const zero = buildAnimationCSS({ animationType: ThemeAnimationType.CIRCLE, geometry: circle, duration: 0, easing: 'ease' })
     expect(blockOf(zero, ':root')).toContain(`${DURATION_VAR}: 0ms;`)
   })
 
@@ -263,6 +269,89 @@ describe('buildAnimationCSS（既有类型产物字节稳定）', () => {
   animation: theme-switch-circle var(--theme-switch-duration, 750ms) var(--theme-switch-easing, ease-in-out) both;
 }
 `)
+  })
+})
+
+describe('buildAnimationCSS（属性驱动揭开：BLINDS / SCAN）', () => {
+  const blindsSpec = getBlindsRevealSpec(ThemeAnimationDirection.LTR, 72)
+  const css = buildAnimationCSS({
+    animationType: ThemeAnimationType.BLINDS,
+    reveal: blindsSpec,
+    duration: 400,
+    easing: 'ease',
+  })
+
+  it('注册属性 + keyframes 只动属性，起止值来自 spec', () => {
+    expect(css).toContain('@property --theme-switch-reveal {')
+    expect(css).toContain('syntax: "<length>";')
+    const keyframes = css.match(/@keyframes theme-switch-blinds \{([\s\S]*?)\n\}/)
+    expect(keyframes).not.toBeNull()
+    expect(keyframes![1]).toContain(`${REVEAL_VAR}: -20px;`)
+    expect(keyframes![1]).toContain(`${REVEAL_VAR}: 72px;`)
+    expect(keyframes![1]).not.toContain('mask-size')
+  })
+
+  it('蒙版挂新层：叶片 repeat 平铺、双 animation 声明、无 z-index / will-change（盒子静止，机制同洞式）', () => {
+    const block = blockOf(css, '::view-transition-new(root)')
+    expect(block).toContain(`mask-image: ${blindsSpec.maskImage};`)
+    expect(block).toContain('mask-size: 72px 100%;')
+    expect(block).toContain('mask-position: 0 0;')
+    expect(block).toContain('mask-repeat: repeat;')
+    expect(block.match(/animation: theme-switch-blinds /g)).toHaveLength(2)
+    expect(css).not.toContain('z-index')
+    expect(css).not.toContain('will-change')
+    // 旧层只出现在重置规则里（完整垫底）
+    expect(css.match(/::view-transition-old\(root\)\s*\{/g) ?? []).toHaveLength(0)
+  })
+
+  it('SCAN：no-repeat 单层满铺，keyframes 终值 = 视口宽 + 光束总宽', () => {
+    const spec = getScanRevealSpec(ThemeAnimationDirection.LTR, { width: 800, height: 600 })
+    const out = buildAnimationCSS({ animationType: ThemeAnimationType.SCAN, reveal: spec, duration: 400, easing: 'ease' })
+    expect(blockOf(out, '::view-transition-new(root)')).toContain('mask-repeat: no-repeat;')
+    expect(out).toContain('@keyframes theme-switch-scan {')
+    expect(out).toContain(`${REVEAL_VAR}: ${800 + SCAN_BAND_WIDTH_PX + SCAN_FADE_WIDTH_PX}px;`)
+  })
+})
+describe('buildAnimationCSS（QR_GRID：方块格子双层 + @supports 降级）', () => {
+  const spec = getQrGridMaskSpec(ThemeAnimationDirection.LTR)
+  const css = buildAnimationCSS({
+    animationType: ThemeAnimationType.QR_GRID,
+    qrGrid: spec,
+    duration: 400,
+    easing: 'ease',
+  })
+
+  it('基线：蒙版挂新层，沿推进轴的单层条带（观感同百叶窗，状态始终正确）', () => {
+    // 排除作为分组选择器一部分（前面带逗号）的重置规则
+    const blocks = css.match(/(?<!,\s*)::view-transition-new\(root\)\s*\{[^}]*\}/g) ?? []
+    expect(blocks.length).toBe(2) // 基线 + @supports 增强各一条
+    const baseline = blocks[0]!
+    expect(baseline).toContain(`mask-image: ${spec.baselineImage};`)
+    expect(baseline).toContain(`mask-size: ${spec.baselineSize};`)
+    expect(baseline).toContain('mask-repeat: repeat;')
+    expect(baseline).not.toContain('mask-composite')
+    expect(baseline).not.toContain('z-index')
+    expect(baseline.match(/animation: theme-switch-qr-grid /g)).toHaveLength(2)
+    // 旧层只出现在重置规则里（完整垫底）
+    expect(css.match(/::view-transition-old\(root\)\s*\{/g) ?? []).toHaveLength(0)
+  })
+
+  it('@supports 增强：列 × 行双层 intersect = 逐格方块，keyframes 只动注册属性', () => {
+    const supportsBlock = css.match(/@supports \(mask-composite: intersect\) \{([\s\S]*)\}\n$/)![1]
+    expect(supportsBlock).toContain('mask-composite: intersect;')
+    expect(supportsBlock).toContain(`mask-image: ${spec.cellImage};`)
+    expect(supportsBlock).toContain(`mask-size: ${spec.cellSize};`)
+    expect(supportsBlock).toContain('mask-repeat: repeat, repeat;')
+    const keyframes = css.match(/@keyframes theme-switch-qr-grid \{([\s\S]*?)\n\}/)
+    expect(keyframes![1]).toContain(`${REVEAL_VAR}: ${spec.from}px;`)
+    expect(keyframes![1]).toContain(`${REVEAL_VAR}: ${QR_GRID_CELL_PX}px;`)
+    expect(keyframes![1]).not.toContain('mask-')
+  })
+
+  it('动画名按类型区分（qr-grid），无 will-change / z-index（盒子静止，机制同洞式）', () => {
+    expect(getAnimationName(ThemeAnimationType.QR_GRID)).toBe('theme-switch-qr-grid')
+    expect(css).not.toContain('will-change')
+    expect(css).not.toContain('z-index')
   })
 })
 

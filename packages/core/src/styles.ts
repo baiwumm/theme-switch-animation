@@ -1,5 +1,5 @@
-import type { CircleHoleGeometry, MaskGeometry } from './masks'
-import { THEME_ANIMATION_DEFAULTS, THEME_ANIMATION_STYLE_ID, ThemeAnimationType } from './types'
+import type { CircleHoleGeometry, MaskGeometry, QrGridMaskSpec, RevealMaskSpec } from './masks'
+import { REVEAL_VAR, THEME_ANIMATION_DEFAULTS, THEME_ANIMATION_STYLE_ID, ThemeAnimationType } from './types'
 
 /** 时长变量名；用户 duration 写进 `:root`，动画声明只引用变量 */
 export const DURATION_VAR = '--theme-switch-duration'
@@ -19,7 +19,8 @@ export function getAnimationName(type: ThemeAnimationType): string {
 
 export interface BuildAnimationCSSParams {
   animationType: ThemeAnimationType
-  geometry: MaskGeometry
+  /** mask-size / mask-position 驱动类型的蒙版几何；reveal / holeGeometry 分支不需要 */
+  geometry?: MaskGeometry
   /** 动画时长 ms */
   duration: number
   /** 任意合法 CSS timing-function */
@@ -31,6 +32,13 @@ export interface BuildAnimationCSSParams {
    * 生成静止蒙版盒子 + 动画半径的 CSS（见 §附录六）。
    */
   holeGeometry?: CircleHoleGeometry
+  /**
+   * 属性驱动揭开（BLINDS / SCAN）的蒙版规格；给了它就忽略 geometry，
+   * 生成 `@property` 注册属性 + 静止蒙版盒子 + 引用该属性的渐变（机制同洞式，见 masks.ts）。
+   */
+  reveal?: RevealMaskSpec
+  /** QR_GRID 的方块格子双层蒙版规格；给了它就忽略 geometry，蒙版挂新截图层（见 masks.ts QrGridMaskSpec） */
+  qrGrid?: QrGridMaskSpec
 }
 
 /**
@@ -74,6 +82,101 @@ function buildHoleAnimationCSS(hole: CircleHoleGeometry, duration: number, easin
 }
 
 /**
+ * 属性驱动揭开（BLINDS / SCAN）的 CSS：与洞式同一机制——蒙版盒子完全静止，
+ * keyframes 只动注册属性 `REVEAL_VAR`，引用它的 mask-image 渐变逐帧重新解析
+ * （mask-image 本身不可动画；`@property` 注册后 length 属性可参与插值）。
+ * 蒙版挂新截图层，旧层完整垫底；渐变模板与起止值由 masks.ts 的 RevealMaskSpec 提供。
+ */
+function buildRevealAnimationCSS(reveal: RevealMaskSpec, duration: number, easing: string, name: string): string {
+  const safeDuration = Number.isFinite(duration) && duration >= 0 ? duration : THEME_ANIMATION_DEFAULTS.duration
+  return `:root {
+  ${DURATION_VAR}: ${safeDuration}ms;
+  ${EASING_VAR}: ${easing};
+}
+@property ${REVEAL_VAR} {
+  syntax: "<length>";
+  inherits: false;
+  initial-value: 0px;
+}
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation: none;
+  mix-blend-mode: normal;
+}
+@keyframes ${name} {
+  from {
+    ${REVEAL_VAR}: ${reveal.from}px;
+  }
+  to {
+    ${REVEAL_VAR}: ${reveal.to}px;
+  }
+}
+::view-transition-new(root) {
+  mask-image: ${reveal.maskImage};
+  mask-size: ${reveal.maskSize};
+  mask-position: 0 0;
+  mask-repeat: ${reveal.maskRepeat};
+  animation: ${name} var(${DURATION_VAR}, ${THEME_ANIMATION_DEFAULTS.duration}ms) ease-in-out both;
+  animation: ${name} var(${DURATION_VAR}, ${THEME_ANIMATION_DEFAULTS.duration}ms) var(${EASING_VAR}, ease-in-out) both;
+}
+`
+}
+
+/**
+ * QR_GRID 的 CSS：与 BLINDS 同样挂新截图层（旧层完整垫底），方块随注册属性 `REVEAL_VAR`
+ * 同步生长。基线（所有浏览器）：沿推进轴的单层条带（观感同百叶窗），状态始终正确；
+ * `@supports` 增强（支持 mask-composite 的引擎）：叠加垂直轴条带层做 intersect，
+ * 两个正交条带组的交集即逐格方块。不写 `-webkit-mask-composite`：仅支持旧语法的引擎
+ * 落入基线即可，避免新旧两套 composite 关键字的级联歧义。
+ */
+function buildQrGridAnimationCSS(spec: QrGridMaskSpec, duration: number, easing: string, name: string): string {
+  const safeDuration = Number.isFinite(duration) && duration >= 0 ? duration : THEME_ANIMATION_DEFAULTS.duration
+  const animation = (): string =>
+    `animation: ${name} var(${DURATION_VAR}, ${THEME_ANIMATION_DEFAULTS.duration}ms) ease-in-out both;
+  animation: ${name} var(${DURATION_VAR}, ${THEME_ANIMATION_DEFAULTS.duration}ms) var(${EASING_VAR}, ease-in-out) both;`
+  return `:root {
+  ${DURATION_VAR}: ${safeDuration}ms;
+  ${EASING_VAR}: ${easing};
+}
+@property ${REVEAL_VAR} {
+  syntax: "<length>";
+  inherits: false;
+  initial-value: 0px;
+}
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation: none;
+  mix-blend-mode: normal;
+}
+@keyframes ${name} {
+  from {
+    ${REVEAL_VAR}: ${spec.from}px;
+  }
+  to {
+    ${REVEAL_VAR}: ${spec.to}px;
+  }
+}
+::view-transition-new(root) {
+  mask-image: ${spec.baselineImage};
+  mask-size: ${spec.baselineSize};
+  mask-position: 0 0;
+  mask-repeat: repeat;
+  ${animation()}
+}
+@supports (mask-composite: intersect) {
+  ::view-transition-new(root) {
+    mask-image: ${spec.cellImage};
+    mask-size: ${spec.cellSize};
+    mask-position: 0 0, 0 0;
+    mask-repeat: repeat, repeat;
+    mask-composite: intersect;
+    ${animation()}
+  }
+}
+`
+}
+
+/**
  * 生成注入 `<head>` 的临时样式表：
  *
  * 1. `:root` 定义 duration / easing 两个变量（唯一需要插值用户输入的地方）；
@@ -94,9 +197,14 @@ export function buildAnimationCSS({
   easing,
   revertDirection,
   holeGeometry,
+  reveal,
+  qrGrid,
 }: BuildAnimationCSSParams): string {
   const name = getAnimationName(animationType)
   if (holeGeometry) return buildHoleAnimationCSS(holeGeometry, duration, easing, name)
+  if (reveal) return buildRevealAnimationCSS(reveal, duration, easing, name)
+  if (qrGrid) return buildQrGridAnimationCSS(qrGrid, duration, easing, name)
+  if (!geometry) throw new TypeError('buildAnimationCSS: mask-size 驱动的类型必须提供 geometry（reveal / holeGeometry 分支除外）')
   const safeDuration = Number.isFinite(duration) && duration >= 0 ? duration : THEME_ANIMATION_DEFAULTS.duration
   const onOld = animationType === ThemeAnimationType.CIRCLE_REVERT && revertDirection !== 'expand'
   const selector = onOld ? '::view-transition-old(root)' : '::view-transition-new(root)'
