@@ -14,3 +14,6 @@ out/
 
 # verify-engine/verify-firefox-video 运行时报告输出（--keep 或失败时落盘）
 scripts/.verify-engine-out/
+
+# wrangler 部署时的临时打包目录
+.wrangler/
