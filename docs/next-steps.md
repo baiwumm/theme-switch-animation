@@ -272,23 +272,28 @@ iPhone 与 Mac 同一局域网访问 `http://<mac-ip>:5224/`（或直接把 `pla
         `--theme-switch-reveal` 在 VT 伪元素上逐帧插值（机制同 CIRCLE_REVERT 收起，WebKit 路线见 §2 A）。
       - 软边观感判读：方块/叶片软边 = 尺寸 × `BLINDS_FEATHER_RATIO`(0.28) 封顶 20px，QR_GRID 格距
         `QR_GRID_CELL_PX` = 64 → 约 18px。真机若觉得方块偏糊，调低该比例（一处常量，三类型共用）。
-- [ ] 5. 文档站上线：画廊卡片与 hero 文案已变（12 张卡、三张带 direction 行、BLINDS 带叶宽行），
-      需 push 触发自动部署。README 首页截图 `assets/screen.jpg` 已重出（`8fa1beb`，1910×911 亮色，
-      hero 文案改为「12 种形状 / 试玩 12 种动画」）。
-- [ ] 6. 发布 0.2.0（**流程已改为 tag 触发 CI 发包**，工作已备好并推送，等指令执行）：
-      - 前置（一次性、人工）：① npmjs.com → 包页 → Settings → Trusted Publisher 登记
+- [x] 5. 文档站上线（2026-09-22 完成）：push `main` 触发自动部署，线上首页已核实显示「12 种动画」
+      （`curl https://theme-switch-animation.baiwumm.com`）。README 首页截图 `assets/screen.jpg`
+      已在部署前重出（`8fa1beb`，1910×911 亮色，hero 文案「12 种形状 / 试玩 12 种动画」）。
+- [x] 6. 发布 0.2.0（2026-09-22 完成，**首次走 tag 触发流水线，全链路绿**）：
+      - 前置（一次性、人工，已完成）：① npmjs.com → 包页 → Settings → Trusted Publisher 登记
         `baiwumm/theme-switch-animation` + `release.yml`；② GitHub Settings → Environments → `npm`
-        → Required reviewers 加上自己（否则人工闸门形同虚设）；③ `release.yml` 必须已在 main 上
-        （workflow 取自 tag 指向的 commit，在旧提交上打 tag 既不触发也不报错）。
-      - 执行：`pnpm changeset version` → 提交 `chore(release): version 0.2.0` → `git push`
-        → `git tag v0.2.0 && git push origin v0.2.0` → CI 校验（tag==version、tag 在 main 上、
-        无未消费 changeset、lint/typecheck/test/build、`verify:package` 清单）→
-        `npm publish --provenance`（npm 审批通过才发包）→ 自动建 GitHub Release。
-      - 变更点：不再手动 `changeset publish`——装的 `@changesets/cli@3.0.2` 全树无 provenance 支持，
-        走不了 Trusted Publishing，且它会另打一个 `theme-switch-animation@x.y.z` tag 与 `v*` 约定冲突；
-        职责边界已写进 `.changeset/README.md`。
-      - 破坏性变更在 0.x 阶段按 changesets 语义仍落 minor，CHANGELOG 保留"移除四向类型 + 迁移写法"
-        的叙述（现 changeset 正文已含）。
+        → Required reviewers 加上自己；③ `release.yml` 先合进 main 再打 tag。
+      - 执行序列：`pnpm changeset version`（0.1.0 → 0.2.0，CHANGELOG 落 0.2.0 段）→ 本地门禁
+        （lint / typecheck / 208 单测 / build / `verify:package` 18 文件）→ `3266164` 提交并推 main
+        → `git tag v0.2.0 && git push origin v0.2.0` → Release run `35675176224`（4m18s，13 步全 ✓）。
+      - 实测结论：**环境审批闸门真的会拦**——run 进入 `waiting` 等待 `npm` 环境复核，
+        `can_admins_bypass: true` 并没有把管理员自动放行（此前评估里的担心不成立）；
+        审批后 `npm publish --provenance` 免密成功，`npm audit signatures` 报
+        "1 package has a verified attestation"，证明 Trusted Publisher 生效。
+      - 发布后核验：npm `latest = 0.2.0`；GitHub Release `v0.2.0` 已建（0 assets，正文走 generate-notes）；
+        干净安装冒烟通过——core 导出 12 个类型值与 `ThemeAnimationDirection` 四值、
+        `direction`/`slatWidth` 透传与非法值回落（`nope`/`9999` → `ltr`/`72`）正确，
+        `/react` `/vue` 产物含 `ThemeAnimationDirection` 与 `qr-grid`，`/nuxt` runtime 自动导入含该常量。
+      - 变更点（保留备查）：不再手动 `changeset publish`——装的 `@changesets/cli@3.0.2` 全树无 provenance
+        支持，走不了 Trusted Publishing，且它会另打一个 `theme-switch-animation@x.y.z` tag 与 `v*`
+        约定冲突；职责边界已写进 `.changeset/README.md`。
+      - 破坏性变更在 0.x 阶段按 changesets 语义落 minor，CHANGELOG 保留"移除四向类型 + 迁移写法"叙述。
 
 **长期遗留（不属本轮）**：Playwright e2e 矩阵（需求 §9-8 只跑 Chromium + WebKit）至今未正式建立，
 引擎覆盖靠 `scripts/verify-engine.mjs` 手动跑，Playwright 仍是 `%TEMP%/pw-webkit` 的临时安装；
