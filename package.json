@@ -58,6 +58,7 @@
     "test:acceptance": "node scripts/cdp-consistency.mjs && node scripts/cdp-darkcycle.mjs && node scripts/cdp-hydration.mjs && node scripts/cdp-measure.mjs && node scripts/cdp-vue-rapid.mjs && node scripts/cdp-nuxt93.mjs && node scripts/cdp-nuxt-animtypes.mjs",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
+    "verify:package": "node scripts/verify-package.mjs",
     "changeset": "changeset",
     "version": "changeset version"
   },
