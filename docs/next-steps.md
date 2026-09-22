@@ -300,9 +300,10 @@ iPhone 与 Mac 同一局域网访问 `http://<mac-ip>:5224/`（或直接把 `pla
 ## 6. 文档站 UI 层迁到 beUI（2026-09-22 记录）
 
 本轮只动 `apps/docs`（外加根 `.gitignore` 一行），**npm 发布产物逐字节不变**（根包 `files: ['dist']`，
-`@theme-switch-animation/docs` 是 `private: true`）。因此**没有记 changeset**：加一条 patch 只会在下次
-`changeset version` 时切出一个内容与 0.2.0 完全相同的 0.2.1，污染 CHANGELOG 与版本序列；
-`@changesets/cli@3.0.2` 全树没有 `skip release` 这种"留记录不涨版本"的取值（已核实），所以只能二选一。
+`@theme-switch-animation/docs` 是 `private: true`）。changeset 走的是 patch（`.changeset/beui-docs-homepage.md`），
+代价已知情：下次 `pnpm changeset version` 会切出一个 tarball 内容与 0.2.0 相同的 0.2.1，只为在 CHANGELOG 里
+留下门面改版的记录。`@changesets/cli@3.0.2` 全树没有 `skip release` 这种"留记录不涨版本"的取值（已核实），
+所以做不到两全。
 
 提交清单（全部本地，未 push）：`9fe09a8` biome vcs.root + 清 @aceternity registry →
 `8093782` beUI 迁移 + 代码高亮 → `77537b3` 滚动条 → `3c6c101` 清磁盘垃圾 + ignore `.wrangler/`。
