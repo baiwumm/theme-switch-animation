@@ -1,11 +1,6 @@
 'use client'
 
-import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-} from '@/components/ui/accordion'
+import { BouncyAccordion } from '@/components/motion/bouncy-accordion'
 
 const FAQS = [
   {
@@ -38,6 +33,12 @@ const FAQS = [
   },
 ] as const
 
+const ITEMS = FAQS.map((item, index) => ({
+  id: `faq-${index}`,
+  title: item.q,
+  description: item.a,
+}))
+
 export function FaqSection() {
   return (
     <section id="faq" className="relative z-10 scroll-mt-24 border-b border-dashed border-black/10 py-20 dark:border-white/10">
@@ -45,14 +46,7 @@ export function FaqSection() {
         <div className="mx-auto mb-10 max-w-2xl text-center">
           <h2 className="text-3xl font-bold tracking-tight md:text-4xl">FAQ</h2>
         </div>
-        <Accordion type="single" collapsible className="mx-auto max-w-3xl">
-          {FAQS.map((item, index) => (
-            <AccordionItem key={item.q} value={`item-${index}`}>
-              <AccordionTrigger className="text-left">{item.q}</AccordionTrigger>
-              <AccordionContent className="leading-relaxed text-muted-foreground">{item.a}</AccordionContent>
-            </AccordionItem>
-          ))}
-        </Accordion>
+        <BouncyAccordion items={ITEMS} className="mx-auto max-w-3xl" />
       </div>
     </section>
   )

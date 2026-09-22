@@ -1,16 +1,25 @@
 'use client'
 
-import { Check, Copy } from 'lucide-react'
+import { Copy } from 'lucide-react'
 import { useState } from 'react'
 
-import { NextIcon, NuxtIcon, ReactIcon, VueIcon } from '@/components/ui/framework-icons'
-import { REPO_URL } from '@/constants/site'
+import { CodeBlock } from '@/components/code-block'
+import { AnimatedBadge } from '@/components/motion/animated-badge'
+import { StatefulButton } from '@/components/motion/button/stateful'
+import { Tabs, TabsList, TabsTrigger } from '@/components/motion/tabs'
+import {
+  NextIcon,
+  NuxtIcon,
+  ReactIcon,
+  VueIcon,
+} from '@/components/ui/framework-icons'
 
 const INSTALL_CMD = 'npm install theme-switch-animation'
 
 const FRAMEWORKS = [
   {
     id: 'react',
+    lang: 'tsx' as const,
     label: 'React',
     Icon: ReactIcon,
     iconClass: 'text-sky-500',
@@ -36,6 +45,7 @@ export function ThemeToggle() {
   },
   {
     id: 'next',
+    lang: 'tsx' as const,
     label: 'Next.js',
     Icon: NextIcon,
     iconClass: 'text-foreground',
@@ -64,6 +74,7 @@ export function ThemeToggle() {
   },
   {
     id: 'vue',
+    lang: 'vue' as const,
     label: 'Vue',
     Icon: VueIcon,
     iconClass: '',
@@ -88,6 +99,7 @@ const { triggerRef, toggleTheme, isDark, finished } = useThemeAnimation<HTMLButt
   },
   {
     id: 'nuxt',
+    lang: 'ts' as const,
     label: 'Nuxt',
     Icon: NuxtIcon,
     iconClass: '',
@@ -122,55 +134,59 @@ function CopyButton({ text }: { text: string }) {
   }
 
   return (
-    <button
-      type="button"
+    <StatefulButton
+      size="sm"
+      variant="ghost"
+      state={copied ? 'success' : 'idle'}
+      successText="已复制"
+      icon={<Copy size={14} />}
       onClick={copy}
-      aria-label="复制"
-      className="rounded-lg p-2 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
     >
-      {copied ? <Check size={14} className="text-emerald-500" /> : <Copy size={14} />}
-    </button>
+      复制
+    </StatefulButton>
   )
 }
 
 export function QuickStartSection() {
-  const [active, setActive] = useState<(typeof FRAMEWORKS)[number]['id']>('react')
+  const [active, setActive] =
+    useState<(typeof FRAMEWORKS)[number]['id']>('react')
   const current = FRAMEWORKS.find((f) => f.id === active)!
 
   return (
-    <section id="quick-start" className="relative z-10 scroll-mt-24 border-b border-dashed border-black/10 py-20 dark:border-white/10">
+    <section
+      id="quick-start"
+      className="relative z-10 scroll-mt-24 border-b border-dashed border-black/10 py-20 dark:border-white/10"
+    >
       <div className="container mx-auto px-4 sm:px-6 lg:px-8">
         <div className="mx-auto mb-10 max-w-2xl text-center">
-          <span className="mb-3 inline-block rounded-full border bg-card/70 px-3 py-1 font-mono text-[11px] uppercase tracking-widest text-muted-foreground backdrop-blur">
+          <AnimatedBadge size="sm" className="mb-3">
             Quick Start
-          </span>
-          <h2 className="text-3xl font-bold tracking-tight md:text-4xl">三行代码接入</h2>
-          <p className="mt-3 text-muted-foreground">
-            四个入口，同一套 API。受控模式接入 next-themes / @nuxtjs/color-mode 的完整示例见{' '}
-            <a href={REPO_URL} target="_blank" rel="noreferrer" className="text-primary underline underline-offset-4">
-              GitHub README
-            </a>
-            。
-          </p>
+          </AnimatedBadge>
+          <h2 className="text-3xl font-bold tracking-tight md:text-4xl">
+            三行代码接入
+          </h2>
+          <p className="mt-3 text-muted-foreground">四个入口，同一套 API。</p>
         </div>
 
         <div className="mx-auto max-w-3xl">
-          {/* 分段式 Tab（带框架品牌图标） */}
-          <div className="mx-auto mb-5 flex w-fit gap-1 rounded-full border bg-card/70 p-1 backdrop-blur">
-            {FRAMEWORKS.map((f) => (
-              <button
-                key={f.id}
-                type="button"
-                onClick={() => setActive(f.id)}
-                className={`flex items-center gap-2 rounded-full px-5 py-1.5 text-sm transition-all ${
-                  active === f.id ? 'bg-primary font-semibold text-primary-foreground shadow' : 'text-muted-foreground hover:text-foreground'
-                }`}
-              >
-                <f.Icon className={`size-4 shrink-0 ${active === f.id ? '' : f.iconClass}`} />
-                {f.label}
-              </button>
-            ))}
-          </div>
+          {/* 分段式 Tab（带框架品牌图标，滑块走共享布局动画） */}
+          <Tabs
+            value={active}
+            onValueChange={(v) =>
+              setActive(v as (typeof FRAMEWORKS)[number]['id'])
+            }
+          >
+            <TabsList wrapperClassName="mx-auto mb-5 w-fit">
+              {FRAMEWORKS.map((f) => (
+                <TabsTrigger key={f.id} value={f.id} className="gap-2">
+                  <f.Icon
+                    className={`size-4 shrink-0 ${active === f.id ? '' : f.iconClass}`}
+                  />
+                  {f.label}
+                </TabsTrigger>
+              ))}
+            </TabsList>
+          </Tabs>
 
           {/* 编辑器窗口：红绿灯 chrome + 安装命令条 + 代码区 */}
           <div className="overflow-hidden rounded-2xl border bg-card/80 shadow-xl shadow-black/5 backdrop-blur dark:shadow-black/30">
@@ -180,12 +196,12 @@ export function QuickStartSection() {
                 <span className="size-3 rounded-full bg-amber-400" />
                 <span className="size-3 rounded-full bg-emerald-400" />
               </div>
-              <code className="font-mono text-xs text-muted-foreground">{current.install}</code>
+              <code className="font-mono text-xs text-muted-foreground">
+                {current.install}
+              </code>
               <CopyButton text={`${current.install}\n\n${current.code}`} />
             </div>
-            <pre className="max-h-96 overflow-auto p-5 font-mono text-xs leading-relaxed">
-              <code>{current.code}</code>
-            </pre>
+            <CodeBlock code={current.code} language={current.lang} />
           </div>
         </div>
       </div>

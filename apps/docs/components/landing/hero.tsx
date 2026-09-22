@@ -1,12 +1,13 @@
 'use client'
 
-import { ArrowRight, Check, Copy, Github } from 'lucide-react'
+import { ArrowRight, Check, Copy } from 'lucide-react'
 import { motion } from 'motion/react'
 import Link from 'next/link'
 import { useState } from 'react'
 
-import BlurText from '@/components/ui/react-bits/blur-text'
-import { TextGenerateEffect } from '@/components/ui/text-generate-effect'
+import { Button, ButtonLink } from '@/components/motion/button/base'
+import { TextReveal } from '@/components/motion/text-reveal'
+import { GithubIcon } from '@/components/ui/brand-icons'
 import { REPO_URL } from '@/constants/site'
 
 const INSTALL_CMD = 'npm install theme-switch-animation'
@@ -25,15 +26,22 @@ function InstallCommand() {
   }
 
   return (
-    <button
-      type="button"
+    <Button
+      variant="secondary"
       onClick={copy}
-      className="group mx-auto flex w-fit items-center gap-3 rounded-xl border bg-card/80 px-5 py-3 font-mono text-sm shadow-sm backdrop-blur transition-colors hover:border-primary/40"
+      className="group font-mono whitespace-nowrap"
     >
       <span className="text-muted-foreground select-none">$</span>
       <span>{INSTALL_CMD}</span>
-      {copied ? <Check size={15} className="text-emerald-500" /> : <Copy size={15} className="text-muted-foreground opacity-60 group-hover:opacity-100" />}
-    </button>
+      {copied ? (
+        <Check size={15} className="text-emerald-500" />
+      ) : (
+        <Copy
+          size={15}
+          className="text-muted-foreground opacity-60 group-hover:opacity-100"
+        />
+      )}
+    </Button>
   )
 }
 
@@ -45,7 +53,12 @@ export function HeroSection() {
           <motion.div
             initial={{ opacity: 0, y: -14, scale: 0.98, filter: 'blur(10px)' }}
             animate={{ opacity: 1, y: 0, scale: 1, filter: 'blur(0px)' }}
-            transition={{ type: 'spring', stiffness: 320, damping: 26, delay: 0.1 }}
+            transition={{
+              type: 'spring',
+              stiffness: 320,
+              damping: 26,
+              delay: 0.1,
+            }}
             whileTap={{ scale: 0.98 }}
           >
             <Link
@@ -54,52 +67,61 @@ export function HeroSection() {
               rel="noreferrer"
               className="group mx-auto flex w-fit items-center gap-3 rounded-full border bg-background/80 p-1 pl-4 shadow-md backdrop-blur transition-colors duration-300 hover:bg-muted dark:border-t-white/5 dark:hover:border-t-border"
             >
-              <span className="text-sm font-medium">基于 View Transitions API · 开源 MIT</span>
-              <span className="hidden h-4 w-0.5 border-l bg-back dark:border-background dark:bg-zinc-700 md:block" />
-              <span className="flex size-6 items-center justify-center overflow-hidden rounded-full bg-muted transition-colors duration-300 group-hover:bg-background">
-                <ArrowRight className="size-4" />
+              <span className="text-sm font-medium">
+                View Transitions API · MIT
+              </span>
+              <span className="hidden h-4 w-0.5 border-l bg-border md:block" />
+              {/* 箭头循环滑入：两支箭头错开一个圆宽，悬停时整体右移，视觉上无限推进 */}
+              <span className="relative flex size-6 items-center justify-center overflow-hidden rounded-full bg-muted transition-colors duration-300 group-hover:bg-background">
+                <ArrowRight className="absolute inset-0 m-auto size-4 transition-transform duration-300 ease-out group-hover:translate-x-6 motion-reduce:transition-none motion-reduce:group-hover:translate-x-0" />
+                <ArrowRight className="absolute inset-0 m-auto size-4 -translate-x-6 transition-transform duration-300 ease-out group-hover:translate-x-0 motion-reduce:transition-none motion-reduce:group-hover:translate-x-0" />
               </span>
             </Link>
           </motion.div>
 
-          <div className="mx-auto max-w-3xl">
-            <BlurText
-              text="Make theme switching cinematic"
-              delay={120}
-              animateBy="words"
-              direction="top"
-              className="mb-4 justify-center text-4xl font-bold tracking-tight text-balance md:text-6xl lg:text-7xl"
+          <div className="mx-auto max-w-2xl">
+            <TextReveal
+              as="h1"
+              text="Theme switching, cinematic"
+              stagger={0.1}
+              yOffset={-40}
+              blur={10}
+              className="mb-5 text-4xl font-bold tracking-tight text-balance md:text-6xl"
             />
-            <TextGenerateEffect
-              words="主题切换动画库：新主题以 12 种形状揭开旧主题，而不是生硬跳变。支持 React / Vue / Next.js / Nuxt；受控模式无缝接入 next-themes / @nuxtjs/color-mode，多实例与跨标签页状态自动同步。"
-              className="mx-auto max-w-2xl leading-relaxed text-pretty text-muted-foreground md:text-lg"
-              duration={0.5}
+            <TextReveal
+              as="p"
+              text="12 种形状揭开新主题，React / Vue / Next.js / Nuxt 通用。"
+              split="char"
+              stagger={0.022}
+              yOffset={0}
+              blur={8}
+              className="mx-auto max-w-xl leading-relaxed text-pretty text-muted-foreground md:text-lg"
             />
           </div>
 
           <motion.div
             initial={{ opacity: 0, y: 14, filter: 'blur(10px)' }}
             animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
-            transition={{ type: 'spring', stiffness: 300, damping: 28, delay: 0.55 }}
+            transition={{
+              type: 'spring',
+              stiffness: 300,
+              damping: 28,
+              delay: 0.55,
+            }}
             className="flex w-full max-w-xl flex-col items-center gap-4"
           >
             <InstallCommand />
             <div className="flex flex-row items-center gap-3">
-              <a
-                href="#gallery"
-                className="inline-flex h-10 items-center justify-center rounded-xl bg-primary px-6 text-sm font-medium text-primary-foreground shadow transition-colors hover:bg-primary/90"
-              >
-                在下方试玩 12 种动画
-              </a>
-              <a
+              <ButtonLink href="#gallery">在下方试玩 12 种动画</ButtonLink>
+              <ButtonLink
                 href={REPO_URL}
                 target="_blank"
                 rel="noreferrer"
-                className="inline-flex h-10 items-center justify-center gap-2 rounded-xl border bg-background/80 px-6 text-sm font-medium shadow-sm backdrop-blur transition-colors hover:bg-accent"
+                variant="secondary"
               >
-                <Github size={16} />
+                <GithubIcon className="size-4" />
                 GitHub
-              </a>
+              </ButtonLink>
             </div>
           </motion.div>
         </div>

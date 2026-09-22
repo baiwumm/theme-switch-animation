@@ -5,6 +5,9 @@ import { useTheme } from 'next-themes'
 import { useEffect, useState } from 'react'
 import { motion } from 'motion/react'
 import { ThemeAnimationDirection, ThemeAnimationType, useThemeAnimation } from 'theme-switch-animation/react'
+
+import { AnimatedBadge } from '@/components/motion/animated-badge'
+import { Button } from '@/components/motion/button/base'
 import type { JSX, SVGProps } from 'react'
 
 /** 每张卡片的迷你图形标（stroke 风格，颜色走渐变图标砖的 currentColor） */
@@ -99,7 +102,7 @@ const ANIMATION_TYPES: Array<{
   { type: ThemeAnimationType.HEXAGON, label: 'HEXAGON', hint: '六边形 · 尖顶朝上', Icon: IcoShape('12,2.8 19.8,7.4 19.8,16.6 12,21.2 4.2,16.6 4.2,7.4'), tile: 'from-blue-100 to-blue-200 text-blue-600 dark:from-blue-500/15 dark:to-blue-500/5 dark:text-blue-400' },
   { type: ThemeAnimationType.TRIANGLE, label: 'TRIANGLE', hint: '三角形 · 顶点朝上', Icon: IcoShape('12,4 20,19 4,19'), tile: 'from-fuchsia-100 to-fuchsia-200 text-fuchsia-600 dark:from-fuchsia-500/15 dark:to-fuchsia-500/5 dark:text-fuchsia-400' },
   { type: ThemeAnimationType.STAR, label: 'STAR', hint: '五角星 · 顶点朝上', Icon: IcoShape('12,2.8 14.7,9 21.5,9.6 16.3,14 17.9,20.7 12,17 6.1,20.7 7.7,14 2.5,9.6 9.3,9'), tile: 'from-pink-100 to-pink-200 text-pink-600 dark:from-pink-500/15 dark:to-pink-500/5 dark:text-pink-400' },
-  { type: ThemeAnimationType.BLINDS, label: 'BLINDS', hint: '百叶窗 · direction 控方向 / slatWidth 控叶宽', initialDirection: ThemeAnimationDirection.LTR, initialSlatWidth: 72, Icon: IcoBlinds, tile: 'from-lime-100 to-lime-200 text-lime-600 dark:from-lime-500/15 dark:to-lime-500/5 dark:text-lime-400' },
+  { type: ThemeAnimationType.BLINDS, label: 'BLINDS', hint: '百叶窗 · 叶宽与方向可调', initialDirection: ThemeAnimationDirection.LTR, initialSlatWidth: 72, Icon: IcoBlinds, tile: 'from-lime-100 to-lime-200 text-lime-600 dark:from-lime-500/15 dark:to-lime-500/5 dark:text-lime-400' },
   { type: ThemeAnimationType.SCAN, label: 'SCAN', hint: '扫描 · 硬边扫开 + 前缘光束', initialDirection: ThemeAnimationDirection.TTB, Icon: IcoScan, tile: 'from-green-100 to-green-200 text-green-600 dark:from-green-500/15 dark:to-green-500/5 dark:text-green-400' },
   { type: ThemeAnimationType.QR_GRID, label: 'QR_GRID', hint: '方块格子 · 方块逐格生长揭开', initialDirection: ThemeAnimationDirection.LTR, Icon: IcoQrGrid, tile: 'from-stone-100 to-stone-200 text-stone-600 dark:from-stone-500/15 dark:to-stone-500/5 dark:text-stone-400' },
 ]
@@ -182,7 +185,7 @@ function GalleryCard({
         <Icon className="size-7" />
       </div>
       <h3 className="font-mono text-sm font-bold tracking-wide">{label}</h3>
-      <p className="mt-1 text-center text-xs text-muted-foreground">{hint}</p>
+      <p className="mt-1 min-h-8 text-center text-xs text-muted-foreground">{hint}</p>
 
       {/* 中央切换按钮：唯一交互点，动画起收点即按钮中心 */}
       <button
@@ -218,7 +221,7 @@ function GalleryCard({
                   className={`rounded-md px-1.5 py-0.5 font-mono text-[10px] transition-colors ${
                     direction === d.value
                       ? 'bg-primary font-semibold text-primary-foreground'
-                      : 'border bg-card/60 text-muted-foreground hover:text-foreground'
+                      : 'border border-border bg-card text-muted-foreground hover:text-foreground'
                   }`}
                 >
                   {d.label}
@@ -239,7 +242,7 @@ function GalleryCard({
                   className={`rounded-md px-1.5 py-0.5 font-mono text-[10px] transition-colors ${
                     slatWidth === s.value
                       ? 'bg-primary font-semibold text-primary-foreground'
-                      : 'border bg-card/60 text-muted-foreground hover:text-foreground'
+                      : 'border border-border bg-card text-muted-foreground hover:text-foreground'
                   }`}
                 >
                   {s.label}
@@ -268,18 +271,16 @@ function PresetRow<T extends number | string>({
     <div className="flex flex-wrap items-center justify-center gap-2">
       <span className="mr-1 font-mono text-xs uppercase tracking-wider text-muted-foreground">{label}</span>
       {presets.map((p) => (
-        <button
+        <Button
           key={String(p.value)}
-          type="button"
+          size="sm"
+          variant={value === p.value ? 'primary' : 'secondary'}
+          aria-pressed={value === p.value}
           onClick={() => onChange(p.value)}
-          className={`rounded-full px-3.5 py-1.5 font-mono text-xs transition-all ${
-            value === p.value
-              ? 'bg-primary font-semibold text-primary-foreground shadow'
-              : 'border bg-card/70 text-muted-foreground backdrop-blur hover:border-primary/40 hover:text-foreground'
-          }`}
+          className="font-mono"
         >
           {p.label}
-        </button>
+        </Button>
       ))}
     </div>
   )
@@ -294,12 +295,12 @@ export function GallerySection() {
     <section id="gallery" className="relative z-10 scroll-mt-24 border-b border-dashed border-black/10 py-20 dark:border-white/10">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8">
         <div className="mx-auto mb-10 max-w-2xl text-center">
-          <span className="mb-3 inline-block rounded-full border bg-card/70 px-3 py-1 font-mono text-[11px] uppercase tracking-widest text-muted-foreground backdrop-blur">
+          <AnimatedBadge size="sm" className="mb-3">
             Playground
-          </span>
+          </AnimatedBadge>
           <h2 className="text-3xl font-bold tracking-tight md:text-4xl">Try Different Animations</h2>
           <p className="mt-3 text-muted-foreground">
-            点击卡片中央的切换按钮体验对应动画（切换右上角主题也可以）。中心扩散类动画的起收点 = 按钮中心；BLINDS / SCAN / QR_GRID 可在卡片内切换 direction，各卡片互不影响。
+            点击卡片中央按钮播放动画；BLINDS / SCAN / QR_GRID 可在卡内切换方向。
           </p>
         </div>
 

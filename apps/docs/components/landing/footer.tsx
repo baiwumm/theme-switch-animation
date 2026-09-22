@@ -1,6 +1,6 @@
-import { Github } from 'lucide-react'
 import Link from 'next/link'
 
+import { GithubIcon } from '@/components/ui/brand-icons'
 import { AUTHOR_URL, NPM_URL, REPO_URL } from '@/constants/site'
 
 const RESOURCE_LINKS = [
@@ -30,7 +30,7 @@ export function Footer() {
               <span className="text-sm font-semibold">theme-switch-animation</span>
             </div>
             <p className="text-sm leading-relaxed text-muted-foreground">
-              基于 View Transitions API 的跨框架主题切换动画库。MIT 开源。
+              基于 View Transitions API 的跨框架主题切换动画库。
             </p>
           </div>
           <div>
@@ -65,7 +65,7 @@ export function Footer() {
               baiwumm.com
             </Link>
             <a href={REPO_URL} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 transition-colors hover:text-foreground">
-              <Github size={13} />
+              <GithubIcon className="size-3.5" />
               Source
             </a>
           </span>

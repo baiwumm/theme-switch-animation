@@ -85,7 +85,8 @@ html {
   --radius: 0.625rem;
   --background: oklch(1 0 0);
   --foreground: oklch(0.145 0 0);
-  --card: oklch(1 0 0);
+  /* beUI 组件用实色 bg-card 作底，成立的前提是 card 与 background 有分离度（beui.dev 取 99%/97%） */
+  --card: oklch(0.97 0 0);
   --card-foreground: oklch(0.145 0 0);
   --popover: oklch(1 0 0);
   --popover-foreground: oklch(0.145 0 0);
@@ -165,6 +166,33 @@ html {
  * 低不透明度渐变底 + 重 backdrop-blur + 饱和提升 + 内侧 1px 高光 + 柔和大阴影。
  * 页面 fixed 层的 LightRays 与彩色光斑透过玻璃产生真实的磨砂折射。
  */
+:root {
+  /*
+   * 代码高亮配色（prism-react-renderer 的 oneLight / oneDark 调色板，改挂到 CSS 变量上）
+   * 组件侧只引用 var(--tok-*)，暗色切换不重渲染、不闪未着色代码。
+   */
+  --tok-plain: var(--foreground);
+  --tok-comment: hsl(230 4% 64%);
+  --tok-punct: hsl(230 8% 24%);
+  --tok-const: hsl(35 99% 36%);
+  --tok-keyword: hsl(301 63% 40%);
+  --tok-tag: hsl(5 74% 59%);
+  --tok-string: hsl(119 34% 47%);
+  --tok-func: hsl(221 87% 60%);
+  --tok-url: hsl(198 99% 37%);
+}
+
+.dark {
+  --tok-comment: hsl(220 10% 40%);
+  --tok-punct: hsl(220 14% 71%);
+  --tok-const: hsl(29 54% 61%);
+  --tok-keyword: hsl(286 60% 67%);
+  --tok-tag: hsl(355 65% 65%);
+  --tok-string: hsl(95 38% 62%);
+  --tok-func: hsl(207 82% 66%);
+  --tok-url: hsl(187 47% 55%);
+}
+
 .glass-card {
   position: relative;
   background: linear-gradient(135deg, rgba(255, 255, 255, 0.5), rgba(255, 255, 255, 0.18));
