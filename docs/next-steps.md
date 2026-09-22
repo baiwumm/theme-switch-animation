@@ -341,10 +341,14 @@ iPhone 与 Mac 同一局域网访问 `http://<mac-ip>:5224/`（或直接把 `pla
 
 - [ ] 真机视觉验收（首页改版幅度大：顶栏胶囊 + 滚动高亮 + npm 入口、hero 文案精简、FAQ 换弹簧手风琴、
       代码块语法高亮、细滚动条）。预览：`cd apps/docs && pnpm exec next dev -p 5230`。
-- [ ] README 门面截图已重出（1910×911 亮色，与 `8fa1beb` 同取景；本轮改从静态产物拍，不再带 Next dev 角标）。
-      若 hero 文案还要改，这张得再重出一次。
-- [ ] **push `main` 会触发文档站自动部署**（§5-5 那条链路），线上首页会跟着变；发包不受影响，
-      Release workflow 只认 `v*` tag。
+- [x] README 门面截图已重出（`bf6277c`，1910×911 亮色，与 `8fa1beb` 同取景；本轮改从静态产物拍，
+      不再带 Next dev 角标）。若 hero 文案还要改，这张得再重出一次。
+- [x] push `main`（2026-09-22 完成，`78cc21d..eaa2e3d` 共 7 笔）：CI run `35706947299` **success**（44s）；
+      文档站自动部署已生效——线上首页命中四个新版标记（`可在卡内切换方向`、`叶宽与方向可调`、
+      `四个入口，同一套 API。`、`View Transitions API · MIT`），三个旧版特征（`切换右上角主题也可以`、
+      `完整示例见`、旧 hero 文案）均为 0。**发包未发生**：没推 `v*` tag，npm `latest` 仍是 `0.2.0`
+      （dist-tags 接口核实）。注意 `Theme switching, cinematic` 在线上 HTML 里搜不到属正常——
+      TextReveal 按词切成 span；`已复制` 与 Vue 样本代码不在 HTML 里也分别因为是 success 态、非激活 Tab。
 - [ ] 若你认为"文档站改版"也该进 CHANGELOG，再补一条 patch changeset（代价见本节开头）。
 
 ---
