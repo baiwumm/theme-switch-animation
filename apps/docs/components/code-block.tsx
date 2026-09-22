@@ -80,7 +80,7 @@ export function CodeBlock({
     <Highlight code={code.trim()} language={language} theme={TOKEN_THEME}>
       {({ className, style, tokens, getLineProps, getTokenProps }) => (
         <pre
-          className={`${className ?? ''} m-0 max-h-96 overflow-auto p-5 font-mono text-xs leading-relaxed`}
+          className={`${className ?? ''} custom_scrollbar m-0 max-h-96 overflow-auto p-5 font-mono text-xs leading-relaxed`}
           style={style}
         >
           {tokens.map((line, i) => {
