@@ -1,4 +1,4 @@
-# 发布前待办（2026-09-14 记录 · 2026-09-21 更新进度）
+# 发布前待办（2026-09-14 记录 · 2026-09-22 更新进度）
 
 背景：`551bdde` 提交了转场可靠性修复与状态同步增强（单测 178 → 196 全绿，typecheck / lint / build
 全过）。手动浏览器实测覆盖了 React / Vue / Next 三个 playground；**Nuxt playground 本轮未手动
@@ -9,6 +9,8 @@
 > 2026-09-21 更新：0.1.0 已发布（待办 1–4 全部完成，见下），待办 2 的真机手动清单仍需你的设备。
 > 本轮 v0.2（`direction` 选项 + BLINDS / SCAN / QR_GRID 三类型 + 移除四向类型，破坏性）的剩余事项
 > 集中在 §5。
+> 2026-09-22 追加：0.2.0 已发布（§5 全绿）；本轮**文档站 UI 层迁到 beUI**（只动 `apps/docs`，
+> 发布产物不变、未记 changeset）的判断、踩坑与剩余事项集中在 §6。
 
 - [x] 1. 跑正式验收 `pnpm test:acceptance`（2026-09-14 完成，7/7 PASS + §9-3 组二补跑 PASS）
 - [x] 2. Safari / 真机验证（2026-09-14 本机可自动化部分已全绿，见 §2；**macOS Safari + iOS 真机**
@@ -295,7 +297,62 @@ iPhone 与 Mac 同一局域网访问 `http://<mac-ip>:5224/`（或直接把 `pla
         约定冲突；职责边界已写进 `.changeset/README.md`。
       - 破坏性变更在 0.x 阶段按 changesets 语义落 minor，CHANGELOG 保留"移除四向类型 + 迁移写法"叙述。
 
+## 6. 文档站 UI 层迁到 beUI（2026-09-22 记录）
+
+本轮只动 `apps/docs`（外加根 `.gitignore` 一行），**npm 发布产物逐字节不变**（根包 `files: ['dist']`，
+`@theme-switch-animation/docs` 是 `private: true`）。因此**没有记 changeset**：加一条 patch 只会在下次
+`changeset version` 时切出一个内容与 0.2.0 完全相同的 0.2.1，污染 CHANGELOG 与版本序列；
+`@changesets/cli@3.0.2` 全树没有 `skip release` 这种"留记录不涨版本"的取值（已核实），所以只能二选一。
+
+提交清单（全部本地，未 push）：`9fe09a8` biome vcs.root + 清 @aceternity registry →
+`8093782` beUI 迁移 + 代码高亮 → `77537b3` 滚动条 → `3c6c101` 清磁盘垃圾 + ignore `.wrangler/`。
+
+落地的判断与踩过的坑（下次再动首页 UI 先看这里）：
+
+- 组件源来自 beUI 的 shadcn registry（`curl https://beui.dev/r/{slug}` 拿 files+deps），手工落文件而非
+  跑 `npx shadcn add`——零新依赖，且避免 CLI 改 `components.json` / 覆盖 `lib/utils.ts`。
+  已装：`bouncy-accordion`（FAQ）、`tabs`（框架切换）、`button` 的 `base`+`stateful`（CTA / 复制 / 顶栏）、
+  `text-reveal`（hero 标题与副标题）、`animated-badge`（眉标与卡片标签）。
+- **beUI 组件一律保持上游默认样式**，不为贴合旧的毛玻璃观感做 className 覆写（中途覆写过一轮，已撤）。
+- 亮色 `--card` 由 `oklch(1 0 0)` 改为 `oklch(0.97 0 0)`：beUI 的实色 `bg-card` 表面需要 card 与
+  background 有分离度（beui.dev 自己取 99%/97%）。这条 token 连带影响首页所有 `bg-card/70`、`bg-card/80`
+  元素（眉标、gallery 预设 pill、代码窗），由纯白转浅灰。
+- **motion 组件的 ref 只在自身挂载那一刻转发一次**：`ref={mounted ? ref : undefined}` 这种延迟传法在
+  beUI `Button` 上会让库永远拿不到触发元素，动画回落到视口中心（原生 `<button>` 无此问题）。
+  验证起收点最快的探针：点一下后读库注入的 `<style id="theme-switch-animation">` 里的 `mask-position`。
+- 控件位置不要塞 `AnimatedBadge`（它渲染 `motion.span`，丢点击/键盘语义）；beUI `radio` 的选项是
+  `h-5 w-5` 圆圈 + `text-sm`，放不进 gallery 卡内 10px 等宽字参数行。参数行的"发虚"在实色
+  `bg-card` + `border-border` 这一层解决。
+- 滚动条：Chrome 121+ 一旦设了非 `auto` 的 `scrollbar-color`，会整套忽略 `::-webkit-scrollbar` 自绘，
+  所以标准属性包在 `@supports not selector(::-webkit-scrollbar)` 里只给 Firefox。保住自绘才保住
+  「滚动条被 View Transitions 快照捕获、跟蒙版一起动」这个既有设计（见 `app/layout.tsx` 注释）。
+- **liquid-glass-react 已评估并否决**（做过一次性 spike 后整体撤回）：`LiquidGlass` 返回一个 Fragment 的
+  5 个兄弟节点，靠 `inset: 50%` + `translate(-50%,-50%)` 定位，百分比参照包含块 → 放进 CSS Grid 直接散架
+  （内容浮到相邻卡、露出整块黑色面板），加堆叠容器也没救回来。另有三条独立风险：README 自陈位移仅
+  Chromium 可见、不处理 `prefers-reduced-motion`、1.1.1 自 2025-06-11 未发版且 registry 无仓库链接。
+  首页继续用手写 `.glass-card`，这个包不必重复评估。
+- 仓库整洁性盘点结论：纳管文件里没有可删的（0 孤立源文件 / 0 未使用依赖 / 0 未引用资源 / 文档无死链）；
+  清掉的是两个磁盘垃圾 `playgrounds/nuxt/3001/`（nuxi 把端口当工程根跑出来的嵌套产物）与
+  `apps/docs/.wrangler/`。`assets/logo/*`（品牌母版，仅 phase-5 报告提及）与 `apps/docs/components.json`
+  （留着给以后 `npx shadcn add @beui/xxx` 用）判定保留。
+
+剩余事项：
+
+- [ ] 真机视觉验收（首页改版幅度大：顶栏胶囊 + 滚动高亮 + npm 入口、hero 文案精简、FAQ 换弹簧手风琴、
+      代码块语法高亮、细滚动条）。预览：`cd apps/docs && pnpm exec next dev -p 5230`。
+- [ ] README 门面截图已重出（1910×911 亮色，与 `8fa1beb` 同取景；本轮改从静态产物拍，不再带 Next dev 角标）。
+      若 hero 文案还要改，这张得再重出一次。
+- [ ] **push `main` 会触发文档站自动部署**（§5-5 那条链路），线上首页会跟着变；发包不受影响，
+      Release workflow 只认 `v*` tag。
+- [ ] 若你认为"文档站改版"也该进 CHANGELOG，再补一条 patch changeset（代价见本节开头）。
+
+---
+
 **长期遗留（不属本轮）**：Playwright e2e 矩阵（需求 §9-8 只跑 Chromium + WebKit）至今未正式建立，
-引擎覆盖靠 `scripts/verify-engine.mjs` 手动跑，Playwright 仍是 `%TEMP%/pw-webkit` 的临时安装；
-`apps/docs` 的 Biome（`biome.json` 配了 `vcs.useIgnoreFile` 但目录内无 ignore 文件）自始跑不通，
-见 §3 存量问题。
+引擎覆盖靠 `scripts/verify-engine.mjs` 手动跑，Playwright 仍是 `%TEMP%/pw-webkit` 的临时安装。
+~~`apps/docs` 的 Biome 自始跑不通~~——2026-09-22 已修（`biome.json` 的 `vcs.root` 指向仓库根复用根
+`.gitignore`），但修好后 `biome check .` 会露出 35 条既存诊断（`a11y/noSvgWithoutTitle` 10、
+`performance/noImgElement` 4、`assist/organizeImports` 2、`style/noNonNullAssertion` 1 等），
+尚未清理；根 `eslint.config.js` 一直 ignore `apps/docs/**`，所以这些都不在 CI 上。
+
+
