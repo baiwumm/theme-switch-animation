@@ -353,6 +353,50 @@ iPhone 与 Mac 同一局域网访问 `http://<mac-ip>:5224/`（或直接把 `pla
 
 ---
 
+## 7. 新增 RIPPLE 水滴涟漪（2026-09-23 记录）
+
+需求方提"想加一个类似水滴波纹涟漪的效果"，先要方案不动代码；定调"先做看下效果，不行再撤回"，效果通过后补齐其余文档面。
+
+### 本轮判断
+
+- **技术红线先说清**：View Transition 期间真实页面是冻结的，唯一能动的东西是 `::view-transition-*` 伪元素上的 CSS 动画。所以"涟漪"只能是**环形蒙版揭示**，不是真的水面波动位移——`feDisplacementMap` 折射位移做不了，JS 驱动的 overlay 粒子也做不了（转场前插进页面的装饰元素还会被拍进旧截图）。接受这条，剩下全是现成能力。
+- **零新机制成立**：涟漪的数学表达就是一个 `radial-gradient`，stop 位置引用注册属性——`styles.ts` 的洞式蒙版（`buildHoleAnimationCSS`）早就在用"圆心写进渐变串 + 蒙版盒子静止 + 只有注册属性在动"这套骨架。结果 `styles.ts` 一行未改，涟漪的 spec 直接复用 `RevealMaskSpec` 与 `buildRevealAnimationCSS`。
+- **兼容面零扩张**：与 BLINDS / SCAN 同样依赖 `@property`；未注册的引擎取 `to` 值即直切，状态仍正确。
+- **选项面按最小方案**：只开 `waveWidth` 一个选项，余波圈数与衰减系数固化为导出常量（沿 `SCAN_BAND_*` / `QR_GRID_CELL_PX` 先例，不做选项膨胀）。
+- **两步走的取舍**："不行再撤回"决定了先只落 core + 画廊、门面数字原样，效果通过后再补 README / 需求文档 / 文档站文案 / 四个 playground / changeset——撤回时白改成本最高的就是这批文档面。
+
+### 实测结果
+
+| 探针 | 结果 |
+| --- | --- |
+| 波源圆心 vs 按钮中心（读注入 `<style>` 的 `circle at X Y`） | 逐位一致（`32, 14015.81`） |
+| 环带在真实 Chromium 是否渲染成立（冻结半径截图，非转场态） | 成立：实心水面 + 三圈明暗相间环带清晰可辨 |
+| 起始帧（负 stop 单调化行为） | 整屏旧主题，中心只剩直径约 90px 的极淡水纹，无提前漏出的新主题 |
+| 末帧覆盖 | 由几何断言锁死 `to − waveWidth > maxRadius`，不需要像素验证 |
+| 根 test / lint / tsc / build | 220 例通过（新增 10）/ 0 error / 0 error / dist 含 ripple |
+| 文档站 `tsc --noEmit` + react / vue / next playground `typecheck` | 全通过 |
+
+**测量环境的一条新坑**：`::view-transition-*` 伪元素只在转场存活那几百毫秒存在，把库生成的 CSS 注进 `<style>` 再截图等于什么都没拍到。有效做法是从 `dist` import `getRippleRevealSpec`，把 `var(--theme-switch-reveal)` 冻结成具体 px 挂到一个 `position:fixed` 纯色 div 上——一次验到表达式合法性、stop 单调化行为与覆盖半径。另外 browser-use 面板 0×0 时，`evaluate_script` 里 `await requestAnimationFrame` 会让整个工具调用 15s 超时（不是返回假值），去掉等帧改 `setTimeout` 就通。
+
+### 候选盘点（下次别重复推）
+
+- **`CLOCK_SWEEP` + `IRIS`（建议下一轮）**：一次 `<angle>` 注册属性 + `conic-gradient` / `repeating-conic-gradient` 机制买两个类型，补的是"现有 13 种全轴对齐、没有旋转维度"这个结构性空缺。
+- **`DISSOLVE` 沙化溶解**：`feTurbulence` 噪声 α × 渐变进度，靠 QR_GRID 已验证的 `mask-composite: intersect`；差异化最强，但开工前得先解决噪声图随视口拉伸导致颗粒变粗。
+- **不做**：3D 翻页 / 折叠——要放弃 mask 改动画 `::view-transition-group` 的 transform，直接破需求文档 §1"技术路线仅用 mask 以保 Safari 兼容"，且 `masks.ts` 已记录 Safari 忽略伪元素上的 WAAPI 与 clip-path；文字描边书写揭示——越界，且蒙版尺寸随视口变化会失真。
+- **不作为新类型**：边角擦入 / 对角展开，观感接近 SCAN 的参数变体，要做应作为 `origin` 选项。
+
+### 待办
+
+- [x] core 实现（`types` / `masks` / `orchestrate` / `index` 导出）+ 10 例单测
+- [x] 文档站画廊第 13 张卡 + 卡内波长档位 10 / 18 / 34px
+- [x] README 数量与两张表、需求文档 §10 v1.7、文档站 hero / features / `site.ts`、四个 playground 的类型清单与 `waveWidth` 控件
+- [x] changeset `minor`（本轮 dist 产物真实变化，不属"纯文档站轮次不记"的情形）
+- [x] 门面截图 `assets/screen.jpg` 按既有规格重出（hero "12 种"→"13 种" 触发）
+- [ ] 真机视觉验收：RIPPLE 卡在 Chrome / Safari / Firefox 的实际观感；波长三档 + duration 1000ms 慢放下余波是否糊成一条边；末帧四角是否干净
+- [ ] Safari / Firefox 真机确认 `radial-gradient` 双位置 stop 语法与负偏移单调化行为——与 BLINDS / SCAN 同面，预期无新增风险，但尚未在真机跑过
+
+---
+
 **长期遗留（不属本轮）**：Playwright e2e 矩阵（需求 §9-8 只跑 Chromium + WebKit）至今未正式建立，
 引擎覆盖靠 `scripts/verify-engine.mjs` 手动跑，Playwright 仍是 `%TEMP%/pw-webkit` 的临时安装。
 ~~`apps/docs` 的 Biome 自始跑不通~~——2026-09-22 已修（`biome.json` 的 `vcs.root` 指向仓库根复用根
