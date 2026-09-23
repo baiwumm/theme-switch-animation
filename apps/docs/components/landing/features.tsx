@@ -15,9 +15,9 @@ const FEATURES = [
   },
   {
     icon: Sparkles,
-    title: '13 种动画',
-    description: '圆形扩散 / 收起 / 模糊与几何形状扩散（起收点跟随点击位置），百叶窗 / 扫描 / 方块格子（direction 控方向），水滴涟漪（环带前缘，waveWidth 控波长）。',
-    tags: ['CIRCLE', 'STAR', 'BLINDS', 'QR_GRID', '…'],
+    title: '15 种动画',
+    description: '圆形扩散 / 收起 / 模糊与几何形状扩散（起收点跟随点击位置），百叶窗 / 扫描 / 方块格子（direction 控方向），水滴涟漪（waveWidth 控波长），时钟扇形与扇叶旋开（bladeCount 控扇叶数）。',
+    tags: ['CIRCLE', 'RIPPLE', 'CLOCK_SWEEP', 'BLINDS', '…'],
     tile: 'from-fuchsia-500 to-rose-500',
   },
   {

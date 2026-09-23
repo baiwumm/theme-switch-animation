@@ -89,6 +89,24 @@ function IcoRipple(props: SVGProps<SVGSVGElement>) {
     </svg>
   )
 }
+function IcoClockSweep(props: SVGProps<SVGSVGElement>) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.9} {...props}>
+      <circle cx="12" cy="12" r="9" opacity="0.35" />
+      <path d="M12 12V3" />
+      <path d="M12 12l6.4 6.4" />
+      <path d="M12 3a9 9 0 0 1 6.36 15.36" strokeWidth={2.6} />
+    </svg>
+  )
+}
+function IcoFan(props: SVGProps<SVGSVGElement>) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.9} {...props}>
+      <circle cx="12" cy="12" r="9" />
+      <path d="M12 3v18M3 12h18M5.6 5.6l12.8 12.8M18.4 5.6L5.6 18.4" opacity="0.55" />
+    </svg>
+  )
+}
 
 const ANIMATION_TYPES: Array<{
   type: ThemeAnimationType
@@ -100,6 +118,8 @@ const ANIMATION_TYPES: Array<{
   initialSlatWidth?: number
   /** 仅 RIPPLE：卡片内渲染波长选择器（初始波长 px） */
   initialWaveWidth?: number
+  /** 仅 FAN：卡片内渲染扇叶数选择器（初始扇叶数） */
+  initialBladeCount?: number
   Icon: (props: SVGProps<SVGSVGElement>) => JSX.Element
   /** 渐变图标砖：亮 / 暗两套底色 + 图标色（写全类名，避免动态拼接被 Tailwind 摇掉） */
   tile: string
@@ -117,6 +137,8 @@ const ANIMATION_TYPES: Array<{
   { type: ThemeAnimationType.SCAN, label: 'SCAN', hint: '扫描 · 硬边扫开 + 前缘光束', initialDirection: ThemeAnimationDirection.TTB, Icon: IcoScan, tile: 'from-green-100 to-green-200 text-green-600 dark:from-green-500/15 dark:to-green-500/5 dark:text-green-400' },
   { type: ThemeAnimationType.QR_GRID, label: 'QR_GRID', hint: '方块格子 · 方块逐格生长揭开', initialDirection: ThemeAnimationDirection.LTR, Icon: IcoQrGrid, tile: 'from-stone-100 to-stone-200 text-stone-600 dark:from-stone-500/15 dark:to-stone-500/5 dark:text-stone-400' },
   { type: ThemeAnimationType.RIPPLE, label: 'RIPPLE', hint: '水滴涟漪 · 波源', initialWaveWidth: 18, Icon: IcoRipple, tile: 'from-sky-100 to-sky-200 text-sky-600 dark:from-sky-500/15 dark:to-sky-500/5 dark:text-sky-400' },
+  { type: ThemeAnimationType.CLOCK_SWEEP, label: 'CLOCK_SWEEP', hint: '时钟扇形 · 轴心', Icon: IcoClockSweep, tile: 'from-violet-100 to-violet-200 text-violet-600 dark:from-violet-500/15 dark:to-violet-500/5 dark:text-violet-400' },
+  { type: ThemeAnimationType.FAN, label: 'FAN', hint: '扇叶旋开 · 轴心', initialBladeCount: 8, Icon: IcoFan, tile: 'from-indigo-100 to-indigo-200 text-indigo-600 dark:from-indigo-500/15 dark:to-indigo-500/5 dark:text-indigo-400' },
 ]
 
 const DURATION_PRESETS = [
@@ -152,6 +174,13 @@ const WAVE_OPTIONS: ReadonlyArray<{ value: number; label: string }> = [
   { value: 34, label: '34px' },
 ]
 
+/** 扇叶数档位（合法区间 [4, 16] 的整数）：仅 FAN 卡片展示，周期 = 360° / 片数 */
+const BLADE_OPTIONS: ReadonlyArray<{ value: number; label: string }> = [
+  { value: 6, label: '6' },
+  { value: 8, label: '8' },
+  { value: 12, label: '12' },
+]
+
 function GalleryCard({
   animationType,
   label,
@@ -159,6 +188,7 @@ function GalleryCard({
   initialDirection,
   initialSlatWidth,
   initialWaveWidth,
+  initialBladeCount,
   Icon,
   tile,
   duration,
@@ -171,6 +201,7 @@ function GalleryCard({
   initialDirection?: ThemeAnimationDirection
   initialSlatWidth?: number
   initialWaveWidth?: number
+  initialBladeCount?: number
   Icon: (props: SVGProps<SVGSVGElement>) => JSX.Element
   tile: string
   duration: number
@@ -182,12 +213,14 @@ function GalleryCard({
   const [direction, setDirection] = useState<ThemeAnimationDirection>(initialDirection ?? ThemeAnimationDirection.LTR)
   const [slatWidth, setSlatWidth] = useState(initialSlatWidth ?? 72)
   const [waveWidth, setWaveWidth] = useState(initialWaveWidth ?? 18)
+  const [bladeCount, setBladeCount] = useState(initialBladeCount ?? 8)
   const { resolvedTheme, setTheme } = useTheme()
   const { ref, toggleTheme, isDark } = useThemeAnimation<HTMLButtonElement>({
     animationType,
     direction,
     slatWidth,
     waveWidth,
+    bladeCount,
     duration,
     easing,
     isDark: resolvedTheme === 'dark',
@@ -295,6 +328,27 @@ function GalleryCard({
             </div>
           </div>
         )}
+        {initialBladeCount !== undefined && (
+          <div className="flex items-center justify-between gap-2">
+            <span className="text-muted-foreground">Blades</span>
+            <div className="flex gap-1">
+              {BLADE_OPTIONS.map((b) => (
+                <button
+                  key={b.value}
+                  type="button"
+                  onClick={() => setBladeCount(b.value)}
+                  className={`rounded-md px-1.5 py-0.5 font-mono text-[10px] transition-colors ${
+                    bladeCount === b.value
+                      ? 'bg-primary font-semibold text-primary-foreground'
+                      : 'border border-border bg-card text-muted-foreground hover:text-foreground'
+                  }`}
+                >
+                  {b.label}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
     </motion.div>
   )
@@ -330,7 +384,7 @@ function PresetRow<T extends number | string>({
   )
 }
 
-/** 13 种动画的可交互画廊：卡片中央圆形按钮触发（受控模式 × next-themes，与站点主题联动） */
+/** 15 种动画的可交互画廊：卡片中央圆形按钮触发（受控模式 × next-themes，与站点主题联动） */
 export function GallerySection() {
   const [duration, setDuration] = useState(750)
   const [easing, setEasing] = useState('ease-in-out')
@@ -344,7 +398,7 @@ export function GallerySection() {
           </AnimatedBadge>
           <h2 className="text-3xl font-bold tracking-tight md:text-4xl">Try Different Animations</h2>
           <p className="mt-3 text-muted-foreground">
-            点击卡片中央按钮播放动画；BLINDS / SCAN / QR_GRID 可在卡内切换方向，RIPPLE 可切换环带波长。
+            点击卡片中央按钮播放动画；BLINDS / SCAN / QR_GRID 可在卡内切换方向，RIPPLE 可切换环带波长，FAN 可切换扇叶数。
           </p>
         </div>
 
@@ -363,6 +417,7 @@ export function GallerySection() {
               initialDirection={t.initialDirection}
               initialSlatWidth={t.initialSlatWidth}
               initialWaveWidth={t.initialWaveWidth}
+              initialBladeCount={t.initialBladeCount}
               Icon={t.Icon}
               tile={t.tile}
               duration={duration}
