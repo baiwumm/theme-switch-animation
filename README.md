@@ -7,7 +7,7 @@
 [![CI](https://github.com/baiwumm/theme-switch-animation/actions/workflows/ci.yml/badge.svg)](https://github.com/baiwumm/theme-switch-animation/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](./LICENSE)
 
-✨ 基于浏览器 View Transitions API 的主题切换动画库：切换 light / dark 主题时，新主题以指定形状（圆形扩散 / 多边形 / 百叶窗 / 方块格子）"揭开"覆盖旧主题，而不是生硬跳变。
+✨ 基于浏览器 View Transitions API 的主题切换动画库：切换 light / dark 主题时，新主题以指定形状（圆形扩散 / 多边形 / 百叶窗 / 方块格子 / 水滴涟漪）"揭开"覆盖旧主题，而不是生硬跳变。
 
 ## 📸 预览
 
@@ -16,7 +16,7 @@
 ## ✨ 特性
 
 - 🔀 **跨框架**：React 18+、Vue 3+、Next.js（App Router）、Nuxt 3+
-- 🎨 **12 种动画类型**：圆形扩散 / 收起 / 模糊（`CIRCLE` / `CIRCLE_REVERT` / `CIRCLE_BLUR`）、形状扩散（`SQUARE` / `DIAMOND` / `RECTANGLE` / `HEXAGON` / `TRIANGLE` / `STAR`）、条带与格子（`BLINDS` / `SCAN` / `QR_GRID`，由 `direction` 控制四方向）
+- 🎨 **13 种动画类型**：圆形扩散 / 收起 / 模糊（`CIRCLE` / `CIRCLE_REVERT` / `CIRCLE_BLUR`）、形状扩散（`SQUARE` / `DIAMOND` / `RECTANGLE` / `HEXAGON` / `TRIANGLE` / `STAR`）、条带与格子（`BLINDS` / `SCAN` / `QR_GRID`，由 `direction` 控制四方向）、环带前缘（`RIPPLE`，由 `waveWidth` 控制波长）
 - 🔌 **受控模式**：不独占主题状态管理，`next-themes`、`@nuxtjs/color-mode` 用户可直接接入
 - 🔄 **非受控多实例同步**：同页多个实例的 `isDark` 以 `<html>` 暗色类名为事实源镜像，其它标签页经 storage 事件同步
 - 🛟 **自动降级**：不支持 View Transitions 或 `prefers-reduced-motion: reduce` 时自动降级为直接切换（状态永远正确）
@@ -113,8 +113,9 @@ export default defineNuxtConfig({
 | `BLINDS` | 百叶窗：叶片逐条揭开 | 无触发点（全屏按叶宽平铺） | `direction` / `slatWidth` |
 | `SCAN` | 硬边扫开 + 前缘半透明光束 | 无触发点（沿推进轴） | `direction` |
 | `QR_GRID` | 方块格子逐格生长、末帧融为整屏 | 无触发点（按 `direction` 锚定方位） | `direction` |
+| `RIPPLE` | 水滴涟漪：实心水面外推，前缘是主波峰 + 两圈衰减余波的环带 | 触发元素中心（波源） | `waveWidth` |
 
-`BLINDS` / `SCAN` / `QR_GRID` 是属性驱动蒙版（`@property --theme-switch-reveal` + 静止蒙版盒子），不读触发元素几何——`ref` 只用于点击与状态。`QR_GRID` 的"列 ∩ 行"双层蒙版交集经 `@supports (mask-composite: intersect)` 门控，不支持的引擎自动降级为推进轴单层条带（观感同百叶窗），状态始终正确。
+`BLINDS` / `SCAN` / `QR_GRID` 是属性驱动蒙版（`@property --theme-switch-reveal` + 静止蒙版盒子），不读触发元素几何——`ref` 只用于点击与状态。`RIPPLE` 复用同一注册属性与同一静止蒙版盒子，但把波源中心写进 `radial-gradient` 串，是这一族里唯一消费 `ref` 几何的类型。`QR_GRID` 的"列 ∩ 行"双层蒙版交集经 `@supports (mask-composite: intersect)` 门控，不支持的引擎自动降级为推进轴单层条带（观感同百叶窗），状态始终正确。
 
 ## 🧩 API
 
@@ -122,12 +123,13 @@ export default defineNuxtConfig({
 
 | 选项 | 类型 | 说明 |
 | --- | --- | --- |
-| `animationType` | `ThemeAnimationType` | 12 种动画类型之一，默认 `CIRCLE` |
+| `animationType` | `ThemeAnimationType` | 13 种动画类型之一，默认 `CIRCLE` |
 | `duration` | `number` | 动画时长 ms，默认 750 |
 | `easing` | `string` | 任意合法 CSS timing-function，默认 `ease-in-out` |
 | `blurAmount` | `number` | 模糊蒙版强度系数，默认 2。仅 `CIRCLE_BLUR` 生效 |
 | `direction` | `'ltr' \| 'rtl' \| 'ttb' \| 'btt'` | 扫描方向，默认 `ltr`。仅 `BLINDS` / `SCAN` / `QR_GRID` 生效（可用 `ThemeAnimationDirection` 常量），非法值静默回落默认 |
 | `slatWidth` | `number` | 百叶窗叶片宽度 px，范围 `[16, 200]`，默认 72。仅 `BLINDS` 生效，越界静默回落默认 |
+| `waveWidth` | `number` | 涟漪波长 px（相邻两圈波峰间距），范围 `[8, 60]`，默认 18。仅 `RIPPLE` 生效，越界静默回落默认 |
 | `darkClassName` | `string` | 暗色类名，默认 `dark`（与 next-themes / color-mode 默认一致） |
 | `isDark` + `onChange` | — | 同时提供 → 受控模式；都缺省 → 非受控（localStorage key 为 `THEME_STORAGE_KEY` 常量 `theme-switch-animation`，`observeThemeClass` 可带自定义 key）；只提供其一 → 契约不完整（开发环境 console.warn，按非受控工作） |
 

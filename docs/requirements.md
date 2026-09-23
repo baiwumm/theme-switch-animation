@@ -2,7 +2,7 @@
 
 | 项目 | 内容 |
 |---|---|
-| 版本 | v1.6（新增三种属性驱动类型 + `direction` 选项，移除四向类型，见 §10 修订记录） |
+| 版本 | v1.7（新增 `RIPPLE` 水滴涟漪类型 + `waveWidth` 选项，见 §10 修订记录） |
 | 日期 | 2026-09-21 |
 | 状态 | 已评审通过，待开发指令 |
 | 仓库 / npm 包名 | `theme-switch-animation`（npm 已确认未注册） |
@@ -15,7 +15,7 @@
 做一个**主题切换动画库**：用户点击按钮切换 light / dark 主题时，新主题以指定形状"揭开"覆盖旧主题，而不是生硬跳变。定位参考 `react-theme-switch-animation`（React-only），差异点：
 
 1. **跨框架**：同时支持 React、Vue、Next.js、Nuxt.js（参考库仅 React）。
-2. **自定义图案**：12 种动画类型（`CIRCLE` / `CIRCLE_REVERT` / `CIRCLE_BLUR` / `SQUARE` / `DIAMOND` / `RECTANGLE` / `HEXAGON` / `TRIANGLE` / `STAR` / `BLINDS` / `SCAN` / `QR_GRID`，形状观感对齐 magicui 的 animated-theme-toggler，技术路线仅用 mask；`BLINDS` / `SCAN` / `QR_GRID` 由 `direction` 选项控制四方向，v1.6），后续可扩展。
+2. **自定义图案**：13 种动画类型（`CIRCLE` / `CIRCLE_REVERT` / `CIRCLE_BLUR` / `SQUARE` / `DIAMOND` / `RECTANGLE` / `HEXAGON` / `TRIANGLE` / `STAR` / `BLINDS` / `SCAN` / `QR_GRID` / `RIPPLE`，形状观感对齐 magicui 的 animated-theme-toggler，技术路线仅用 mask；`BLINDS` / `SCAN` / `QR_GRID` 由 `direction` 选项控制四方向，v1.6；`RIPPLE` 由 `waveWidth` 控制环带波长，v1.7），后续可扩展。
 3. **受控模式**：不独占主题状态管理，`next-themes`、`@nuxtjs/color-mode` 用户可直接接入复用动画能力。
 
 ## 2. 可行性评估（调研结论复述）
@@ -42,7 +42,7 @@ theme-switch-animation/                  # 仓库名 = 包名
 │   ├── core/                           # 私有包（不发布），框架无关核心
 │   │   └── src/
 │   │       ├── types.ts                # ThemeAnimationType、options、返回值类型
-│   │       ├── masks.ts                # 蒙版几何与规格（circle/多边形 SVG、BLINDS/SCAN/QR_GRID 渐变模板）
+│   │       ├── masks.ts                # 蒙版几何与规格（circle/多边形 SVG、BLINDS/SCAN/QR_GRID/RIPPLE 渐变模板）
 │   │       ├── styles.ts               # 样式注入/清理，CSS 变量化声明
 │   │       ├── orchestrate.ts          # startViewTransition 编排 + 降级判断
 │   │       ├── uncontrolled.ts         # 非受控状态：localStorage 读写 + darkClassName 同步（v1.3 补，React / Vue 适配层共用）
@@ -106,17 +106,18 @@ theme-switch-animation/                  # 仓库名 = 包名
 
 | 参数 | 类型 | 默认值 | 说明 |
 |---|---|---|---|
-| `animationType` | `ThemeAnimationType` | `CIRCLE` | 动画类型：`CIRCLE` \| `CIRCLE_REVERT` \| `CIRCLE_BLUR` \| `SQUARE` \| `DIAMOND` \| `RECTANGLE` \| `HEXAGON` \| `TRIANGLE` \| `STAR` \| `BLINDS` \| `SCAN` \| `QR_GRID`（v1.6：四向类型 `LTR`/`RTL`/`TTB`/`BTT` 移除，改由 `direction` 承接） |
+| `animationType` | `ThemeAnimationType` | `CIRCLE` | 动画类型：`CIRCLE` \| `CIRCLE_REVERT` \| `CIRCLE_BLUR` \| `SQUARE` \| `DIAMOND` \| `RECTANGLE` \| `HEXAGON` \| `TRIANGLE` \| `STAR` \| `BLINDS` \| `SCAN` \| `QR_GRID` \| `RIPPLE`（v1.6：四向类型 `LTR`/`RTL`/`TTB`/`BTT` 移除，改由 `direction` 承接） |
 | `darkClassName` | `string` | `'dark'` | 暗色类名，可配置 |
 | `duration` | `number` | `750` | 动画时长 ms |
 | `easing` | `string` | `'ease-in-out'` | 任意合法 CSS timing-function |
 | `blurAmount` | `number` | `2` | 模糊强度（仅 `CIRCLE_BLUR` 生效，v1.5 新增） |
 | `direction` | `ThemeAnimationDirection` | `'ltr'` | 扫描方向（仅 `BLINDS` / `SCAN` / `QR_GRID` 生效，其余类型忽略；非法值回落默认，v1.6 新增） |
 | `slatWidth` | `number` | `72` | 百叶窗叶片宽度 px，合法区间 `[16, 200]`（仅 `BLINDS` 生效；越界静默回落默认，v1.6 新增） |
+| `waveWidth` | `number` | `18` | 涟漪波长 px（相邻两圈波峰间距），合法区间 `[8, 60]`（仅 `RIPPLE` 生效；越界静默回落默认，v1.7 新增） |
 | `isDark` | `boolean` | 可选 | 受控模式：外部暗色状态 |
 | `onChange` | `(next: boolean) => void` | 可选 | 受控模式：状态变更回调 |
 
-前四项两种模式共用；`blurAmount` / `direction` / `slatWidth` 亦为普通动画参数（非法值回落默认）；后两项仅受控模式出现。
+前四项两种模式共用；`blurAmount` / `direction` / `slatWidth` / `waveWidth` 亦为普通动画参数（非法值回落默认）；后两项仅受控模式出现。
 
 ### 5.2 模式判定
 
@@ -254,6 +255,7 @@ export type { ThemeAnimationOptions, ... } from '@theme-switch-animation/core'
 - **BLINDS**：叶片宽 `slatWidth`（默认 72）的条带平铺（`mask-repeat: repeat`），每根叶片的不透明段从 `-feather` 长到 `slatWidth`；软边 `feather = min(20, round(slatWidth × 0.28))`（`BLINDS_FEATHER_RATIO` / `BLINDS_MAX_FEATHER_PX`），超出叶片边界的部分被平铺裁掉，形成相邻叶片硬边相接的百叶窗观感。`direction` 决定渐变角与平铺轴（LTR/RTL 竖条沿 x、TTB/BTT 横条沿 y）。
 - **SCAN**：单层满铺（`no-repeat`），实心段之后跟一条 12px、α=0.4 的前缘光束 + 4px 渐隐尾（`SCAN_BAND_WIDTH_PX` / `SCAN_BAND_ALPHA` / `SCAN_FADE_WIDTH_PX`）；`to = 推进轴全长 + 光束总宽`，保证末帧实心段盖满视口、光束整体扫出画面（覆盖余量同 CIRCLE 的哲学）。
 - **QR_GRID**：百叶窗的二维版——"列约束 ∩ 行约束"两条渐变以 `mask-composite: intersect` 求交，交集即每格一个方块（格距 `QR_GRID_CELL_PX` = 64，软边比例同 BLINDS）；推进轴层从格子起始边生长、垂直轴层从格子中心对称生长，`direction` 决定锚定方位（LTR 左上 / RTL 右上 / TTB 顶边中点 / BTT 底边中点）。双层交集写在 `@supports (mask-composite: intersect)` 内，不支持的引擎落回基线的推进轴单层条带（观感同百叶窗），状态始终正确；**不写 `-webkit-mask-composite`**——仅支持旧语法的引擎落入基线即可，避免新旧两套 composite 关键字的级联歧义。
+- **RIPPLE（v1.7，环带前缘）**：属性驱动揭开族的第四个成员，复用 `REVEAL_VAR` 与 `buildRevealAnimationCSS` 的静止蒙版盒子（`styles.ts` 零改动），差别只在渐变换成 `radial-gradient` 且**波源中心写进 `mask-image` 串**（同 CIRCLE_REVERT 洞式的写法）——它是该族里唯一消费 `ref` 几何的类型。环带以波长 `waveWidth`（默认 18，合法区间 `[8, 60]`）为格：实心水面止于 `R − 1×W`，其后波峰落在整数格、波谷落在半整数格，主峰 α = `RIPPLE_CREST_ALPHA`(0.5)，余波按 0.55 逐圈相乘共 `RIPPLE_TRAIL_COUNT`(2) 圈（α 0.275 / 0.151）。波峰用部分 α 而非 >1：蒙版 α 就是新截图层的不透明度，半幅环带叠在完整垫底的旧层上即透亮的水线。`to = 2.1 × maxRadius + (TRAIL + 0.5) × W`，末帧实心段仍远超视口最远角（覆盖约束同其余类型）。`from = 0` 时实心段落在负半径，靠渐变规范的 stop 单调化夹成 0 长度——起始帧只剩中心一圈极淡水纹，不提前漏出新主题（无头 Chrome 冻结半径截图已核）。
 - **Safari 兼容**：只用 mask 动画，不碰 view-transition 伪元素上的 clip-path 和 WAAPI；`will-change: mask-size, mask-position`。
 - **duration / easing 变量化注入**：注入的临时 `<style>` 中动画声明一律写
   `animation: <name> var(--theme-switch-duration, 750ms) var(--theme-switch-easing, ease-in-out) both;`
@@ -283,10 +285,20 @@ export type { ThemeAnimationOptions, ... } from '@theme-switch-animation/core'
 7. **受控协议超时压力测试**（v1.1 修订 #1、v1.2 微调 #2）：在 Chrome DevTools 中开启 CPU 4x/6x throttling + Slow 3G 网络节流，实测 next-themes / color-mode 的 300ms 超时触发频率；若频繁触发，按 §5.4 备选方案改混合模式（库回调内直接改 class + 同步通知外部状态），并重测。
 8. **Playwright e2e 矩阵**（v1.1 修订 #5）：**只跑 Chromium 和 WebKit**。理由：Playwright 的 WebKit 引擎与 Safari 存在差异；Firefox 的 View Transitions 自 144 才支持，Playwright 自带的 Firefox 版本可能未默认启用。Firefox 用**真机手动测试**，暂时跳过，并在文档（README + 文档站）注明。
 9. **Nuxt 自动导入完整性**（v1.1 修订 #2 新增）：全新 Nuxt 项目仅加 `modules: ['theme-switch-animation/nuxt']`，`useThemeAnimation`、`ThemeAnimationType` 及所有类型**无需 import 即可使用且有完整类型提示**（`nuxt prepare` 通过、TS 无报错）。
-10. **单测**：mask 几何（四角最大距离、终尺寸）与 v1.6 的属性驱动规格（BLINDS / SCAN / QR_GRID 的起止值、渐变角、平铺尺寸、`@supports` 双层与降级基线）全覆盖；TS strict 通过。
+10. **单测**：mask 几何（四角最大距离、终尺寸）与 v1.6 的属性驱动规格（BLINDS / SCAN / QR_GRID 的起止值、渐变角、平铺尺寸、`@supports` 双层与降级基线）、v1.7 的 RIPPLE 环带（stop 序列与衰减 alpha、波长缩放、末帧实心段覆盖最远角、波源取自触发点）全覆盖；TS strict 通过。
 11. **发布清单**：`npm pack` 内容 = dist（含 nuxt-runtime 目录）+ LICENSE + README；四个子路径（`.` / `./react` / `./vue` / `./nuxt`）exports 均可解析。
 
 ## 10. 修订记录
+
+### v1.7（2026-09-23）
+
+需求方提出加"水滴波纹涟漪"，并定调"先看效果、不行再撤回"，故本轮走两步：先落 core 实现 + 文档站画廊，效果通过后再补齐门面文案与其余文档面。
+
+1. **新增 `RIPPLE` 类型与 `waveWidth` 选项（§1 / §5.1 / §7）**：动画类型 12 → 13 种。`waveWidth` 合法区间 `[8, 60]`、默认 18，越界静默回落（与 `slatWidth` 同策略）；余波圈数与衰减系数固化为导出常量 `RIPPLE_TRAIL_COUNT` / `RIPPLE_CREST_ALPHA`（沿 `SCAN_BAND_*` / `QR_GRID_CELL_PX` 的先例，不做选项膨胀）。非破坏性变更，其余 12 种类型的行为逐帧不变。
+2. **零新机制（§7）**：涟漪复用属性驱动揭开族的 `REVEAL_VAR` + 静止蒙版盒子，`styles.ts` 一行未改；新增导出只有 `getRippleRevealSpec` / `isRippleAnimationType` / `getRippleFrontExtentPx` 与三个常量。兼容面与 BLINDS / SCAN 完全一致（同样依赖 `@property`；未注册的引擎取 `to` 值即直切，状态仍正确）。
+3. **该族首个消费触发点几何的成员**：`RevealMaskSpec` 的"无触发点"叙事随之修正——BLINDS / SCAN 仍不消费 `center`，RIPPLE 把波源写进 `radial-gradient` 串。`getRevealMaskSpec` 的公开签名保持不变（涟漪在 `orchestrate` 里走独立分支），避免对已导出函数做破坏性改动。
+4. **实测**：无头 Chrome + CDP 冻结半径截图，核了起始帧（负 stop 单调化后只剩中心一圈极淡水纹）与中段环带；波源圆心与按钮中心逐位一致（读注入 `<style>` 的 `circle at X Y`）；末帧覆盖由几何断言锁死（`to − waveWidth > maxRadius`）。根 220 例单测（新增 10 例）+ lint / tsc / build + 文档站 `tsc` 全绿。
+5. **文档同步**：README 数量与两张表、文档站 hero / features / `site.ts` 的 SEO description、画廊第 13 张卡（卡内波长档位 10 / 18 / 34px）、四个 playground 的类型清单与 `waveWidth` 控件；hero 文案数字变动按既有规格重出门面截图 `assets/screen.jpg`。FAQ 的 0.2.0 迁移条目属历史归档不改写。
 
 ### v1.6（2026-09-21）
 
@@ -337,4 +349,4 @@ export type { ThemeAnimationOptions, ... } from '@theme-switch-animation/core'
 
 ---
 
-**当前状态（2026-09-21）**：0.1.0 已发布（npm + tag `theme-switch-animation@0.1.0`），本文档随实现推进到 v1.6。v0.2（`direction` 选项 + BLINDS / SCAN / QR_GRID 三类型，含四向类型移除的破坏性变更）开发与文档已同步、无头 Chrome 实测通过，剩余真机验证与发版事项见 `docs/next-steps.md` §5。
+**当前状态（2026-09-23）**：0.1.0 已发布（npm + tag `theme-switch-animation@0.1.0`），本文档随实现推进到 v1.7。v0.2（`direction` 选项 + BLINDS / SCAN / QR_GRID 三类型，含四向类型移除的破坏性变更）与 v1.7（`RIPPLE` 水滴涟漪 + `waveWidth`）的开发与文档均已同步、无头 Chrome 实测通过。剩余真机验证与发版事项见 `docs/next-steps.md`。
