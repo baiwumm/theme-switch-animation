@@ -13,6 +13,8 @@ const ANIMATION_TYPES: Array<{
   initialDirection?: ThemeAnimationDirection
   /** 仅 BLINDS：卡片下方渲染叶宽选择按钮 */
   initialSlatWidth?: number
+  /** 仅 RIPPLE：卡片下方渲染波长选择按钮 */
+  initialWaveWidth?: number
 }> = [
   { type: ThemeAnimationType.CIRCLE, label: 'CIRCLE', hint: '圆形扩散 · 圆心 = 点击位置' },
   { type: ThemeAnimationType.CIRCLE_REVERT, label: 'CIRCLE_REVERT', hint: '圆形收起/扩散 · 切回亮色收起、切到暗色扩散' },
@@ -26,6 +28,7 @@ const ANIMATION_TYPES: Array<{
   { type: ThemeAnimationType.BLINDS, label: 'BLINDS', hint: '百叶窗 · 叶片逐条揭开，direction 控方向', initialDirection: ThemeAnimationDirection.LTR, initialSlatWidth: 72 },
   { type: ThemeAnimationType.SCAN, label: 'SCAN', hint: '扫描 · 硬边扫开 + 前缘光束，direction 控方向', initialDirection: ThemeAnimationDirection.TTB },
   { type: ThemeAnimationType.QR_GRID, label: 'QR_GRID', hint: '方块格子 · 方块逐格生长，direction 控方位', initialDirection: ThemeAnimationDirection.LTR },
+  { type: ThemeAnimationType.RIPPLE, label: 'RIPPLE', hint: '水滴涟漪 · 环带前缘向外推，waveWidth 控波长', initialWaveWidth: 18 },
 ]
 
 /** duration / easing 全局预设：选中后所有按钮的下一次切换立即生效 */
@@ -52,6 +55,12 @@ const SLAT_OPTIONS: ReadonlyArray<{ value: number; label: string }> = [
   { value: 72, label: '72px' },
   { value: 128, label: '128px' },
 ]
+/** 波长档位（px，合法区间 [8, 60]）：仅 RIPPLE 卡片展示，间距即相邻两圈波峰的距离 */
+const WAVE_OPTIONS: ReadonlyArray<{ value: number; label: string }> = [
+  { value: 10, label: '10px' },
+  { value: 18, label: '18px' },
+  { value: 34, label: '34px' },
+]
 
 /**
  * next-themes 的 SSR 约定：`resolvedTheme` 在服务端为 undefined，而客户端水合渲染期间
@@ -77,6 +86,7 @@ function ThemeButton({
   hint,
   initialDirection,
   initialSlatWidth,
+  initialWaveWidth,
   duration,
   easing,
 }: {
@@ -85,17 +95,20 @@ function ThemeButton({
   hint: string
   initialDirection?: ThemeAnimationDirection
   initialSlatWidth?: number
+  initialWaveWidth?: number
   duration: number
   easing: string
 }) {
   const mounted = useMounted()
   const [direction, setDirection] = useState<ThemeAnimationDirection>(initialDirection ?? ThemeAnimationDirection.LTR)
   const [slatWidth, setSlatWidth] = useState(initialSlatWidth ?? 72)
+  const [waveWidth, setWaveWidth] = useState(initialWaveWidth ?? 18)
   const { resolvedTheme, setTheme } = useTheme()
   const { ref, toggleTheme, isDark } = useThemeAnimation({
     animationType,
     direction,
     slatWidth,
+    waveWidth,
     darkClassName: 'dark',
     duration,
     easing,
@@ -139,6 +152,21 @@ function ThemeButton({
           ))}
         </div>
       )}
+      {initialWaveWidth !== undefined && (
+        <div className="slats" role="group" aria-label={`${label} waveWidth`}>
+          <span>waveWidth</span>
+          {WAVE_OPTIONS.map((w) => (
+            <button
+              key={w.value}
+              type="button"
+              className={`chip chip-sm${waveWidth === w.value ? ' active' : ''}`}
+              onClick={() => setWaveWidth(w.value)}
+            >
+              {w.label}
+            </button>
+          ))}
+        </div>
+      )}
     </div>
   )
 }
@@ -173,10 +201,10 @@ export function ThemeSwitcher() {
         <b>{mounted ? (isDark ? 'dark' : 'light') : '…'}</b>）
       </p>
       <p>
-        12 个按钮各自是独立的受控 <code>useThemeAnimation</code> 实例：库不写 localStorage、不改 class，
+        13 个按钮各自是独立的受控 <code>useThemeAnimation</code> 实例：库不写 localStorage、不改 class，
         在转场回调内调用 <code>setTheme</code> 并等待 next-themes 写入 class 后截图（300ms 未同步则自动直切）。
-        中心扩散类动画的起收点是按钮中心，可验证点击位置跟随；BLINDS / SCAN / QR_GRID
-        卡片下方各有独立的 direction 选择，只影响本卡片。
+        中心扩散类动画（含 RIPPLE）的起收点是按钮中心，可验证点击位置跟随；BLINDS / SCAN / QR_GRID
+        卡片下方各有独立的 direction 选择，RIPPLE 卡片另有 waveWidth 档位，都只影响本卡片。
       </p>
       <div className="presets" role="group" aria-label="duration 预设">
         <span>duration</span>
@@ -211,6 +239,7 @@ export function ThemeSwitcher() {
             hint={t.hint}
             initialDirection={t.initialDirection}
             initialSlatWidth={t.initialSlatWidth}
+            initialWaveWidth={t.initialWaveWidth}
             duration={duration}
             easing={easing}
           />

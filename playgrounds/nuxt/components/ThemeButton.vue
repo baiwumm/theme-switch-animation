@@ -11,6 +11,8 @@ const props = defineProps<{
   initialDirection?: ThemeAnimationDirection
   /** 仅 BLINDS：卡片下方的叶宽按钮初始值（px） */
   initialSlatWidth?: number
+  /** 仅 RIPPLE：卡片下方的波长按钮初始值（px） */
+  initialWaveWidth?: number
 }>()
 
 const DIRECTION_OPTIONS = [
@@ -22,9 +24,12 @@ const DIRECTION_OPTIONS = [
 
 const SLAT_OPTIONS = [32, 72, 128] as const
 
+const WAVE_OPTIONS = [10, 18, 34] as const
+
 /** 方向：每张卡片独立持有，互不影响 */
 const direction = ref<ThemeAnimationDirection>(props.initialDirection ?? ThemeAnimationDirection.LTR)
 const slatWidth = ref(props.initialSlatWidth ?? 72)
+const waveWidth = ref(props.initialWaveWidth ?? 18)
 
 const colorMode = useColorMode()
 
@@ -39,6 +44,7 @@ const options = reactive({
   easing: props.easing,
   direction: direction.value,
   slatWidth: slatWidth.value,
+  waveWidth: waveWidth.value,
   isDark: false,
   onChange: (next: boolean) => {
     colorMode.preference = next ? 'dark' : 'light'
@@ -52,6 +58,7 @@ watchEffect(() => {
   options.easing = props.easing
   options.direction = direction.value
   options.slatWidth = slatWidth.value
+  options.waveWidth = waveWidth.value
 })
 
 const { triggerRef, toggleTheme, isDark } = useThemeAnimation<HTMLButtonElement>(options)
@@ -91,6 +98,18 @@ const setTrigger = (el: unknown) => {
         @click="slatWidth = s"
       >
         {{ s }}px
+      </button>
+    </div>
+    <div v-if="initialWaveWidth" class="slats" :aria-label="`${label} waveWidth`" role="group">
+      <span>waveWidth</span>
+      <button
+        v-for="w in WAVE_OPTIONS"
+        :key="w"
+        type="button"
+        :class="['chip', 'chip-sm', { active: waveWidth === w }]"
+        @click="waveWidth = w"
+      >
+        {{ w }}px
       </button>
     </div>
   </div>
