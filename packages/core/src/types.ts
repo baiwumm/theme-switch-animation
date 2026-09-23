@@ -27,6 +27,8 @@ export const ThemeAnimationType = {
   SCAN: 'scan',
   /** 方块格子：新主题以方块格子逐格生长揭开（类似百叶窗的二维版），direction 控制生长方位 */
   QR_GRID: 'qr-grid',
+  /** 水滴涟漪：圆形扩散但前缘是主波 + 衰减余波的环带，waveWidth 控制波长 */
+  RIPPLE: 'ripple',
 } as const
 
 export type ThemeAnimationType = (typeof ThemeAnimationType)[keyof typeof ThemeAnimationType]
@@ -69,6 +71,8 @@ export interface ThemeAnimationOptions {
   direction?: ThemeAnimationDirection
   /** 百叶窗叶片宽度（px），合法范围 `[16, 200]`，默认 `72`。仅 `BLINDS` 生效，非法值静默回落默认 */
   slatWidth?: number
+  /** 涟漪波长（px，相邻两圈波峰间距），合法范围 `[8, 60]`，默认 `18`。仅 `RIPPLE` 生效，非法值静默回落默认 */
+  waveWidth?: number
   /** 受控模式：外部暗色状态。与 `onChange` 同时提供才进入受控模式 */
   isDark?: boolean
   /** 受控模式：状态变更回调。与 `isDark` 同时提供才进入受控模式 */
@@ -84,12 +88,18 @@ export interface ResolvedAnimationOptions {
   blurAmount: number
   direction: ThemeAnimationDirection
   slatWidth: number
+  waveWidth: number
 }
 
 /** 百叶窗叶片宽度的默认值与合法区间（超出区间静默回落默认，与 blurAmount 同策略） */
 export const SLAT_WIDTH_DEFAULT = 72
 export const MIN_SLAT_WIDTH = 16
 export const MAX_SLAT_WIDTH = 200
+
+/** 涟漪波长的默认值与合法区间（同 slatWidth 的静默回落策略） */
+export const WAVE_WIDTH_DEFAULT = 18
+export const MIN_WAVE_WIDTH = 8
+export const MAX_WAVE_WIDTH = 60
 
 export const THEME_ANIMATION_DEFAULTS: Readonly<ResolvedAnimationOptions> = Object.freeze({
   animationType: ThemeAnimationType.CIRCLE,
@@ -99,6 +109,7 @@ export const THEME_ANIMATION_DEFAULTS: Readonly<ResolvedAnimationOptions> = Obje
   blurAmount: 2,
   direction: ThemeAnimationDirection.LTR,
   slatWidth: SLAT_WIDTH_DEFAULT,
+  waveWidth: WAVE_WIDTH_DEFAULT,
 })
 
 /** 非受控模式持久化到 localStorage 的 key（v1.2：避免与 next-themes 等库的 `'theme'` 冲突） */
@@ -124,6 +135,7 @@ export function resolveAnimationOptions(options: ThemeAnimationOptions = {}): Re
     blurAmount: isValidBlurAmount(options.blurAmount) ? options.blurAmount : THEME_ANIMATION_DEFAULTS.blurAmount,
     direction: isValidDirection(options.direction) ? options.direction : THEME_ANIMATION_DEFAULTS.direction,
     slatWidth: isValidSlatWidth(options.slatWidth) ? options.slatWidth : THEME_ANIMATION_DEFAULTS.slatWidth,
+    waveWidth: isValidWaveWidth(options.waveWidth) ? options.waveWidth : THEME_ANIMATION_DEFAULTS.waveWidth,
   }
 }
 
@@ -141,4 +153,9 @@ function isValidDirection(value: ThemeAnimationDirection | undefined): value is 
 /** slatWidth 仅 BLINDS 消费；越界 / NaN / 无穷静默回落默认 */
 function isValidSlatWidth(value: number | undefined): value is number {
   return value !== undefined && Number.isFinite(value) && value >= MIN_SLAT_WIDTH && value <= MAX_SLAT_WIDTH
+}
+
+/** waveWidth 仅 RIPPLE 消费；越界 / NaN / 无穷静默回落默认 */
+function isValidWaveWidth(value: number | undefined): value is number {
+  return value !== undefined && Number.isFinite(value) && value >= MIN_WAVE_WIDTH && value <= MAX_WAVE_WIDTH
 }

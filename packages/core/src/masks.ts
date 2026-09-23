@@ -314,7 +314,8 @@ export function getBlurCircleMaskGeometry(center: Point, viewport: Size, blurAmo
  * 属性驱动揭开（BLINDS / SCAN）：蒙版盒子完全静止（不动画 mask-size / mask-position），
  * 只有注册属性 `REVEAL_VAR` 在动——渐变蒙版引用该属性，属性每帧变化时渐变重新解析。
  * 与 CIRCLE_REVERT 收起方向的"洞"（buildHoleAnimationCSS）同一机制，CSS 生成见 styles.ts。
- * 这类动画没有触发点（不消费 center），旧截图层完整垫底、新层挂蒙版。
+ * 旧截图层完整垫底、新层挂蒙版。BLINDS / SCAN 没有触发点（不消费 center），
+ * 唯一消费 center 的成员是 RIPPLE——它的圆心得写进 radial-gradient 串（见 getRippleRevealSpec）。
  */
 export interface RevealMaskSpec {
   /** 注册属性的起始值 / 终止值（px），写进 keyframes 的 from / to */
@@ -485,6 +486,64 @@ export function getQrGridMaskSpec(direction: ThemeAnimationDirection): QrGridMas
 
 export function isQrGridAnimationType(type: ThemeAnimationType): boolean {
   return type === ThemeAnimationType.QR_GRID
+}
+
+/**
+ * RIPPLE：水滴涟漪——仍是"从触发点圆面积扩大"，但揭开前缘不是一条干净的边，
+ * 而是主波峰 + 若干圈衰减余波的环带。与 BLINDS / SCAN 同属属性驱动揭开（蒙版盒子静止、
+ * 只有 `REVEAL_VAR` 在动，CSS 复用 buildRevealAnimationCSS），差别有两处：
+ *
+ * 1. 渐变是 radial 且需要触发点——圆心写进 mask-image 串本身（同 CIRCLE_REVERT 的洞式），
+ *    所以它消费 center，而 BLINDS / SCAN 不消费；
+ * 2. 波峰用部分 alpha（而非 >1）：蒙版 alpha 就是新截图层的不透明度，半幅环带叠在完整
+ *    垫底的旧层上，观感是透亮的水线；波谷用 transparent 露出旧主题，形成明暗相间的环。
+ *
+ * 半径以「波长 W 的整数倍」表达：波峰在 R + kW（k = 0…余波圈数），波谷在半整数位，
+ * 最外波谷即前缘。`REVEAL_VAR` 从 0 长到 `CIRCLE 终半径 + 前缘外沿`，末帧实心段远超
+ * 视口最远角——本库的硬约束「mask 在样式移除前持续生效，末帧必须完全覆盖」在此同样成立。
+ */
+export const RIPPLE_TRAIL_COUNT = 2
+export const RIPPLE_CREST_ALPHA = 0.5
+const RIPPLE_TRAIL_DECAY = 0.55
+/** 实心水面止于 `R - 1 × W`（留一格给主波峰前的波谷） */
+const RIPPLE_SOLID_LAG_WAVES = 1
+
+/** 前缘外沿（px）：最外一圈波谷到实心段的距离，`REVEAL_VAR` 终值要加上它 */
+export function getRippleFrontExtentPx(waveWidth: number): number {
+  return (RIPPLE_TRAIL_COUNT + 0.5) * waveWidth
+}
+
+/** 以波长为单位的环带位置 → `calc()` 表达式（0 格即 var 本身，负格走减号且两侧留空格） */
+function rippleStop(waveWidth: number, waves: number): string {
+  const v = `var(${REVEAL_VAR})`
+  const offset = roundTo(waves * waveWidth, 2)
+  if (offset === 0) return v
+  return `calc(${v} ${offset > 0 ? '+' : '-'} ${Math.abs(offset)}px)`
+}
+
+export function getRippleRevealSpec(center: Point, viewport: Size, waveWidth: number): RevealMaskSpec {
+  const stops = [
+    `#000 0 ${rippleStop(waveWidth, -RIPPLE_SOLID_LAG_WAVES)}`,
+    `transparent ${rippleStop(waveWidth, -0.5)}`,
+  ]
+  for (let wave = 0; wave <= RIPPLE_TRAIL_COUNT; wave += 1) {
+    const alpha = wave === 0
+      ? RIPPLE_CREST_ALPHA
+      : RIPPLE_CREST_ALPHA * RIPPLE_TRAIL_DECAY ** wave
+    stops.push(`rgba(0, 0, 0, ${roundTo(alpha, 3)}) ${rippleStop(waveWidth, wave)}`)
+    stops.push(`transparent ${rippleStop(waveWidth, wave + 0.5)}`)
+  }
+  return {
+    from: 0,
+    to: getMaxRadiusToCorners(center, viewport) * CIRCLE_SIZE_FACTOR + getRippleFrontExtentPx(waveWidth),
+    maskImage: `radial-gradient(circle at ${roundTo(center.x, 2)}px ${roundTo(center.y, 2)}px, ${stops.join(', ')})`,
+    maskSize: '100% 100%',
+    maskRepeat: 'no-repeat',
+  }
+}
+
+export function isRippleAnimationType(type: ThemeAnimationType): boolean {
+  return type === ThemeAnimationType.RIPPLE
 }
 
 /** 中心扩散形状的几何函数表（含 CIRCLE）；`type in` 即类型守卫 */

@@ -2,17 +2,20 @@ import { describe, expect, it } from 'vitest'
 
 import {
   MAX_SLAT_WIDTH,
+  MAX_WAVE_WIDTH,
   MIN_SLAT_WIDTH,
+  MIN_WAVE_WIDTH,
   SLAT_WIDTH_DEFAULT,
   THEME_ANIMATION_DEFAULTS,
   THEME_ANIMATION_STYLE_ID,
   THEME_STORAGE_KEY,
+  WAVE_WIDTH_DEFAULT,
   ThemeAnimationDirection,
   ThemeAnimationType,
   resolveAnimationOptions,
 } from './types'
 describe('ThemeAnimationType', () => {
-  it('提供且仅提供 12 种动画类型（3 基础 + 6 形状 + 百叶窗/扫描/方块格子；四向擦除已并入 direction）', () => {
+  it('提供且仅提供 13 种动画类型（3 基础 + 6 形状 + 百叶窗/扫描/方块格子/涟漪；四向擦除已并入 direction）', () => {
     expect(ThemeAnimationType).toEqual({
       CIRCLE: 'circle',
       CIRCLE_REVERT: 'circle-revert',
@@ -26,8 +29,9 @@ describe('ThemeAnimationType', () => {
       BLINDS: 'blinds',
       SCAN: 'scan',
       QR_GRID: 'qr-grid',
+      RIPPLE: 'ripple',
     })
-    expect(new Set(Object.values(ThemeAnimationType)).size).toBe(12)
+    expect(new Set(Object.values(ThemeAnimationType)).size).toBe(13)
   })
 })
 
@@ -47,6 +51,7 @@ describe('resolveAnimationOptions', () => {
       blurAmount: 2,
       direction: 'ltr',
       slatWidth: 72,
+      waveWidth: 18,
     })
     expect(resolveAnimationOptions()).toEqual(THEME_ANIMATION_DEFAULTS)
   })
@@ -61,6 +66,7 @@ describe('resolveAnimationOptions', () => {
         blurAmount: 3,
         direction: ThemeAnimationDirection.BTT,
         slatWidth: 100,
+        waveWidth: 40,
       }),
     ).toEqual({
       animationType: 'blinds',
@@ -70,6 +76,7 @@ describe('resolveAnimationOptions', () => {
       blurAmount: 3,
       direction: 'btt',
       slatWidth: 100,
+      waveWidth: 40,
     })
   })
 
@@ -93,7 +100,15 @@ describe('resolveAnimationOptions', () => {
     expect(resolveAnimationOptions({ slatWidth: MAX_SLAT_WIDTH }).slatWidth).toBe(MAX_SLAT_WIDTH)
   })
 
-  it('忽略受控模式字段，只返回七个动画参数', () => {
+  it('waveWidth 越界 / NaN / 无穷回落默认，区间边界值有效', () => {
+    for (const waveWidth of [0, 7, 61, -18, Number.NaN, Number.POSITIVE_INFINITY]) {
+      expect(resolveAnimationOptions({ waveWidth }).waveWidth).toBe(WAVE_WIDTH_DEFAULT)
+    }
+    expect(resolveAnimationOptions({ waveWidth: MIN_WAVE_WIDTH }).waveWidth).toBe(MIN_WAVE_WIDTH)
+    expect(resolveAnimationOptions({ waveWidth: MAX_WAVE_WIDTH }).waveWidth).toBe(MAX_WAVE_WIDTH)
+  })
+
+  it('忽略受控模式字段，只返回八个动画参数', () => {
     const resolved = resolveAnimationOptions({ isDark: true, onChange: () => {} })
     expect(Object.keys(resolved).sort()).toEqual([
       'animationType',
@@ -103,6 +118,7 @@ describe('resolveAnimationOptions', () => {
       'duration',
       'easing',
       'slatWidth',
+      'waveWidth',
     ])
   })
 })

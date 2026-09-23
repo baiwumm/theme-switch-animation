@@ -185,6 +185,36 @@ describe('runThemeTransition 动画路径（jsdom + 模拟 startViewTransition�
     expect(css).toContain('--theme-switch-reveal: 616px;')
   })
 
+  it('RIPPLE：复用静止蒙版盒子生成器，但 radial-gradient 圆心取触发点、waveWidth 决定环带间距', () => {
+    installFakeViewTransition()
+    vi.spyOn(window, 'innerWidth', 'get').mockReturnValue(800)
+    vi.spyOn(window, 'innerHeight', 'get').mockReturnValue(600)
+    const trigger = { getBoundingClientRect: () => ({ left: 100, top: 50, width: 40, height: 20 }) }
+
+    runThemeTransition({
+      domUpdate: () => {},
+      trigger,
+      options: { animationType: ThemeAnimationType.RIPPLE, waveWidth: 18 },
+    })
+
+    const css = styleNode()!.textContent!
+    expect(css).toContain('@property --theme-switch-reveal')
+    // 与 BLINDS / SCAN 同一机制：蒙版盒子完全静止，逐帧只有注册属性在动
+    expect(css).toContain('mask-size: 100% 100%;')
+    expect(css).toContain('mask-position: 0 0;')
+    expect(css).toContain('mask-repeat: no-repeat;')
+    expect(css).not.toContain('z-index')
+    // 与 BLINDS / SCAN 的关键差别：RIPPLE 消费 center，波源钉在触发点中心 (120, 60)
+    expect(css).toContain('radial-gradient(circle at 120px 60px')
+    // 环带：实心水面止于 R−18px、主波峰在 R、最外圈波谷即前缘 R+45px
+    expect(css).toContain('#000 0 calc(var(--theme-switch-reveal) - 18px)')
+    expect(css).toContain('rgba(0, 0, 0, 0.5) var(--theme-switch-reveal)')
+    expect(css).toContain('transparent calc(var(--theme-switch-reveal) + 45px)')
+    // 终值 = CIRCLE 终半径 + 前缘外沿，保证末帧实心段盖满视口最远角
+    expect(css).toContain('--theme-switch-reveal: 0px;')
+    expect(css).toContain(`--theme-switch-reveal: ${Math.hypot(680, 540) * 2.1 + 45}px;`)
+  })
+
   it('QR_GRID：蒙版挂新层的方块格子双层，@supports 增强 intersect，无 z-index', () => {
     installFakeViewTransition()
     vi.spyOn(window, 'innerWidth', 'get').mockReturnValue(800)

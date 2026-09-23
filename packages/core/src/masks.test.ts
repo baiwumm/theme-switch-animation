@@ -9,6 +9,8 @@ import {
   HEXAGON_COVERAGE_FACTOR,
   RECTANGLE_COVERAGE_MARGIN,
   QR_GRID_CELL_PX,
+  RIPPLE_CREST_ALPHA,
+  RIPPLE_TRAIL_COUNT,
   SCAN_BAND_ALPHA,
   SCAN_BAND_WIDTH_PX,
   SCAN_FADE_WIDTH_PX,
@@ -31,6 +33,8 @@ import {
   getQrGridMaskSpec,
   getRectangleMaskGeometry,
   getRevealMaskSpec,
+  getRippleFrontExtentPx,
+  getRippleRevealSpec,
   getScanRevealSpec,
   getSquareMaskGeometry,
   getStarMaskGeometry,
@@ -39,10 +43,11 @@ import {
   isBlurAnimationType,
   isQrGridAnimationType,
   isRevealAnimationType,
+  isRippleAnimationType,
   isShapeAnimationType,
 } from './masks'
 import type { RectProvider } from './masks'
-import { ThemeAnimationDirection, ThemeAnimationType } from './types'
+import { REVEAL_VAR, ThemeAnimationDirection, ThemeAnimationType } from './types'
 
 const viewport = { width: 800, height: 600 }
 
@@ -448,5 +453,89 @@ describe('QR_GRID（方块格子）', () => {
     ] as const) {
       expect(isQrGridAnimationType(type)).toBe(false)
     }
+  })
+})
+
+describe('RIPPLE（水滴涟漪）', () => {
+  const center = { x: 400, y: 300 }
+  const v = `var(${REVEAL_VAR})`
+  /** 以波长格数为单位写出 calc 表达式（0 格即 var 本身） */
+  const at = (waves: number, waveWidth = 18): string => {
+    const offset = waves * waveWidth
+    if (offset === 0) return v
+    return `calc(${v} ${offset > 0 ? '+' : '-'} ${Math.abs(offset)}px)`
+  }
+
+  it('环带序列：实心水面 + 主波峰 + 2 圈衰减余波，波峰落在整数格、波谷落在半整数格', () => {
+    const spec = getRippleRevealSpec(center, viewport, 18)
+    expect(spec.maskImage).toBe(
+      `radial-gradient(circle at 400px 300px, ` +
+      `#000 0 ${at(-1)}, ` +
+      `transparent ${at(-0.5)}, ` +
+      `rgba(0, 0, 0, ${RIPPLE_CREST_ALPHA}) ${at(0)}, ` +
+      `transparent ${at(0.5)}, ` +
+      `rgba(0, 0, 0, 0.275) ${at(1)}, ` +
+      `transparent ${at(1.5)}, ` +
+      `rgba(0, 0, 0, 0.151) ${at(2)}, ` +
+      `transparent ${at(2.5)})`,
+    )
+  })
+
+  it('余波圈数由 RIPPLE_TRAIL_COUNT 决定：主峰之外恰好再跟那么多圈', () => {
+    const spec = getRippleRevealSpec(center, viewport, 18)
+    expect(spec.maskImage.split('rgba(0, 0, 0, ').length - 1).toBe(RIPPLE_TRAIL_COUNT + 1)
+  })
+
+  it('from = 0 且实心段止于 -1 波长：首帧实心半径为负，被渐变 stop 单调化夹成 0，起始屏不提前露出新主题', () => {
+    const spec = getRippleRevealSpec(center, viewport, 18)
+    expect(spec.from).toBe(0)
+    expect(spec.maskImage).toContain(`#000 0 ${at(-1)}`)
+  })
+
+  it('to = CIRCLE 终半径 + 前缘外沿，末帧实心段仍远超视口最远角（mask 持续生效必须完全覆盖）', () => {
+    const waveWidth = 18
+    const spec = getRippleRevealSpec(center, viewport, waveWidth)
+    const maxRadius = getMaxRadiusToCorners(center, viewport)
+    expect(getRippleFrontExtentPx(waveWidth)).toBe((RIPPLE_TRAIL_COUNT + 0.5) * waveWidth)
+    expect(spec.to).toBe(maxRadius * CIRCLE_SIZE_FACTOR + getRippleFrontExtentPx(waveWidth))
+    expect(spec.to - waveWidth).toBeGreaterThan(maxRadius)
+  })
+
+  it('波源中心写进 radial-gradient 串，环带间距按 waveWidth 等比缩放', () => {
+    const spec = getRippleRevealSpec({ x: 120.5, y: 640.25 }, viewport, 40)
+    expect(spec.maskImage).toContain('circle at 120.5px 640.25px')
+    expect(spec.maskImage).toContain(`#000 0 calc(${v} - 40px)`)
+    expect(spec.maskImage).toContain(`transparent calc(${v} + 100px)`)
+    expect(spec.to).toBeCloseTo(
+      getMaxRadiusToCorners({ x: 120.5, y: 640.25 }, viewport) * CIRCLE_SIZE_FACTOR + 100,
+      10,
+    )
+  })
+
+  it('蒙版盒子静止：mask-size 100% 100% + no-repeat（逐帧只动注册属性，与 BLINDS / SCAN 同机制）', () => {
+    const spec = getRippleRevealSpec(center, viewport, 18)
+    expect(spec.maskSize).toBe('100% 100%')
+    expect(spec.maskRepeat).toBe('no-repeat')
+  })
+
+  it('守卫与分发：仅 RIPPLE 命中 isRippleAnimationType，且不落入 BLINDS / SCAN 的 isRevealAnimationType', () => {
+    expect(isRippleAnimationType(ThemeAnimationType.RIPPLE)).toBe(true)
+    for (const type of [
+      ThemeAnimationType.BLINDS,
+      ThemeAnimationType.SCAN,
+      ThemeAnimationType.CIRCLE,
+      ThemeAnimationType.QR_GRID,
+    ] as const) {
+      expect(isRippleAnimationType(type)).toBe(false)
+    }
+    expect(isRevealAnimationType(ThemeAnimationType.RIPPLE)).toBe(false)
+  })
+
+  it('RIPPLE 不是形状类也不是模糊类：getMaskGeometry 按既有语义回落 CIRCLE', () => {
+    expect(isShapeAnimationType(ThemeAnimationType.RIPPLE)).toBe(false)
+    expect(isBlurAnimationType(ThemeAnimationType.RIPPLE)).toBe(false)
+    expect(getMaskGeometry(ThemeAnimationType.RIPPLE, center, viewport)).toEqual(
+      getCircleMaskGeometry(center, viewport),
+    )
   })
 })
