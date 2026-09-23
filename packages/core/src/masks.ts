@@ -1,4 +1,4 @@
-import { REVEAL_VAR, ThemeAnimationDirection, ThemeAnimationType } from './types'
+import { REVEAL_VAR, SWEEP_VAR, ThemeAnimationDirection, ThemeAnimationType } from './types'
 import type { ShapeAnimationType } from './types'
 
 export interface Point {
@@ -327,6 +327,13 @@ export interface RevealMaskSpec {
   maskSize: string
   /** BLINDS 叶片平铺 `repeat`；SCAN 单层 `no-repeat` */
   maskRepeat: 'no-repeat' | 'repeat'
+  /**
+   * 动画量的注册属性名；缺省 = `REVEAL_VAR`。CLOCK_SWEEP / FAN 传 `SWEEP_VAR`，
+   * 因为 `@property` 的 syntax 一经注册不可改，`<angle>` 必须另起一名。
+   */
+  varName?: string
+  /** 动画量的单位，决定 `@property` 的 syntax 与 keyframes 的值后缀；缺省 `'px'`（`<length>`） */
+  unit?: 'px' | 'deg'
 }
 
 /** BLINDS / SCAN 共用的方向参数表：渐变角 = 扫开方向（90deg 向右 / 270deg 向左 / 180deg 向下 / 0deg 向上） */
@@ -544,6 +551,86 @@ export function getRippleRevealSpec(center: Point, viewport: Size, waveWidth: nu
 
 export function isRippleAnimationType(type: ThemeAnimationType): boolean {
   return type === ThemeAnimationType.RIPPLE
+}
+
+/**
+ * 角度驱动揭开（CLOCK_SWEEP / FAN）：与 RIPPLE 同一套静止蒙版盒子，只是动画量从
+ * `<length>` 换成 `<angle>`、渐变从 radial 换成 conic。
+ *
+ * 关键便利：conic-gradient 覆盖的是**角度**而不是半径——从轴心出发的任意射线都有颜色，
+ * 所以扫满一周时整个平面必然盖住，不存在 CIRCLE 家族"终半径要够到视口最远角"的计算问题。
+ * CSS conic 的 `0deg` 就是 12 点方向、顺时针为正，做"时钟擦除"不需要角度偏移。
+ */
+export const FULL_CIRCLE_DEG = 360
+
+/** conic 渐变的轴心（视口坐标；轴心静止不动，故无需像素对齐，同洞式圆心的处理） */
+function conicAt(center: Point): string {
+  return `${roundTo(center.x, 2)}px ${roundTo(center.y, 2)}px`
+}
+
+/**
+ * CLOCK_SWEEP：实心扇形从 12 点顺时针扫出，前缘留一条 `CLOCK_SWEEP_TAIL_DEG` 的软尾
+ * （观感同 SCAN 的前缘带，只是弯成了弧）。`to = 360 + 尾宽`：末帧实心段止于 360°，
+ * 软尾整体转出画面，全平面实心。
+ */
+export const CLOCK_SWEEP_TAIL_DEG = 12
+
+export function getClockSweepRevealSpec(center: Point): RevealMaskSpec {
+  const v = `var(${SWEEP_VAR})`
+  return {
+    from: 0,
+    to: FULL_CIRCLE_DEG + CLOCK_SWEEP_TAIL_DEG,
+    maskImage:
+      `conic-gradient(from 0deg at ${conicAt(center)}, ` +
+      `#000 0 calc(${v} - ${CLOCK_SWEEP_TAIL_DEG}deg), transparent ${v})`,
+    maskSize: '100% 100%',
+    maskRepeat: 'no-repeat',
+    varName: SWEEP_VAR,
+    unit: 'deg',
+  }
+}
+
+/**
+ * FAN：`bladeCount` 片楔形扇叶同时从各自周期的起始边向终止边旋开，末帧拼成整圆。
+ * 每片是硬边（`#000 0 open` + `transparent open step`）——这里做不了软尾：软尾会让
+ * 周期末残留一段渐变淡出，末帧就留一圈永不闭合的缝，违反"末帧必须完全覆盖"。
+ * 硬边也更贴扇叶的锐利直边。`step` 必须整除 360，故 bladeCount 限整数。
+ *
+ * 观感是"扇叶旋开"，不是相机光圈的"中央孔径收缩"——后者需要半径维度，
+ * 而 conic 只有角度维度，表达不了（故本类型定名 FAN 而非 IRIS）。
+ */
+export function getFanBladeStepDeg(bladeCount: number): number {
+  return roundTo(FULL_CIRCLE_DEG / bladeCount, 4)
+}
+
+export function getFanRevealSpec(center: Point, bladeCount: number): RevealMaskSpec {
+  const v = `var(${SWEEP_VAR})`
+  const step = getFanBladeStepDeg(bladeCount)
+  return {
+    from: 0,
+    to: step,
+    maskImage:
+      `repeating-conic-gradient(from 0deg at ${conicAt(center)}, ` +
+      `#000 0 ${v}, transparent ${v} ${step}deg)`,
+    maskSize: '100% 100%',
+    maskRepeat: 'no-repeat',
+    varName: SWEEP_VAR,
+    unit: 'deg',
+  }
+}
+
+/** 角度驱动族（CLOCK_SWEEP / FAN）；与 px 驱动的 BLINDS / SCAN / RIPPLE 互斥 */
+export function isSweepAnimationType(type: ThemeAnimationType): boolean {
+  return type === ThemeAnimationType.CLOCK_SWEEP || type === ThemeAnimationType.FAN
+}
+
+/** 角度族分发；仅接受 isSweepAnimationType 命中的类型，其余按 CLOCK_SWEEP 处理 */
+export function getSweepMaskSpec(
+  type: ThemeAnimationType,
+  center: Point,
+  bladeCount: number,
+): RevealMaskSpec {
+  return type === ThemeAnimationType.FAN ? getFanRevealSpec(center, bladeCount) : getClockSweepRevealSpec(center)
 }
 
 /** 中心扩散形状的几何函数表（含 CIRCLE）；`type in` 即类型守卫 */

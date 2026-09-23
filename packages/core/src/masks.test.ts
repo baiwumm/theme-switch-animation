@@ -5,7 +5,9 @@ import {
   BLUR_MAX_MASK_SIZE,
   CIRCLE_MASK_IMAGE,
   CIRCLE_SIZE_FACTOR,
+  CLOCK_SWEEP_TAIL_DEG,
   DIAMOND_COVERAGE_FACTOR,
+  FULL_CIRCLE_DEG,
   HEXAGON_COVERAGE_FACTOR,
   RECTANGLE_COVERAGE_MARGIN,
   QR_GRID_CELL_PX,
@@ -26,8 +28,11 @@ import {
   getBlindsRevealSpec,
   getCircleMaskGeometry,
   getCircleRevertMaskGeometry,
+  getClockSweepRevealSpec,
   getDiamondMaskGeometry,
   getHexagonMaskGeometry,
+  getFanBladeStepDeg,
+  getFanRevealSpec,
   getMaskGeometry,
   getMaxRadiusToCorners,
   getQrGridMaskSpec,
@@ -38,6 +43,7 @@ import {
   getScanRevealSpec,
   getSquareMaskGeometry,
   getStarMaskGeometry,
+  getSweepMaskSpec,
   getTriggerCenter,
   getTriangleMaskGeometry,
   isBlurAnimationType,
@@ -45,9 +51,10 @@ import {
   isRevealAnimationType,
   isRippleAnimationType,
   isShapeAnimationType,
+  isSweepAnimationType,
 } from './masks'
 import type { RectProvider } from './masks'
-import { REVEAL_VAR, ThemeAnimationDirection, ThemeAnimationType } from './types'
+import { REVEAL_VAR, SWEEP_VAR, ThemeAnimationDirection, ThemeAnimationType } from './types'
 
 const viewport = { width: 800, height: 600 }
 
@@ -537,5 +544,84 @@ describe('RIPPLE（水滴涟漪）', () => {
     expect(getMaskGeometry(ThemeAnimationType.RIPPLE, center, viewport)).toEqual(
       getCircleMaskGeometry(center, viewport),
     )
+  })
+})
+
+describe('角度驱动族（CLOCK_SWEEP / FAN）', () => {
+  const center = { x: 640, y: 400 }
+  const v = `var(${SWEEP_VAR})`
+
+  it('CLOCK_SWEEP：单层 conic + 12° 软尾，from 0 / to 372，注册属性是角度族的 SWEEP_VAR', () => {
+    const spec = getClockSweepRevealSpec(center)
+    expect(spec.maskImage).toBe(
+      `conic-gradient(from 0deg at 640px 400px, ` +
+      `#000 0 calc(${v} - ${CLOCK_SWEEP_TAIL_DEG}deg), transparent ${v})`,
+    )
+    expect(spec.from).toBe(0)
+    expect(spec.to).toBe(FULL_CIRCLE_DEG + CLOCK_SWEEP_TAIL_DEG)
+    expect(spec.maskSize).toBe('100% 100%')
+    expect(spec.maskRepeat).toBe('no-repeat')
+    expect(spec.varName).toBe(SWEEP_VAR)
+    expect(spec.unit).toBe('deg')
+  })
+
+  it('CLOCK_SWEEP 的覆盖与半径无关：末帧实心段止于 360°，整周实心（conic 覆盖角度而非面积）', () => {
+    const spec = getClockSweepRevealSpec(center)
+    // 末帧实心段终点 = to - 尾宽 = 360°，与视口尺寸、轴心位置都无关
+    expect(spec.to - CLOCK_SWEEP_TAIL_DEG).toBe(FULL_CIRCLE_DEG)
+    // 换任意轴心与视口，终值不变——这是角度族相对 CIRCLE 家族的结构性便利
+    expect(getClockSweepRevealSpec({ x: 1, y: 1 }).to).toBe(spec.to)
+    expect(getClockSweepRevealSpec({ x: 4000, y: -300 }).to).toBe(spec.to)
+  })
+
+  it('CLOCK_SWEEP 起始帧：实心段止于 -12° 被单调化夹成 0，整屏透出旧主题', () => {
+    const spec = getClockSweepRevealSpec(center)
+    expect(spec.from - CLOCK_SWEEP_TAIL_DEG).toBeLessThan(0)
+    expect(spec.maskImage).toContain(`#000 0 calc(${v} - 12deg)`)
+  })
+
+  it('FAN：扇叶周期 = 360 / bladeCount，末帧 open 到周期末即拼成整圆', () => {
+    const spec = getFanRevealSpec(center, 8)
+    expect(getFanBladeStepDeg(8)).toBe(45)
+    expect(spec.maskImage).toBe(
+      `repeating-conic-gradient(from 0deg at 640px 400px, #000 0 ${v}, transparent ${v} 45deg)`,
+    )
+    expect(spec.from).toBe(0)
+    expect(spec.to).toBe(45)
+    expect(spec.varName).toBe(SWEEP_VAR)
+    expect(spec.unit).toBe('deg')
+  })
+
+  it('FAN 扇叶数缩放周期：4 片 90°、16 片 22.5°；非整除值保留四位小数', () => {
+    expect(getFanRevealSpec(center, 4).to).toBe(90)
+    expect(getFanRevealSpec(center, 16).to).toBe(22.5)
+    expect(getFanBladeStepDeg(7)).toBe(51.4286)
+    expect(getFanRevealSpec(center, 7).maskImage).toContain(`transparent ${v} 51.4286deg)`)
+  })
+
+  it('FAN 硬边是有意为之：软尾会在周期末留下永不闭合的淡缝，违反末帧必须完全覆盖', () => {
+    const spec = getFanRevealSpec(center, 8)
+    expect(spec.maskImage).not.toContain('calc(')
+    // 末帧实心段止于 open = step，透明段退化为零长度区间
+    expect(spec.maskImage).toContain(`#000 0 ${v}`)
+  })
+
+  it('分发与守卫：角度族两类型命中 isSweepAnimationType，且不落入 px 驱动的三个守卫', () => {
+    for (const type of [ThemeAnimationType.CLOCK_SWEEP, ThemeAnimationType.FAN] as const) {
+      expect(isSweepAnimationType(type)).toBe(true)
+      expect(isRevealAnimationType(type)).toBe(false)
+      expect(isRippleAnimationType(type)).toBe(false)
+      expect(isQrGridAnimationType(type)).toBe(false)
+      expect(isShapeAnimationType(type)).toBe(false)
+    }
+    expect(isSweepAnimationType(ThemeAnimationType.RIPPLE)).toBe(false)
+    expect(isSweepAnimationType(ThemeAnimationType.SCAN)).toBe(false)
+    expect(getSweepMaskSpec(ThemeAnimationType.FAN, center, 8)).toEqual(getFanRevealSpec(center, 8))
+    expect(getSweepMaskSpec(ThemeAnimationType.CLOCK_SWEEP, center, 8)).toEqual(getClockSweepRevealSpec(center))
+  })
+
+  it('轴心写进 conic 串：换触发点即换轴心（与 RIPPLE 同族，消费 ref 几何）', () => {
+    const spec = getFanRevealSpec({ x: 12.5, y: 700.25 }, 8)
+    expect(spec.maskImage).toContain('from 0deg at 12.5px 700.25px')
   })
 })

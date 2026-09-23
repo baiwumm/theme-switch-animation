@@ -185,6 +185,52 @@ describe('runThemeTransition 动画路径（jsdom + 模拟 startViewTransition�
     expect(css).toContain('--theme-switch-reveal: 616px;')
   })
 
+  it('CLOCK_SWEEP：注册属性改用 <angle> 的 SWEEP_VAR，keyframes 值带 deg 后缀', () => {
+    installFakeViewTransition()
+    vi.spyOn(window, 'innerWidth', 'get').mockReturnValue(800)
+    vi.spyOn(window, 'innerHeight', 'get').mockReturnValue(600)
+    const trigger = { getBoundingClientRect: () => ({ left: 100, top: 50, width: 40, height: 20 }) }
+
+    runThemeTransition({
+      domUpdate: () => {},
+      trigger,
+      options: { animationType: ThemeAnimationType.CLOCK_SWEEP },
+    })
+
+    const css = styleNode()!.textContent!
+    // 与 px 族同名注册会因 syntax 不可改而非法，故必须另起一名
+    expect(css).toContain('@property --theme-switch-sweep')
+    expect(css).toContain('syntax: "<angle>"')
+    expect(css).toContain('initial-value: 0deg')
+    expect(css).not.toContain('@property --theme-switch-reveal')
+    // 轴心 = 触发点中心；实心段止于 sweep-12°、软尾到 sweep
+    expect(css).toContain('conic-gradient(from 0deg at 120px 60px')
+    expect(css).toContain('#000 0 calc(var(--theme-switch-sweep) - 12deg)')
+    // 0deg → 372deg：末帧实心段止于整周，与视口尺寸无关
+    expect(css).toContain('--theme-switch-sweep: 0deg;')
+    expect(css).toContain('--theme-switch-sweep: 372deg;')
+    expect(css).toContain('mask-size: 100% 100%;')
+    expect(css).toContain('mask-repeat: no-repeat;')
+  })
+
+  it('FAN：repeating-conic 扇叶周期 = 360 / bladeCount，bladeCount 选项生效', () => {
+    installFakeViewTransition()
+    vi.spyOn(window, 'innerWidth', 'get').mockReturnValue(800)
+    vi.spyOn(window, 'innerHeight', 'get').mockReturnValue(600)
+
+    runThemeTransition({
+      domUpdate: () => {},
+      options: { animationType: ThemeAnimationType.FAN, bladeCount: 6 },
+    })
+
+    const css = styleNode()!.textContent!
+    expect(css).toContain('syntax: "<angle>"')
+    expect(css).toContain('repeating-conic-gradient(from 0deg at 400px 300px')
+    expect(css).toContain('transparent var(--theme-switch-sweep) 60deg)')
+    // 无 trigger 时轴心回落视口中心；末帧 open 到周期末 60° 即拼成整圆
+    expect(css).toContain('--theme-switch-sweep: 60deg;')
+  })
+
   it('RIPPLE：复用静止蒙版盒子生成器，但 radial-gradient 圆心取触发点、waveWidth 决定环带间距', () => {
     installFakeViewTransition()
     vi.spyOn(window, 'innerWidth', 'get').mockReturnValue(800)

@@ -4,10 +4,12 @@ import {
   getQrGridMaskSpec,
   getRevealMaskSpec,
   getRippleRevealSpec,
+  getSweepMaskSpec,
   getTriggerCenter,
   isQrGridAnimationType,
   isRevealAnimationType,
   isRippleAnimationType,
+  isSweepAnimationType,
 } from './masks'
 import type { RectProvider, Size } from './masks'
 import { buildAnimationCSS, injectAnimationStyle, removeAnimationStyle } from './styles'
@@ -169,13 +171,15 @@ export function runThemeTransition(params: RunThemeTransitionParams): RunThemeTr
   // 收起方向：蒙版挂新截图层、掏一个收缩的"洞"（层序与 CIRCLE 一致，不需要给旧层 z-index），
   // 蒙版盒子静止、只有注册半径在动（详见 §附录六）。
   const holeGeometry = isRevert && revertDirection === 'collapse' ? getCircleRevertHoleGeometry(center, viewport) : undefined
-  // 属性驱动揭开（BLINDS / SCAN / RIPPLE）：蒙版盒子静止、注册属性在动，共用同一 CSS 生成器。
-  // BLINDS / SCAN 无触发点；RIPPLE 以触发点为波源中心（见 masks.ts RevealMaskSpec）。
+  // 属性驱动揭开（BLINDS / SCAN / RIPPLE / CLOCK_SWEEP / FAN）：蒙版盒子静止、注册属性在动，
+  // 共用同一 CSS 生成器。BLINDS / SCAN 无触发点；RIPPLE 与角度族以触发点为波源 / 轴心。
   const reveal = isRevealAnimationType(resolved.animationType)
     ? getRevealMaskSpec(resolved.animationType, resolved.direction, resolved.slatWidth, viewport)
     : isRippleAnimationType(resolved.animationType)
       ? getRippleRevealSpec(center, viewport, resolved.waveWidth)
-      : undefined
+      : isSweepAnimationType(resolved.animationType)
+        ? getSweepMaskSpec(resolved.animationType, center, resolved.bladeCount)
+        : undefined
   // QR_GRID：新层"列 ∩ 行"方块格子双层蒙版，同样无触发点。
   const qrGrid = isQrGridAnimationType(resolved.animationType)
     ? getQrGridMaskSpec(resolved.direction)

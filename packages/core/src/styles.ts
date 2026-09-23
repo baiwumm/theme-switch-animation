@@ -89,14 +89,19 @@ function buildHoleAnimationCSS(hole: CircleHoleGeometry, duration: number, easin
  */
 function buildRevealAnimationCSS(reveal: RevealMaskSpec, duration: number, easing: string, name: string): string {
   const safeDuration = Number.isFinite(duration) && duration >= 0 ? duration : THEME_ANIMATION_DEFAULTS.duration
+  // 注册属性名与单位由 spec 决定：px 族用 REVEAL_VAR（<length>），角度族用 SWEEP_VAR（<angle>）
+  const varName = reveal.varName ?? REVEAL_VAR
+  const unit = reveal.unit ?? 'px'
+  const syntax = unit === 'deg' ? '<angle>' : '<length>'
+  const zero = unit === 'deg' ? '0deg' : '0px'
   return `:root {
   ${DURATION_VAR}: ${safeDuration}ms;
   ${EASING_VAR}: ${easing};
 }
-@property ${REVEAL_VAR} {
-  syntax: "<length>";
+@property ${varName} {
+  syntax: "${syntax}";
   inherits: false;
-  initial-value: 0px;
+  initial-value: ${zero};
 }
 ::view-transition-old(root),
 ::view-transition-new(root) {
@@ -105,10 +110,10 @@ function buildRevealAnimationCSS(reveal: RevealMaskSpec, duration: number, easin
 }
 @keyframes ${name} {
   from {
-    ${REVEAL_VAR}: ${reveal.from}px;
+    ${varName}: ${reveal.from}${unit};
   }
   to {
-    ${REVEAL_VAR}: ${reveal.to}px;
+    ${varName}: ${reveal.to}${unit};
   }
 }
 ::view-transition-new(root) {

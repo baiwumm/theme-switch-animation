@@ -29,6 +29,10 @@ export const ThemeAnimationType = {
   QR_GRID: 'qr-grid',
   /** 水滴涟漪：圆形扩散但前缘是主波 + 衰减余波的环带，waveWidth 控制波长 */
   RIPPLE: 'ripple',
+  /** 时钟扇形：新主题以触发点为轴心顺时针扫出扇形揭开（conic-gradient，角度驱动） */
+  CLOCK_SWEEP: 'clock-sweep',
+  /** 扇叶：bladeCount 片楔形扇叶从轴心同时旋开拼成整屏（repeating-conic-gradient） */
+  FAN: 'fan',
 } as const
 
 export type ThemeAnimationType = (typeof ThemeAnimationType)[keyof typeof ThemeAnimationType]
@@ -73,6 +77,8 @@ export interface ThemeAnimationOptions {
   slatWidth?: number
   /** 涟漪波长（px，相邻两圈波峰间距），合法范围 `[8, 60]`，默认 `18`。仅 `RIPPLE` 生效，非法值静默回落默认 */
   waveWidth?: number
+  /** 扇叶数，合法范围 `[4, 16]` 的整数，默认 `8`。仅 `FAN` 生效，非法值静默回落默认 */
+  bladeCount?: number
   /** 受控模式：外部暗色状态。与 `onChange` 同时提供才进入受控模式 */
   isDark?: boolean
   /** 受控模式：状态变更回调。与 `isDark` 同时提供才进入受控模式 */
@@ -89,6 +95,7 @@ export interface ResolvedAnimationOptions {
   direction: ThemeAnimationDirection
   slatWidth: number
   waveWidth: number
+  bladeCount: number
 }
 
 /** 百叶窗叶片宽度的默认值与合法区间（超出区间静默回落默认，与 blurAmount 同策略） */
@@ -101,6 +108,11 @@ export const WAVE_WIDTH_DEFAULT = 18
 export const MIN_WAVE_WIDTH = 8
 export const MAX_WAVE_WIDTH = 60
 
+/** 扇叶数的默认值与合法区间（必须是区间内的整数，非整数会让末帧扇叶接缝错位） */
+export const BLADE_COUNT_DEFAULT = 8
+export const MIN_BLADE_COUNT = 4
+export const MAX_BLADE_COUNT = 16
+
 export const THEME_ANIMATION_DEFAULTS: Readonly<ResolvedAnimationOptions> = Object.freeze({
   animationType: ThemeAnimationType.CIRCLE,
   darkClassName: 'dark',
@@ -110,6 +122,7 @@ export const THEME_ANIMATION_DEFAULTS: Readonly<ResolvedAnimationOptions> = Obje
   direction: ThemeAnimationDirection.LTR,
   slatWidth: SLAT_WIDTH_DEFAULT,
   waveWidth: WAVE_WIDTH_DEFAULT,
+  bladeCount: BLADE_COUNT_DEFAULT,
 })
 
 /** 非受控模式持久化到 localStorage 的 key（v1.2：避免与 next-themes 等库的 `'theme'` 冲突） */
@@ -125,6 +138,13 @@ export const THEME_ANIMATION_STYLE_ID = 'theme-switch-animation'
  */
 export const REVEAL_VAR = '--theme-switch-reveal'
 
+/**
+ * 角度驱动揭开（CLOCK_SWEEP / FAN）的注册自定义属性名。
+ * 与 `REVEAL_VAR` 分开是因为 `@property` 的 syntax 一经注册不可改（这里是 `<angle>`），
+ * 复用同一个名字会和已注册成 `<length>` 的实例冲突——同名不同 syntax 在规范下是非法注册。
+ */
+export const SWEEP_VAR = '--theme-switch-sweep'
+
 /** 用户传入的 `undefined` 视为未提供，回落到默认值 */
 export function resolveAnimationOptions(options: ThemeAnimationOptions = {}): ResolvedAnimationOptions {
   return {
@@ -136,6 +156,7 @@ export function resolveAnimationOptions(options: ThemeAnimationOptions = {}): Re
     direction: isValidDirection(options.direction) ? options.direction : THEME_ANIMATION_DEFAULTS.direction,
     slatWidth: isValidSlatWidth(options.slatWidth) ? options.slatWidth : THEME_ANIMATION_DEFAULTS.slatWidth,
     waveWidth: isValidWaveWidth(options.waveWidth) ? options.waveWidth : THEME_ANIMATION_DEFAULTS.waveWidth,
+    bladeCount: isValidBladeCount(options.bladeCount) ? options.bladeCount : THEME_ANIMATION_DEFAULTS.bladeCount,
   }
 }
 
@@ -158,4 +179,12 @@ function isValidSlatWidth(value: number | undefined): value is number {
 /** waveWidth 仅 RIPPLE 消费；越界 / NaN / 无穷静默回落默认 */
 function isValidWaveWidth(value: number | undefined): value is number {
   return value !== undefined && Number.isFinite(value) && value >= MIN_WAVE_WIDTH && value <= MAX_WAVE_WIDTH
+}
+
+/**
+ * bladeCount 仅 FAN 消费；必须是非负整数——叶片周期 = 360 / bladeCount，
+ * 非整数片会让末帧的 repeating 周期与 360° 不整除，接缝处留一条永不闭合的缝。
+ */
+function isValidBladeCount(value: number | undefined): value is number {
+  return value !== undefined && Number.isInteger(value) && value >= MIN_BLADE_COUNT && value <= MAX_BLADE_COUNT
 }

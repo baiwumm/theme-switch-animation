@@ -1,11 +1,16 @@
 import { describe, expect, it } from 'vitest'
 
 import {
+  BLADE_COUNT_DEFAULT,
+  MAX_BLADE_COUNT,
   MAX_SLAT_WIDTH,
   MAX_WAVE_WIDTH,
+  MIN_BLADE_COUNT,
   MIN_SLAT_WIDTH,
   MIN_WAVE_WIDTH,
+  REVEAL_VAR,
   SLAT_WIDTH_DEFAULT,
+  SWEEP_VAR,
   THEME_ANIMATION_DEFAULTS,
   THEME_ANIMATION_STYLE_ID,
   THEME_STORAGE_KEY,
@@ -15,7 +20,7 @@ import {
   resolveAnimationOptions,
 } from './types'
 describe('ThemeAnimationType', () => {
-  it('提供且仅提供 13 种动画类型（3 基础 + 6 形状 + 百叶窗/扫描/方块格子/涟漪；四向擦除已并入 direction）', () => {
+  it('提供且仅提供 15 种动画类型（3 基础 + 6 形状 + 条带格子涟漪 + 角度族；四向擦除已并入 direction）', () => {
     expect(ThemeAnimationType).toEqual({
       CIRCLE: 'circle',
       CIRCLE_REVERT: 'circle-revert',
@@ -30,8 +35,17 @@ describe('ThemeAnimationType', () => {
       SCAN: 'scan',
       QR_GRID: 'qr-grid',
       RIPPLE: 'ripple',
+      CLOCK_SWEEP: 'clock-sweep',
+      FAN: 'fan',
     })
-    expect(new Set(Object.values(ThemeAnimationType)).size).toBe(13)
+    expect(new Set(Object.values(ThemeAnimationType)).size).toBe(15)
+  })
+})
+
+describe('SWEEP_VAR', () => {
+  it('角度族与 px 族是两个不同的注册属性名（@property 的 syntax 一经注册不可改）', () => {
+    expect(SWEEP_VAR).toBe('--theme-switch-sweep')
+    expect(SWEEP_VAR).not.toBe(REVEAL_VAR)
   })
 })
 
@@ -52,6 +66,7 @@ describe('resolveAnimationOptions', () => {
       direction: 'ltr',
       slatWidth: 72,
       waveWidth: 18,
+      bladeCount: 8,
     })
     expect(resolveAnimationOptions()).toEqual(THEME_ANIMATION_DEFAULTS)
   })
@@ -67,6 +82,7 @@ describe('resolveAnimationOptions', () => {
         direction: ThemeAnimationDirection.BTT,
         slatWidth: 100,
         waveWidth: 40,
+        bladeCount: 12,
       }),
     ).toEqual({
       animationType: 'blinds',
@@ -77,6 +93,7 @@ describe('resolveAnimationOptions', () => {
       direction: 'btt',
       slatWidth: 100,
       waveWidth: 40,
+      bladeCount: 12,
     })
   })
 
@@ -108,10 +125,20 @@ describe('resolveAnimationOptions', () => {
     expect(resolveAnimationOptions({ waveWidth: MAX_WAVE_WIDTH }).waveWidth).toBe(MAX_WAVE_WIDTH)
   })
 
-  it('忽略受控模式字段，只返回八个动画参数', () => {
+  it('bladeCount 越界 / 非整数 / NaN / 无穷回落默认 8，区间边界值有效', () => {
+    // 非整数会让 360 / bladeCount 不整除，末帧扇叶接缝永不闭合，故一并拒绝
+    for (const bladeCount of [0, 3, 17, 7.5, -8, Number.NaN, Number.POSITIVE_INFINITY]) {
+      expect(resolveAnimationOptions({ bladeCount }).bladeCount).toBe(BLADE_COUNT_DEFAULT)
+    }
+    expect(resolveAnimationOptions({ bladeCount: MIN_BLADE_COUNT }).bladeCount).toBe(MIN_BLADE_COUNT)
+    expect(resolveAnimationOptions({ bladeCount: MAX_BLADE_COUNT }).bladeCount).toBe(MAX_BLADE_COUNT)
+  })
+
+  it('忽略受控模式字段，只返回九个动画参数', () => {
     const resolved = resolveAnimationOptions({ isDark: true, onChange: () => {} })
     expect(Object.keys(resolved).sort()).toEqual([
       'animationType',
+      'bladeCount',
       'blurAmount',
       'darkClassName',
       'direction',
