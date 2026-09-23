@@ -80,6 +80,15 @@ function IcoQrGrid(props: SVGProps<SVGSVGElement>) {
     </svg>
   )
 }
+function IcoRipple(props: SVGProps<SVGSVGElement>) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.9} {...props}>
+      <circle cx="12" cy="12" r="1.9" fill="currentColor" stroke="none" />
+      <circle cx="12" cy="12" r="6" opacity="0.7" />
+      <circle cx="12" cy="12" r="10" opacity="0.35" />
+    </svg>
+  )
+}
 
 const ANIMATION_TYPES: Array<{
   type: ThemeAnimationType
@@ -89,6 +98,8 @@ const ANIMATION_TYPES: Array<{
   initialDirection?: ThemeAnimationDirection
   /** 仅 BLINDS：卡片内渲染叶宽选择器（初始宽度 px） */
   initialSlatWidth?: number
+  /** 仅 RIPPLE：卡片内渲染波长选择器（初始波长 px） */
+  initialWaveWidth?: number
   Icon: (props: SVGProps<SVGSVGElement>) => JSX.Element
   /** 渐变图标砖：亮 / 暗两套底色 + 图标色（写全类名，避免动态拼接被 Tailwind 摇掉） */
   tile: string
@@ -105,6 +116,7 @@ const ANIMATION_TYPES: Array<{
   { type: ThemeAnimationType.BLINDS, label: 'BLINDS', hint: '百叶窗 · 叶宽与方向可调', initialDirection: ThemeAnimationDirection.LTR, initialSlatWidth: 72, Icon: IcoBlinds, tile: 'from-lime-100 to-lime-200 text-lime-600 dark:from-lime-500/15 dark:to-lime-500/5 dark:text-lime-400' },
   { type: ThemeAnimationType.SCAN, label: 'SCAN', hint: '扫描 · 硬边扫开 + 前缘光束', initialDirection: ThemeAnimationDirection.TTB, Icon: IcoScan, tile: 'from-green-100 to-green-200 text-green-600 dark:from-green-500/15 dark:to-green-500/5 dark:text-green-400' },
   { type: ThemeAnimationType.QR_GRID, label: 'QR_GRID', hint: '方块格子 · 方块逐格生长揭开', initialDirection: ThemeAnimationDirection.LTR, Icon: IcoQrGrid, tile: 'from-stone-100 to-stone-200 text-stone-600 dark:from-stone-500/15 dark:to-stone-500/5 dark:text-stone-400' },
+  { type: ThemeAnimationType.RIPPLE, label: 'RIPPLE', hint: '水滴涟漪 · 波源', initialWaveWidth: 18, Icon: IcoRipple, tile: 'from-sky-100 to-sky-200 text-sky-600 dark:from-sky-500/15 dark:to-sky-500/5 dark:text-sky-400' },
 ]
 
 const DURATION_PRESETS = [
@@ -133,12 +145,20 @@ const SLAT_OPTIONS: ReadonlyArray<{ value: number; label: string }> = [
   { value: 128, label: '128px' },
 ]
 
+/** 波长档位（px，合法区间 [8, 60]）：仅 RIPPLE 卡片展示，环带间距 = 相邻两圈波峰的距离 */
+const WAVE_OPTIONS: ReadonlyArray<{ value: number; label: string }> = [
+  { value: 10, label: '10px' },
+  { value: 18, label: '18px' },
+  { value: 34, label: '34px' },
+]
+
 function GalleryCard({
   animationType,
   label,
   hint,
   initialDirection,
   initialSlatWidth,
+  initialWaveWidth,
   Icon,
   tile,
   duration,
@@ -150,6 +170,7 @@ function GalleryCard({
   hint: string
   initialDirection?: ThemeAnimationDirection
   initialSlatWidth?: number
+  initialWaveWidth?: number
   Icon: (props: SVGProps<SVGSVGElement>) => JSX.Element
   tile: string
   duration: number
@@ -160,11 +181,13 @@ function GalleryCard({
   // direction 每张卡片独立（初始值来自配置），只在该类型消费 direction 时展示选择器
   const [direction, setDirection] = useState<ThemeAnimationDirection>(initialDirection ?? ThemeAnimationDirection.LTR)
   const [slatWidth, setSlatWidth] = useState(initialSlatWidth ?? 72)
+  const [waveWidth, setWaveWidth] = useState(initialWaveWidth ?? 18)
   const { resolvedTheme, setTheme } = useTheme()
   const { ref, toggleTheme, isDark } = useThemeAnimation<HTMLButtonElement>({
     animationType,
     direction,
     slatWidth,
+    waveWidth,
     duration,
     easing,
     isDark: resolvedTheme === 'dark',
@@ -251,6 +274,27 @@ function GalleryCard({
             </div>
           </div>
         )}
+        {initialWaveWidth !== undefined && (
+          <div className="flex items-center justify-between gap-2">
+            <span className="text-muted-foreground">Wave</span>
+            <div className="flex gap-1">
+              {WAVE_OPTIONS.map((w) => (
+                <button
+                  key={w.value}
+                  type="button"
+                  onClick={() => setWaveWidth(w.value)}
+                  className={`rounded-md px-1.5 py-0.5 font-mono text-[10px] transition-colors ${
+                    waveWidth === w.value
+                      ? 'bg-primary font-semibold text-primary-foreground'
+                      : 'border border-border bg-card text-muted-foreground hover:text-foreground'
+                  }`}
+                >
+                  {w.label}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
     </motion.div>
   )
@@ -286,7 +330,7 @@ function PresetRow<T extends number | string>({
   )
 }
 
-/** 12 种动画的可交互画廊：卡片中央圆形按钮触发（受控模式 × next-themes，与站点主题联动） */
+/** 13 种动画的可交互画廊：卡片中央圆形按钮触发（受控模式 × next-themes，与站点主题联动） */
 export function GallerySection() {
   const [duration, setDuration] = useState(750)
   const [easing, setEasing] = useState('ease-in-out')
@@ -300,7 +344,7 @@ export function GallerySection() {
           </AnimatedBadge>
           <h2 className="text-3xl font-bold tracking-tight md:text-4xl">Try Different Animations</h2>
           <p className="mt-3 text-muted-foreground">
-            点击卡片中央按钮播放动画；BLINDS / SCAN / QR_GRID 可在卡内切换方向。
+            点击卡片中央按钮播放动画；BLINDS / SCAN / QR_GRID 可在卡内切换方向，RIPPLE 可切换环带波长。
           </p>
         </div>
 
@@ -318,6 +362,7 @@ export function GallerySection() {
               hint={t.hint}
               initialDirection={t.initialDirection}
               initialSlatWidth={t.initialSlatWidth}
+              initialWaveWidth={t.initialWaveWidth}
               Icon={t.Icon}
               tile={t.tile}
               duration={duration}
