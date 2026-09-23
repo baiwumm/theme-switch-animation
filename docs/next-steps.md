@@ -380,7 +380,7 @@ iPhone 与 Mac 同一局域网访问 `http://<mac-ip>:5224/`（或直接把 `pla
 
 ### 候选盘点（下次别重复推）
 
-- **`CLOCK_SWEEP` + `IRIS`（建议下一轮）**：一次 `<angle>` 注册属性 + `conic-gradient` / `repeating-conic-gradient` 机制买两个类型，补的是"现有 13 种全轴对齐、没有旋转维度"这个结构性空缺。
+- **`CLOCK_SWEEP` + `IRIS`（建议下一轮）**：一次 `<angle>` 注册属性 + `conic-gradient` / `repeating-conic-gradient` 机制买两个类型，补的是"现有 13 种全轴对齐、没有旋转维度"这个结构性空缺。**→ 已于 §8 落地，其中 IRIS 定名改为 `FAN`。**
 - **`DISSOLVE` 沙化溶解**：`feTurbulence` 噪声 α × 渐变进度，靠 QR_GRID 已验证的 `mask-composite: intersect`；差异化最强，但开工前得先解决噪声图随视口拉伸导致颗粒变粗。
 - **不做**：3D 翻页 / 折叠——要放弃 mask 改动画 `::view-transition-group` 的 transform，直接破需求文档 §1"技术路线仅用 mask 以保 Safari 兼容"，且 `masks.ts` 已记录 Safari 忽略伪元素上的 WAAPI 与 clip-path；文字描边书写揭示——越界，且蒙版尺寸随视口变化会失真。
 - **不作为新类型**：边角擦入 / 对角展开，观感接近 SCAN 的参数变体，要做应作为 `origin` 选项。
@@ -394,6 +394,43 @@ iPhone 与 Mac 同一局域网访问 `http://<mac-ip>:5224/`（或直接把 `pla
 - [x] 门面截图 `assets/screen.jpg` 按既有规格重出（hero "12 种"→"13 种" 触发）
 - [ ] 真机视觉验收：RIPPLE 卡在 Chrome / Safari / Firefox 的实际观感；波长三档 + duration 1000ms 慢放下余波是否糊成一条边；末帧四角是否干净
 - [ ] Safari / Firefox 真机确认 `radial-gradient` 双位置 stop 语法与负偏移单调化行为——与 BLINDS / SCAN 同面，预期无新增风险，但尚未在真机跑过
+
+---
+
+## 8. 新增 CLOCK_SWEEP + FAN 角度族（2026-09-23 记录）
+
+§7 候选盘点里"建议下一轮"的那笔，本轮就做掉了。节奏同涟漪：先 core + 画廊看效果 → 效果通过 → 改名 → 补门面。
+
+### 本轮判断
+
+- **探针先行**：写实现之前先用一次性 headless Chrome 验三个前提（conic / repeating-conic 作为 mask 是否被接受、`@property <angle>` 是否真插值、末帧是否整平面实心）。结论全部成立，于是"conic 只覆盖角度不覆盖面积"这个便利成了选它补旋转维度的主要工程理由——不需要 CIRCLE 家族那套终半径系数。
+- **注册属性必须分名**：`@property` 的 syntax 一经注册不可改，`<angle>` 不能复用 `<length>` 的 `REVEAL_VAR`，故新增 `SWEEP_VAR`。连带 `buildRevealAnimationCSS` 第一次泛化（px / `<length>` 不再写死，改由 spec 的 `varName` / `unit` 决定）；px 族输出逐字节不变，由既有单测锁住。
+- **FAN 的叶片是硬边，且这是被迫的**：软尾会在每个 repeating 周期末留下渐变淡出，末帧必留一条永不闭合的缝，违反覆盖约束。`bladeCount` 限整数同理。
+- **命名 IRIS → FAN**：实现出来是"楔形扇叶从各自起始边旋开"（风车感），不是相机光圈的"中央孔径收缩"——后者要半径维度，conic 表达不了。需求方拍板改名，`bladeCount` 保留。
+- **旋转方向有意不做**：options 里"仅某类型生效"的局部参数已占 5 / 9，再加第 6 个（`sweepDirection`）性价比低且没有真实场景差异。真要加的优先级：① 让方向跟随 `toDark`（复用 `CIRCLE_REVERT` 已有编排、零新参数）；② 复用 `direction` 的 `ltr`/`rtl`；③ 新选项（最差）。需求方结论：**先保持现状，后面需要再加上**。
+
+### 实测结果
+
+| 探针 | 结果 |
+| --- | --- |
+| conic / repeating-conic 作为 `mask-image` | 被接受；扇形与叶片边界是笔直射线，无灰边 |
+| `@property <angle>` 是否真逐帧插值 | 是。paused + 负 delay seek 25% / 75% → computed `93deg` / `279deg`（= 372 × 0.25 / 0.75） |
+| 末帧覆盖（`to = 372deg`） | 整平面实心、四角无残留 |
+| **库真实 CSS** 的 `calc(var(--sweep) - 12deg)` | 逐帧求值成立：93° 时 computed 出 `81deg`，末帧实心段止于 `360deg` |
+| 根 test / lint / tsc / build / verify-package | 236 例通过（新增 16）/ 0 / 0 / 产物含 FAN 与两个新函数 / §9-11 通过 |
+| 文档站 `tsc` + `next build`；四个 playground typecheck | 全通过 |
+
+第四行是补做的：第一批手写探针用的是硬编码角度，覆盖不到"注册属性参与 stop 计算"这一层，所以实现完再喂一遍 `dist` 真实生成的 CSS 复验。
+
+### 待办
+
+- [x] core 实现（types / masks / styles 泛化 / orchestrate / index 导出）+ 16 例单测
+- [x] 文档站画廊第 14–15 张卡（FAN 卡带扇叶数 6 / 8 / 12 档位）
+- [x] IRIS → FAN 改名（45 处标识符 + 中文措辞逐处校，源码里唯一残留的 `IRIS` 是命名理由注释）
+- [x] README / 需求文档 v1.8 / 文档站 hero·features·SEO / 四个 playground / changeset / 门面截图
+- [ ] 真机视觉验收：`CLOCK_SWEEP` 的 12° 前缘软尾在 750ms 下看不看得见、`FAN` 三档扇叶末帧是否无缝
+- [ ] Safari / Firefox 真机确认 `conic-gradient` + `@property <angle>`：版本面理论上与 `<length>` 一致（Safari 16.4+ / Firefox 128+），但 conic 这层没在真机跑过，不支持时退化为直切、状态仍正确
+- [ ] 旋转方向（顺 / 逆）按上面"本轮判断"最后一条的三个方案留着，需要时再开
 
 ---
 
