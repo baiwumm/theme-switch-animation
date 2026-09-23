@@ -15,6 +15,8 @@ const props = defineProps<{
   initialSlatWidth?: number
   /** 仅 RIPPLE：卡片下方的波长按钮初始值（px） */
   initialWaveWidth?: number
+  /** 仅 FAN：卡片下方的扇叶数按钮初始值 */
+  initialBladeCount?: number
 }>()
 
 const DIRECTION_OPTIONS = [
@@ -28,10 +30,13 @@ const SLAT_OPTIONS = [32, 72, 128] as const
 
 const WAVE_OPTIONS = [10, 18, 34] as const
 
+const BLADE_OPTIONS = [6, 8, 12] as const
+
 /** 方向：每张卡片独立持有，互不影响 */
 const direction = ref<ThemeAnimationDirection>(props.initialDirection ?? ThemeAnimationDirection.LTR)
 const slatWidth = ref(props.initialSlatWidth ?? 72)
 const waveWidth = ref(props.initialWaveWidth ?? 18)
+const bladeCount = ref(props.initialBladeCount ?? 8)
 
 // options 用 reactive 承接全局 duration / easing 预设的变化：适配层在点击时读取
 // optionsRef.value 的当前属性，watchEffect 同步 props 后下一次切换立即生效。
@@ -45,6 +50,7 @@ const options = reactive({
   direction: direction.value,
   slatWidth: slatWidth.value,
   waveWidth: waveWidth.value,
+  bladeCount: bladeCount.value,
 })
 watchEffect(() => {
   options.duration = props.duration
@@ -52,6 +58,7 @@ watchEffect(() => {
   options.direction = direction.value
   options.slatWidth = slatWidth.value
   options.waveWidth = waveWidth.value
+  options.bladeCount = bladeCount.value
 })
 
 // 非受控模式；转场回调内 async () => { …; await nextTick() }，浏览器等 Vue DOM 更新后截图
@@ -103,6 +110,18 @@ const setTrigger = (el: Element | ComponentPublicInstance | null) => {
         @click="waveWidth = w"
       >
         {{ w }}px
+      </button>
+    </div>
+    <div v-if="initialBladeCount" class="slats" :aria-label="`${label} bladeCount`" role="group">
+      <span>bladeCount</span>
+      <button
+        v-for="b in BLADE_OPTIONS"
+        :key="b"
+        type="button"
+        :class="['chip', 'chip-sm', { active: bladeCount === b }]"
+        @click="bladeCount = b"
+      >
+        {{ b }}
       </button>
     </div>
   </div>

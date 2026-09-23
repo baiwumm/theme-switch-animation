@@ -13,6 +13,8 @@ const ANIMATION_TYPES: Array<{
   initialSlatWidth?: number
   /** 仅 RIPPLE：卡片下方渲染波长选择按钮 */
   initialWaveWidth?: number
+  /** 仅 FAN：卡片下方渲染扇叶数选择按钮 */
+  initialBladeCount?: number
 }> = [
   { type: ThemeAnimationType.CIRCLE, label: 'CIRCLE', hint: '圆形扩散 · 圆心 = 点击位置' },
   { type: ThemeAnimationType.CIRCLE_REVERT, label: 'CIRCLE_REVERT', hint: '圆形收起/扩散 · 切回亮色收起、切到暗色扩散' },
@@ -27,6 +29,8 @@ const ANIMATION_TYPES: Array<{
   { type: ThemeAnimationType.SCAN, label: 'SCAN', hint: '扫描 · 硬边扫开 + 前缘光束，direction 控方向', initialDirection: ThemeAnimationDirection.TTB },
   { type: ThemeAnimationType.QR_GRID, label: 'QR_GRID', hint: '方块格子 · 方块逐格生长，direction 控方位', initialDirection: ThemeAnimationDirection.LTR },
   { type: ThemeAnimationType.RIPPLE, label: 'RIPPLE', hint: '水滴涟漪 · 环带前缘向外推，waveWidth 控波长', initialWaveWidth: 18 },
+  { type: ThemeAnimationType.CLOCK_SWEEP, label: 'CLOCK_SWEEP', hint: '时钟扇形 · 自 12 点顺时针扫开' },
+  { type: ThemeAnimationType.FAN, label: 'FAN', hint: '扇叶旋开 · bladeCount 控扇叶数', initialBladeCount: 8 },
 ]
 
 /** duration / easing 全局预设：选中后所有按钮的下一次切换立即生效 */
@@ -65,11 +69,11 @@ onUnmounted(() => stopObserving?.())
       <b>{{ htmlIsDark ? darkClassName : 'light' }}</b>）
     </p>
     <p>
-      13 个按钮各持有一个受控 <code>useThemeAnimation</code> 实例（自动导入，无 import）；
+      15 个按钮各持有一个受控 <code>useThemeAnimation</code> 实例（自动导入，无 import）；
       库在转场回调内调用 <code>colorMode.preference = …</code> 并等待 color-mode 写入 class 后截图，
       300ms 未同步到位时自动跳过动画直切（不播放“旧→旧”空转）。
-      每个按钮使用自己声明的动画类型（中心扩散类动画含 RIPPLE 的起收点是按钮中心，可验证点击位置跟随）；BLINDS / SCAN / QR_GRID
-      卡片下方各有独立的 direction 选择，RIPPLE 卡片另有 waveWidth 档位，都只影响本卡片。
+      每个按钮使用自己声明的动画类型（中心扩散与角度扫开类动画含 RIPPLE / CLOCK_SWEEP / FAN 的起收点是按钮中心，可验证点击位置跟随）；BLINDS / SCAN / QR_GRID
+      卡片下方各有独立的 direction 选择，RIPPLE 另有 waveWidth 档位、FAN 另有 bladeCount 档位，都只影响本卡片。
     </p>
     <div class="presets" role="group" aria-label="duration 预设">
       <span>duration</span>
@@ -103,6 +107,7 @@ onUnmounted(() => stopObserving?.())
         :initial-direction="t.initialDirection"
         :initial-slat-width="t.initialSlatWidth"
         :initial-wave-width="t.initialWaveWidth"
+        :initial-blade-count="t.initialBladeCount"
         :duration="duration"
         :easing="easing"
       />
