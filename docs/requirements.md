@@ -363,4 +363,4 @@ export type { ThemeAnimationOptions, ... } from '@theme-switch-animation/core'
 
 ---
 
-**当前状态（2026-09-23）**：0.1.0 已发布（npm + tag `theme-switch-animation@0.1.0`），本文档随实现推进到 v1.8。v0.2（`direction` 选项 + BLINDS / SCAN / QR_GRID 三类型，含四向类型移除的破坏性变更）、v1.7（`RIPPLE` 水滴涟漪 + `waveWidth`）与 v1.8（角度族 `CLOCK_SWEEP` / `FAN` + `bladeCount`）的开发与文档均已同步、无头 Chrome 实测通过。剩余真机验证与发版事项见 `docs/next-steps.md`。
+**当前状态（2026-09-23）**：0.1.0 与 0.2.0 **均已发布**（npm `latest = 0.2.0`；tag 分别是不带前缀的 `theme-switch-animation@0.1.0` 与换成 tag 触发流程后的 `v0.2.0`），本文档随实现推进到 v1.8。v1.7（`RIPPLE` 水滴涟漪 + `waveWidth`）与 v1.8（角度族 `CLOCK_SWEEP` / `FAN` + `bladeCount`）已落地、文档已同步、无头 Chrome 实测通过，**尚未发版**——`.changeset/` 下已累积三条待切。剩余真机验证与发版事项见 `docs/next-steps.md`。
