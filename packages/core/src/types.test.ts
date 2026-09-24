@@ -20,7 +20,7 @@ import {
   resolveAnimationOptions,
 } from './types'
 describe('ThemeAnimationType', () => {
-  it('提供且仅提供 17 种动画类型（3 基础 + 6 形状 + 条带格子涟漪双门梳齿 + 角度族；四向擦除已并入 direction）', () => {
+  it('提供且仅提供 16 种动画类型（3 基础 + 6 形状 + 条带格子涟漪双门 + 角度族；四向擦除已并入 direction）', () => {
     expect(ThemeAnimationType).toEqual({
       CIRCLE: 'circle',
       CIRCLE_REVERT: 'circle-revert',
@@ -38,9 +38,8 @@ describe('ThemeAnimationType', () => {
       CLOCK_SWEEP: 'clock-sweep',
       FAN: 'fan',
       CURTAIN: 'curtain',
-      COMB: 'comb',
     })
-    expect(new Set(Object.values(ThemeAnimationType)).size).toBe(17)
+    expect(new Set(Object.values(ThemeAnimationType)).size).toBe(16)
   })
 })
 

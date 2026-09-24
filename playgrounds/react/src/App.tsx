@@ -35,7 +35,6 @@ const ANIMATION_TYPES: Array<{
   { type: ThemeAnimationType.CLOCK_SWEEP, label: 'CLOCK_SWEEP', hint: '时钟扇形 · 自 12 点顺时针扫开' },
   { type: ThemeAnimationType.FAN, label: 'FAN', hint: '扇叶旋开 · bladeCount 控扇叶数', initialBladeCount: 8 },
   { type: ThemeAnimationType.CURTAIN, label: 'CURTAIN', hint: '双开门 · 中线向两侧推开' },
-  { type: ThemeAnimationType.COMB, label: 'COMB', hint: '梳齿交错 · 奇偶叶片错半拍展开，direction / slatWidth 可调', initialDirection: ThemeAnimationDirection.LTR, initialSlatWidth: 72 },
 ]
 
 /** duration / easing 全局预设：选中后所有按钮的下一次切换立即生效 */
@@ -200,11 +199,11 @@ export default function App() {
         当前主题（MutationObserver 读取 <code>&lt;html&gt;</code> class）：<b>{isDark ? '🌙 暗色' : '☀️ 亮色'}</b>
       </p>
       <p>
-        17 个按钮各自是一个独立的 <code>useThemeAnimation</code> 实例——非受控模式下所有实例的{' '}
+        16 个按钮各自是一个独立的 <code>useThemeAnimation</code> 实例——非受控模式下所有实例的{' '}
         <code>isDark</code> 以 <code>&lt;html&gt;</code> class 为事实源自动镜像（库内{' '}
         <code>observeThemeClass</code>），其它标签页的切换经 storage 事件同步。中心扩散与角度扫开类动画（CIRCLE /
         形状 / BLUR / REVERT / RIPPLE / CLOCK_SWEEP / FAN）的起收点都是按钮中心：在不同位置点击可验证跟随效果；
-        BLINDS / SCAN / QR_GRID / CURTAIN / COMB 不读触发元素几何，ref 只用于点击。前一组卡片下方各有独立的
+        BLINDS / SCAN / QR_GRID / CURTAIN 不读触发元素几何，ref 只用于点击。前一组卡片下方各有独立的
         direction 选择，RIPPLE 另有 waveWidth 档位、FAN 另有 bladeCount 档位，都只影响本卡片。
       </p>
       <div className="presets" role="group" aria-label="duration 预设">

@@ -315,7 +315,7 @@ export function getBlurCircleMaskGeometry(center: Point, viewport: Size, blurAmo
  * 只有注册属性 `REVEAL_VAR` 在动——渐变蒙版引用该属性，属性每帧变化时渐变重新解析。
  * 与 CIRCLE_REVERT 收起方向的"洞"（buildHoleAnimationCSS）同一机制，CSS 生成见 styles.ts。
  * 旧截图层完整垫底、新层挂蒙版。消费 center 的成员是 RIPPLE 与角度族——它们的圆心得
- * 写进渐变串（见 getRippleRevealSpec / getClockSweepRevealSpec）；BLINDS / SCAN / CURTAIN / COMB
+ * 写进渐变串（见 getRippleRevealSpec / getClockSweepRevealSpec）；BLINDS / SCAN / CURTAIN
  * 无触发点、不消费 center。
  */
 export interface RevealMaskSpec {
@@ -326,8 +326,8 @@ export interface RevealMaskSpec {
   maskImage: string
   /** `mask-size`：BLINDS 按叶片尺寸平铺，SCAN 单层满铺 */
   maskSize: string
-  /** BLINDS 叶片平铺 `repeat`；SCAN 单层 `no-repeat`。多层蒙版（COMB）写逗号列表，层数与 maskImage 对齐 */
-  maskRepeat: string
+  /** BLINDS 叶片平铺 `repeat`；SCAN 单层 `no-repeat` */
+  maskRepeat: 'no-repeat' | 'repeat'
   /**
    * 动画量的注册属性名；缺省 = `REVEAL_VAR`。CLOCK_SWEEP / FAN 传 `SWEEP_VAR`，
    * 因为 `@property` 的 syntax 一经注册不可改，`<angle>` 必须另起一名。
@@ -369,43 +369,6 @@ export function getBlindsRevealSpec(direction: ThemeAnimationDirection, slatWidt
     maskImage: `linear-gradient(${angle}deg, #000 0 ${v}, transparent calc(${v} + ${feather}px))`,
     maskSize: axis === 'x' ? `${slatWidth}px 100%` : `100% ${slatWidth}px`,
     maskRepeat: 'repeat',
-  }
-}
-
-/**
- * COMB 的交错量 = 叶片宽 × 此比例，必须严格落在 (0, 1) 内：取 0 就是 BLINDS 本身；
- * 取 1 时奇数段填 `0..W`、偶数段填 `W..r`，两段拼起来正好是单条 `0..r`，
- * 退化成「叶片宽 2W 的 BLINDS」。两个端点都拿不到交错观感（探针实测）。
- */
-export const COMB_STAGGER_RATIO = 0.5
-
-/**
- * COMB：梳齿交错——平铺周期 2W 内奇偶两批叶片错半拍展开，两层静止渐变取并集。
- * 层 A 管 `0..W`、层 B 管 `W..2W`，两批空间区域天然不重叠，所以 `add` 并集不会互相遮蔽
- * （这正是 SEEDS 踩的坑）。每层用 `min()` 钳在本叶片宽内，让先展开的那批提前封顶。
- *
- * 不加 `max()` 下界钳 0：`min()` 允许取负，整段 `#000` 因此滑出平铺边界被裁掉，
- * 起始帧全遮；一旦钳到 0，`#000 0 0px → transparent f` 会留下一条实边漏光（探针实测）。
- * 同 BLINDS 用非 repeating 渐变 + `mask-size = 2W` 承担裁切。
- */
-export function getCombRevealSpec(direction: ThemeAnimationDirection, slatWidth: number): RevealMaskSpec {
-  const { angle, axis } = REVEAL_DIRECTION[direction]
-  const feather = getBlindsFeatherPx(slatWidth)
-  const stagger = Math.round(slatWidth * COMB_STAGGER_RATIO)
-  const v = `var(${REVEAL_VAR})`
-  const capA = `min(${v}, ${slatWidth}px)`
-  const capB = `min(${v} - ${stagger}px, ${slatWidth}px)`
-  const layerA = `linear-gradient(${angle}deg, #000 0 ${capA}, transparent calc(${capA} + ${feather}px))`
-  const layerB = `linear-gradient(${angle}deg, transparent 0 ${slatWidth}px,` +
-    ` #000 ${slatWidth}px calc(${slatWidth}px + ${capB}),` +
-    ` transparent calc(${slatWidth}px + ${capB} + ${feather}px))`
-  const tile = axis === 'x' ? `${slatWidth * 2}px 100%` : `100% ${slatWidth * 2}px`
-  return {
-    from: -feather,
-    to: stagger + slatWidth,
-    maskImage: `${layerB}, ${layerA}`,
-    maskSize: `${tile}, ${tile}`,
-    maskRepeat: 'repeat, repeat',
   }
 }
 
@@ -464,10 +427,10 @@ export function getCurtainRevealSpec(viewport: Size): RevealMaskSpec {
 
 export function isRevealAnimationType(type: ThemeAnimationType): boolean {
   return type === ThemeAnimationType.BLINDS || type === ThemeAnimationType.SCAN
-    || type === ThemeAnimationType.CURTAIN || type === ThemeAnimationType.COMB
+    || type === ThemeAnimationType.CURTAIN
 }
 
-/** 按动画类型分发属性驱动规格；仅接受 BLINDS / SCAN / CURTAIN / COMB（QR_GRID 走独立的双层蒙版规格） */
+/** 按动画类型分发属性驱动规格；仅接受 BLINDS / SCAN / CURTAIN（QR_GRID 走独立的双层蒙版规格） */
 export function getRevealMaskSpec(
   type: ThemeAnimationType,
   direction: ThemeAnimationDirection,
@@ -475,7 +438,6 @@ export function getRevealMaskSpec(
   viewport: Size,
 ): RevealMaskSpec {
   if (type === ThemeAnimationType.BLINDS) return getBlindsRevealSpec(direction, slatWidth)
-  if (type === ThemeAnimationType.COMB) return getCombRevealSpec(direction, slatWidth)
   if (type === ThemeAnimationType.CURTAIN) return getCurtainRevealSpec(viewport)
   return getScanRevealSpec(direction, viewport)
 }

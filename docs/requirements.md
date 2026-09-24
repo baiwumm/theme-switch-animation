@@ -2,7 +2,7 @@
 
 | 项目 | 内容 |
 |---|---|
-| 版本 | v1.10（新增 `COMB` 梳齿交错类型，见 §10 修订记录） |
+| 版本 | v1.9（新增 `CURTAIN` 双开门类型，见 §10 修订记录） |
 | 日期 | 2026-09-21 |
 | 状态 | 已评审通过，待开发指令 |
 | 仓库 / npm 包名 | `theme-switch-animation`（npm 已确认未注册） |
@@ -15,7 +15,7 @@
 做一个**主题切换动画库**：用户点击按钮切换 light / dark 主题时，新主题以指定形状"揭开"覆盖旧主题，而不是生硬跳变。定位参考 `react-theme-switch-animation`（React-only），差异点：
 
 1. **跨框架**：同时支持 React、Vue、Next.js、Nuxt.js（参考库仅 React）。
-2. **自定义图案**：17 种动画类型（`CIRCLE` / `CIRCLE_REVERT` / `CIRCLE_BLUR` / `SQUARE` / `DIAMOND` / `RECTANGLE` / `HEXAGON` / `TRIANGLE` / `STAR` / `BLINDS` / `SCAN` / `QR_GRID` / `RIPPLE` / `CLOCK_SWEEP` / `FAN` / `CURTAIN` / `COMB`，形状观感对齐 magicui 的 animated-theme-toggler，技术路线仅用 mask；`BLINDS` / `SCAN` / `QR_GRID` 由 `direction` 选项控制四方向，v1.6；`RIPPLE` 由 `waveWidth` 控制环带波长，v1.7；`CLOCK_SWEEP` / `FAN` 为角度驱动族、`FAN` 由 `bladeCount` 控制扇叶数，v1.8；`CURTAIN` 中线对开、无参数，v1.9；`COMB` 奇偶叶片错拍展开、复用 `direction` 与 `slatWidth`，v1.10），后续可扩展。
+2. **自定义图案**：16 种动画类型（`CIRCLE` / `CIRCLE_REVERT` / `CIRCLE_BLUR` / `SQUARE` / `DIAMOND` / `RECTANGLE` / `HEXAGON` / `TRIANGLE` / `STAR` / `BLINDS` / `SCAN` / `QR_GRID` / `RIPPLE` / `CLOCK_SWEEP` / `FAN` / `CURTAIN`，形状观感对齐 magicui 的 animated-theme-toggler，技术路线仅用 mask；`BLINDS` / `SCAN` / `QR_GRID` 由 `direction` 选项控制四方向，v1.6；`RIPPLE` 由 `waveWidth` 控制环带波长，v1.7；`CLOCK_SWEEP` / `FAN` 为角度驱动族、`FAN` 由 `bladeCount` 控制扇叶数，v1.8；`CURTAIN` 中线对开、无参数，v1.9），后续可扩展。
 3. **受控模式**：不独占主题状态管理，`next-themes`、`@nuxtjs/color-mode` 用户可直接接入复用动画能力。
 
 ## 2. 可行性评估（调研结论复述）
@@ -106,13 +106,13 @@ theme-switch-animation/                  # 仓库名 = 包名
 
 | 参数 | 类型 | 默认值 | 说明 |
 |---|---|---|---|
-| `animationType` | `ThemeAnimationType` | `CIRCLE` | 动画类型：`CIRCLE` \| `CIRCLE_REVERT` \| `CIRCLE_BLUR` \| `SQUARE` \| `DIAMOND` \| `RECTANGLE` \| `HEXAGON` \| `TRIANGLE` \| `STAR` \| `BLINDS` \| `SCAN` \| `QR_GRID` \| `RIPPLE` \| `CLOCK_SWEEP` \| `FAN` \| `CURTAIN` \| `COMB`（v1.6：四向类型 `LTR`/`RTL`/`TTB`/`BTT` 移除，改由 `direction` 承接） |
+| `animationType` | `ThemeAnimationType` | `CIRCLE` | 动画类型：`CIRCLE` \| `CIRCLE_REVERT` \| `CIRCLE_BLUR` \| `SQUARE` \| `DIAMOND` \| `RECTANGLE` \| `HEXAGON` \| `TRIANGLE` \| `STAR` \| `BLINDS` \| `SCAN` \| `QR_GRID` \| `RIPPLE` \| `CLOCK_SWEEP` \| `FAN` \| `CURTAIN`（v1.6：四向类型 `LTR`/`RTL`/`TTB`/`BTT` 移除，改由 `direction` 承接） |
 | `darkClassName` | `string` | `'dark'` | 暗色类名，可配置 |
 | `duration` | `number` | `750` | 动画时长 ms |
 | `easing` | `string` | `'ease-in-out'` | 任意合法 CSS timing-function |
 | `blurAmount` | `number` | `2` | 模糊强度（仅 `CIRCLE_BLUR` 生效，v1.5 新增） |
-| `direction` | `ThemeAnimationDirection` | `'ltr'` | 扫描方向（仅 `BLINDS` / `SCAN` / `QR_GRID` / `COMB` 生效，其余类型忽略；非法值回落默认，v1.6 新增） |
-| `slatWidth` | `number` | `72` | 百叶窗叶片宽度 px，合法区间 `[16, 200]`（仅 `BLINDS` / `COMB` 生效；越界静默回落默认，v1.6 新增） |
+| `direction` | `ThemeAnimationDirection` | `'ltr'` | 扫描方向（仅 `BLINDS` / `SCAN` / `QR_GRID` 生效，其余类型忽略；非法值回落默认，v1.6 新增） |
+| `slatWidth` | `number` | `72` | 百叶窗叶片宽度 px，合法区间 `[16, 200]`（仅 `BLINDS` 生效；越界静默回落默认，v1.6 新增） |
 | `waveWidth` | `number` | `18` | 涟漪波长 px（相邻两圈波峰间距），合法区间 `[8, 60]`（仅 `RIPPLE` 生效；越界静默回落默认，v1.7 新增） |
 | `bladeCount` | `number` | `8` | 扇叶数，合法区间 `[4, 16]` 的**整数**（仅 `FAN` 生效；非整数或越界静默回落默认，v1.8 新增） |
 | `isDark` | `boolean` | 可选 | 受控模式：外部暗色状态 |
@@ -259,7 +259,6 @@ export type { ThemeAnimationOptions, ... } from '@theme-switch-animation/core'
 - **RIPPLE（v1.7，环带前缘）**：属性驱动揭开族的第四个成员，复用 `REVEAL_VAR` 与 `buildRevealAnimationCSS` 的静止蒙版盒子（`styles.ts` 零改动），差别只在渐变换成 `radial-gradient` 且**波源中心写进 `mask-image` 串**（同 CIRCLE_REVERT 洞式的写法）——它是该族里唯一消费 `ref` 几何的类型。环带以波长 `waveWidth`（默认 18，合法区间 `[8, 60]`）为格：实心水面止于 `R − 1×W`，其后波峰落在整数格、波谷落在半整数格，主峰 α = `RIPPLE_CREST_ALPHA`(0.5)，余波按 0.55 逐圈相乘共 `RIPPLE_TRAIL_COUNT`(2) 圈（α 0.275 / 0.151）。波峰用部分 α 而非 >1：蒙版 α 就是新截图层的不透明度，半幅环带叠在完整垫底的旧层上即透亮的水线。`to = 2.1 × maxRadius + (TRAIL + 0.5) × W`，末帧实心段仍远超视口最远角（覆盖约束同其余类型）。`from = 0` 时实心段落在负半径，靠渐变规范的 stop 单调化夹成 0 长度——起始帧只剩中心一圈极淡水纹，不提前漏出新主题（无头 Chrome 冻结半径截图已核）。
 - **CLOCK_SWEEP / FAN（v1.8，角度驱动族）**：与 RIPPLE 同一套静止蒙版盒子，只是动画量从 `<length>` 换成 `<angle>`、渐变换成 conic。**注册属性必须另起一名** `SWEEP_VAR`（`--theme-switch-sweep`）——`@property` 的 syntax 一经注册不可改，与 `<length>` 的 `REVEAL_VAR` 同名属非法注册；为此 `buildRevealAnimationCSS` 不再把 px / `<length>` 写死，改按 `RevealMaskSpec.varName` / `unit` 出 syntax 与值后缀（px 族输出逐字节不变）。**conic 覆盖的是角度而不是面积**：从轴心出发的任意射线都有颜色，扫满一周即盖住整平面，不需要 CIRCLE 家族"终半径够到视口最远角"的那套计算；CSS conic 的 `0deg` 就是 12 点方向、顺时针为正，做时钟擦除不需要角度偏移。`CLOCK_SWEEP` 是单层 conic + 12° 前缘软尾（`CLOCK_SWEEP_TAIL_DEG`），`to = 360 + 12`。`FAN` 用 `repeating-conic-gradient`，周期 `step = 360 / bladeCount`、`to = step`；**叶片是硬边**——软尾会在每个周期末留下渐变淡出，末帧必留一条永不闭合的缝，违反覆盖约束，`bladeCount` 限整数同理。命名：观感是"扇叶从各自起始边旋开"，不是相机光圈的"中央孔径收缩"（后者要半径维度，conic 表达不了），故定名 `FAN` 而非 `IRIS`。旋转方向（顺 / 逆）本轮**有意未开放**：options 里"仅某类型生效"的局部参数已占 5 个，再加第 6 个性价比低；真要加，首选让方向跟随 `toDark`（复用 `CIRCLE_REVERT` 的编排、零参数），次选复用 `direction` 的 `ltr`/`rtl`，最差才是新选项。
 - **CURTAIN（v1.9，中线对开）**：px 驱动族的第四个成员，落在现成的 `isRevealAnimationType` / `getRevealMaskSpec` 分发里——`orchestrate.ts` 与 `styles.ts` 零改动。蒙版是单层满铺的"从中心向两侧对称生长"三段渐变（`transparent calc(50% - r/2 - f)` / `#000 calc(50% - r/2) calc(50% + r/2)` / `transparent calc(50% + r/2 + f)`），与 QR_GRID 的垂直轴层同构。软边固定 `CURTAIN_FEATHER_PX` = 24，`to = 视口宽 + 2 × 软边`——两条软边都要推出画面才算盖满。**既不消费 `direction`**（中线对称没有方向语义）**也不消费触发点**。起始帧 `r = 0` 时实心段零宽、两侧各留一条软边，表现为中缝先透出一道光，是幕布观感的一部分而非缺陷（同 RIPPLE 起始帧的中心淡纹）。
-- **COMB（v1.10，梳齿交错）**：px 驱动族的第五个成员，同样只落在 `isRevealAnimationType` / `getRevealMaskSpec` 分发里——`orchestrate.ts` 与 `styles.ts` 零改动。与 BLINDS 的唯一区别是**平铺周期翻倍成 `2 × slatWidth`**，一个 tile 内左右两半各归一层渐变：层 A 管 `0..W`（奇数叶片）、层 B 管 `W..2W`（偶数叶片），层 B 的 `min()` 钳值多减一个交错量。两批的空间区域天然不重叠，所以 `add` 并集不会互相遮蔽（SEEDS 撤回时记的那条教训在这里不构成约束）。消费 `direction`（决定渐变角与平铺轴）与 `slatWidth`，不消费触发点。两个实测钉死的常量：① 交错量 `COMB_STAGGER_RATIO` 必须严格落在 `(0, 1)` 内——取 0 就是 BLINDS，取 1 时奇数段 `0..W` 与偶数段 `W..r` 首尾相接拼成单条 `0..r`，退化成"叶宽 2W 的 BLINDS"；② 每层的钳值只用 `min()` **不加 `max(..., 0px)` 下界**，钳到 0 会让 `#000 0 0px → transparent f` 在起始帧每片叶片左沿留一条实边漏光，允许取负才能把整段推出平铺边界。
 - **Safari 兼容**：只用 mask 动画，不碰 view-transition 伪元素上的 clip-path 和 WAAPI；`will-change: mask-size, mask-position`。
 - **duration / easing 变量化注入**：注入的临时 `<style>` 中动画声明一律写
   `animation: <name> var(--theme-switch-duration, 750ms) var(--theme-switch-easing, ease-in-out) both;`
@@ -289,22 +288,10 @@ export type { ThemeAnimationOptions, ... } from '@theme-switch-animation/core'
 7. **受控协议超时压力测试**（v1.1 修订 #1、v1.2 微调 #2）：在 Chrome DevTools 中开启 CPU 4x/6x throttling + Slow 3G 网络节流，实测 next-themes / color-mode 的 300ms 超时触发频率；若频繁触发，按 §5.4 备选方案改混合模式（库回调内直接改 class + 同步通知外部状态），并重测。
 8. **Playwright e2e 矩阵**（v1.1 修订 #5）：**只跑 Chromium 和 WebKit**。理由：Playwright 的 WebKit 引擎与 Safari 存在差异；Firefox 的 View Transitions 自 144 才支持，Playwright 自带的 Firefox 版本可能未默认启用。Firefox 用**真机手动测试**，暂时跳过，并在文档（README + 文档站）注明。
 9. **Nuxt 自动导入完整性**（v1.1 修订 #2 新增）：全新 Nuxt 项目仅加 `modules: ['theme-switch-animation/nuxt']`，`useThemeAnimation`、`ThemeAnimationType` 及所有类型**无需 import 即可使用且有完整类型提示**（`nuxt prepare` 通过、TS 无报错）。
-10. **单测**：mask 几何（四角最大距离、终尺寸）与 v1.6 的属性驱动规格（BLINDS / SCAN / QR_GRID 的起止值、渐变角、平铺尺寸、`@supports` 双层与降级基线）、v1.7 的 RIPPLE 环带（stop 序列与衰减 alpha、波长缩放、末帧实心段覆盖最远角、波源取自触发点）、v1.8 的角度族（conic 串与软尾、`to = 360 + 尾宽` 与视口无关、扇叶周期随 bladeCount 缩放及非整除精度、注册属性分名、守卫互斥）、v1.9 的 CURTAIN（三段对称渐变串、`to = 视口宽 + 2×软边`、四个 direction 取值结果一致、分发命中与守卫互斥）、v1.10 的 COMB（两层串与层数对齐、`to = 交错量 + 叶宽`、起始帧两层 cap 均不外漏、末帧两层 cap 均封顶、横纵轴平铺尺寸、交错量比例落在开区间内、分发命中与守卫互斥、与 BLINDS 规格不等）全覆盖；TS strict 通过。
+10. **单测**：mask 几何（四角最大距离、终尺寸）与 v1.6 的属性驱动规格（BLINDS / SCAN / QR_GRID 的起止值、渐变角、平铺尺寸、`@supports` 双层与降级基线）、v1.7 的 RIPPLE 环带（stop 序列与衰减 alpha、波长缩放、末帧实心段覆盖最远角、波源取自触发点）、v1.8 的角度族（conic 串与软尾、`to = 360 + 尾宽` 与视口无关、扇叶周期随 bladeCount 缩放及非整除精度、注册属性分名、守卫互斥）、v1.9 的 CURTAIN（三段对称渐变串、`to = 视口宽 + 2×软边`、四个 direction 取值结果一致、分发命中与守卫互斥）全覆盖；TS strict 通过。
 11. **发布清单**：`npm pack` 内容 = dist（含 nuxt-runtime 目录）+ LICENSE + README；四个子路径（`.` / `./react` / `./vue` / `./nuxt`）exports 均可解析。
 
 ## 10. 修订记录
-
-### v1.10（2026-09-24）
-
-roadmap 执行顺序里的 P1-4。节奏换了：**先探观感再写库代码**——前两轮（`SPIRAL` / `SEEDS`）都是实现完、真机才被否，这轮把判定提前到探针阶段。
-
-1. **新增 `COMB` 类型（§1 / §5.1 / §7）**：动画类型 16 → 17 种。复用 `direction` 与 `slatWidth`，无新选项、无新注册属性、非破坏性变更；`orchestrate.ts` 与 `styles.ts` 仍是一行未改。
-2. **探针抓到两个问题，都在写库代码之前**：
-   - `max(..., 0px)` 下界钳制会让起始帧每片叶片左沿漏一条实边——`#000 0 0px → transparent 20px` 在 stop 0 处仍是不透明。BLINDS 靠 `from = -feather` 让整段滑出平铺边界被裁掉，COMB 同理，钳值只能留 `min()`。
-   - **交错量取 `slatWidth` 是退化的**：奇数段填 `0..W`、偶数段填 `W..r`，两段首尾相接正好拼成单条 `0..r`，等价于"叶宽 2W 的 BLINDS"。改取 `W / 2`（`COMB_STAGGER_RATIO = 0.5`）后才有"一批封了顶、另一批刚起步"的高对比中间态，这是 BLINDS 全程到不了的画面。
-3. **`RevealMaskSpec.maskRepeat` 从 `'no-repeat' | 'repeat'` 放宽成 `string`**：多层蒙版要写逗号列表，层数与 `maskImage` 对齐（单测锁这一条）。`maskSize` 本来就是 `string`，无需改。
-4. **结构上避开了前两轮的坑**：奇偶两批的空间区域天然不重叠，所以 `mask-composite: add` 不会互相遮蔽（SEEDS 撤回时记的那条）；也没有圆斑越界交叠的问题。
-5. **文档同步**：README 类型表追加一行 + 属性驱动族清单与 options 表两处消费方、文档站 hero / features / `site.ts` 计数 16 → 17、画廊第 17 张卡（带 direction 与 slatWidth 两组控件）、四个 playground 类型清单与"N 个按钮"文案、changeset、门面截图按既有规格重出；roadmap 的 P1-4 状态改「已落地」。
 
 ### v1.9（2026-09-23）
 
@@ -388,4 +375,4 @@ roadmap 执行顺序里的 P1-4。节奏换了：**先探观感再写库代码**
 
 ---
 
-**当前状态（2026-09-24）**：0.1.0 与 0.2.0 **均已发布**（npm `latest = 0.2.0`；tag 分别是不带前缀的 `theme-switch-animation@0.1.0` 与换成 tag 触发流程后的 `v0.2.0`），本文档随实现推进到 v1.10。v1.7（`RIPPLE` + `waveWidth`）、v1.8（角度族 `CLOCK_SWEEP` / `FAN` + `bladeCount`）、v1.9（`CURTAIN`）与 v1.10（`COMB`）均已落地、文档已同步、无头 Chrome 实测通过，**尚未发版**——`.changeset/` 下已累积五条待切。后续新增类型的候选池与执行顺序见 `docs/animation-roadmap.md`，剩余真机验证与发版事项见 `docs/next-steps.md`。
+**当前状态（2026-09-23）**：0.1.0 与 0.2.0 **均已发布**（npm `latest = 0.2.0`；tag 分别是不带前缀的 `theme-switch-animation@0.1.0` 与换成 tag 触发流程后的 `v0.2.0`），本文档随实现推进到 v1.9。v1.7（`RIPPLE` + `waveWidth`）、v1.8（角度族 `CLOCK_SWEEP` / `FAN` + `bladeCount`）与 v1.9（`CURTAIN`）均已落地、文档已同步、无头 Chrome 实测通过，**尚未发版**——`.changeset/` 下已累积四条待切。后续新增类型的候选池与执行顺序见 `docs/animation-roadmap.md`，剩余真机验证与发版事项见 `docs/next-steps.md`。

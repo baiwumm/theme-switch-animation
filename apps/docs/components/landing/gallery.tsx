@@ -117,22 +117,13 @@ function IcoCurtain(props: SVGProps<SVGSVGElement>) {
   )
 }
 
-function IcoComb(props: SVGProps<SVGSVGElement>) {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.2} {...props}>
-      <path d="M4 4v16M12 4v16M20 4v16" />
-      <path d="M8 4v8M16 4v8" opacity="0.45" />
-    </svg>
-  )
-}
-
 const ANIMATION_TYPES: Array<{
   type: ThemeAnimationType
   label: string
   hint: string
   /** 消费 direction 的类型：卡片内渲染独立的方向选择按钮（初始方向） */
   initialDirection?: ThemeAnimationDirection
-  /** BLINDS / COMB：卡片内渲染叶宽选择器（初始宽度 px） */
+  /** 仅 BLINDS：卡片内渲染叶宽选择器（初始宽度 px） */
   initialSlatWidth?: number
   /** 仅 RIPPLE：卡片内渲染波长选择器（初始波长 px） */
   initialWaveWidth?: number
@@ -158,7 +149,6 @@ const ANIMATION_TYPES: Array<{
   { type: ThemeAnimationType.CLOCK_SWEEP, label: 'CLOCK_SWEEP', hint: '时钟扇形 · 轴心', Icon: IcoClockSweep, tile: 'from-violet-100 to-violet-200 text-violet-600 dark:from-violet-500/15 dark:to-violet-500/5 dark:text-violet-400' },
   { type: ThemeAnimationType.FAN, label: 'FAN', hint: '扇叶旋开 · 轴心', initialBladeCount: 8, Icon: IcoFan, tile: 'from-indigo-100 to-indigo-200 text-indigo-600 dark:from-indigo-500/15 dark:to-indigo-500/5 dark:text-indigo-400' },
   { type: ThemeAnimationType.CURTAIN, label: 'CURTAIN', hint: '双开门 · 中线推开', Icon: IcoCurtain, tile: 'from-yellow-100 to-yellow-200 text-yellow-700 dark:from-yellow-500/15 dark:to-yellow-500/5 dark:text-yellow-400' },
-  { type: ThemeAnimationType.COMB, label: 'COMB', hint: '梳齿交错 · 奇偶错拍', initialDirection: ThemeAnimationDirection.LTR, initialSlatWidth: 72, Icon: IcoComb, tile: 'from-purple-100 to-purple-200 text-purple-600 dark:from-purple-500/15 dark:to-purple-500/5 dark:text-purple-400' },
 ]
 
 const DURATION_PRESETS = [
@@ -404,7 +394,7 @@ function PresetRow<T extends number | string>({
   )
 }
 
-/** 17 种动画的可交互画廊：卡片中央圆形按钮触发（受控模式 × next-themes，与站点主题联动） */
+/** 16 种动画的可交互画廊：卡片中央圆形按钮触发（受控模式 × next-themes，与站点主题联动） */
 export function GallerySection() {
   const [duration, setDuration] = useState(750)
   const [easing, setEasing] = useState('ease-in-out')
