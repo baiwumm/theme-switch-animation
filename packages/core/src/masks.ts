@@ -326,8 +326,8 @@ export interface RevealMaskSpec {
   maskImage: string
   /** `mask-size`：BLINDS 按叶片尺寸平铺，SCAN 单层满铺 */
   maskSize: string
-  /** BLINDS 叶片平铺 `repeat`；SCAN 单层 `no-repeat` */
-  maskRepeat: 'no-repeat' | 'repeat'
+  /** BLINDS 叶片平铺 `repeat`；SCAN 单层 `no-repeat`。多层蒙版（CURTAIN 反向）写逗号列表，层数与 maskImage 对齐 */
+  maskRepeat: string
   /**
    * 动画量的注册属性名；缺省 = `REVEAL_VAR`。CLOCK_SWEEP / FAN 传 `SWEEP_VAR`，
    * 因为 `@property` 的 syntax 一经注册不可改，`<angle>` 必须另起一名。
@@ -425,6 +425,41 @@ export function getCurtainRevealSpec(viewport: Size): RevealMaskSpec {
   }
 }
 
+/**
+ * CURTAIN 反向：两扇幕布从屏幕两侧向中线合拢，新主题随之从边缘显出。
+ *
+ * **不能靠"把正向串取补"实现**——正向是一条居中透明带的补集，那条带被钉在 50%、
+ * 无论把 `r` 收到多负都消不掉，末帧必留一条居中半透明缝（实测 40 全透 + 150 半透，
+ * 过冲与"单渐变两侧板"两种改法都只减小不消除）。
+ *
+ * 可用的构造是**两层 + 默认 `add`（取最大 alpha）**：左板自左边缘向右长、右板自右
+ * 边缘向左长，软边都朝内。两板在中央重叠时取最大值而不是相互抵消，所以末帧必然全实。
+ * 两端各留一个软边宽度：`from = -软边` 让首帧两板整体在屏幕外（全隐），
+ * `to = 半屏 + 软边` 让两板都越过中线（全覆盖）。探针实测首帧 6400/6400 全隐、
+ * 末帧 0 残留、推进近似线性。
+ */
+export function getCurtainReverseRevealSpec(viewport: Size): RevealMaskSpec {
+  const v = `var(${REVEAL_VAR})`
+  const f = CURTAIN_FEATHER_PX
+  const layerLeft = `linear-gradient(90deg, #000 0 ${v}, transparent calc(${v} + ${f}px))`
+  const layerRight = `linear-gradient(270deg, #000 0 ${v}, transparent calc(${v} + ${f}px))`
+  return {
+    from: -f,
+    to: viewport.width / 2 + f,
+    maskImage: `${layerLeft}, ${layerRight}`,
+    maskSize: '100% 100%, 100% 100%',
+    maskRepeat: 'no-repeat, no-repeat',
+  }
+}
+
+/**
+ * 属性驱动规格的分发参数：`reverse` 位目前只有 CURTAIN 需要单独走构造器，
+ * 其余类型反向即正向取补，在各自函数内部处理。
+ */
+export function getCurtainMaskSpec(viewport: Size, reverse = false): RevealMaskSpec {
+  return reverse ? getCurtainReverseRevealSpec(viewport) : getCurtainRevealSpec(viewport)
+}
+
 export function isRevealAnimationType(type: ThemeAnimationType): boolean {
   return type === ThemeAnimationType.BLINDS || type === ThemeAnimationType.SCAN
     || type === ThemeAnimationType.CURTAIN
@@ -436,9 +471,10 @@ export function getRevealMaskSpec(
   direction: ThemeAnimationDirection,
   slatWidth: number,
   viewport: Size,
+  reverse = false,
 ): RevealMaskSpec {
   if (type === ThemeAnimationType.BLINDS) return getBlindsRevealSpec(direction, slatWidth)
-  if (type === ThemeAnimationType.CURTAIN) return getCurtainRevealSpec(viewport)
+  if (type === ThemeAnimationType.CURTAIN) return getCurtainMaskSpec(viewport, reverse)
   return getScanRevealSpec(direction, viewport)
 }
 

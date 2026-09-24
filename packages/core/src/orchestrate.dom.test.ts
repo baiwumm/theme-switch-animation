@@ -292,15 +292,45 @@ describe('runThemeTransition 动画路径（jsdom + 模拟 startViewTransition�
     expect(css).toContain('--theme-switch-sweep: 0deg;')
   })
 
-  it('reverse 未接入的类型传 true 也静默无效：QR_GRID / BLINDS / SCAN / CURTAIN 输出不变', () => {
+  it('reverse 已接入 CURTAIN：两层 add 各从屏幕边缘向中线合拢，两端各留一个软边', () => {
+    installFakeViewTransition()
+    vi.spyOn(window, 'innerWidth', 'get').mockReturnValue(800)
+    vi.spyOn(window, 'innerHeight', 'get').mockReturnValue(600)
+
+    runThemeTransition({
+      domUpdate: () => {},
+      options: { animationType: ThemeAnimationType.CURTAIN, reverse: true },
+    })
+    const reversed = styleNode()!.textContent!
+    removeAnimationStyle(document)
+    runThemeTransition({
+      domUpdate: () => {},
+      options: { animationType: ThemeAnimationType.CURTAIN },
+    })
+    const forward = styleNode()!.textContent!
+
+    // 两层：90deg 左板 + 270deg 右板，size / repeat 都是两项逗号列表
+    expect(reversed).toContain('linear-gradient(90deg, #000 0 var(--theme-switch-reveal)')
+    expect(reversed).toContain('linear-gradient(270deg, #000 0 var(--theme-switch-reveal)')
+    expect(reversed).toContain('mask-size: 100% 100%, 100% 100%;')
+    expect(reversed).toContain('mask-repeat: no-repeat, no-repeat;')
+    // from = -软边（首帧两板整体在屏外）、to = 半屏 + 软边（两板都越过中线）
+    expect(reversed).toContain('--theme-switch-reveal: -24px;')
+    expect(reversed).toContain('--theme-switch-reveal: 424px;')
+    // 正向仍是那条居中对称的三段渐变，没被连带改动
+    expect(forward).toContain('#000 calc(50% - var(--theme-switch-reveal) / 2) calc(50% + var(--theme-switch-reveal) / 2)')
+    expect(forward).toContain('mask-repeat: no-repeat;')
+    expect(forward).not.toContain('270deg')
+  })
+
+  it('reverse 未接入的类型传 true 也静默无效：QR_GRID / BLINDS / SCAN 输出不变', () => {
     installFakeViewTransition()
     vi.spyOn(window, 'innerWidth', 'get').mockReturnValue(800)
     vi.spyOn(window, 'innerHeight', 'get').mockReturnValue(600)
     const trigger = { getBoundingClientRect: () => ({ left: 100, top: 50, width: 40, height: 20 }) }
 
     for (const animationType of [
-      ThemeAnimationType.QR_GRID, ThemeAnimationType.BLINDS,
-      ThemeAnimationType.SCAN, ThemeAnimationType.CURTAIN,
+      ThemeAnimationType.QR_GRID, ThemeAnimationType.BLINDS, ThemeAnimationType.SCAN,
     ]) {
       runThemeTransition({ domUpdate: () => {}, trigger, options: { animationType } })
       const baseline = styleNode()!.textContent!

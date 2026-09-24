@@ -31,7 +31,9 @@ import {
   getCircleRevertMaskGeometry,
   getClockSweepRevealSpec,
   getClockSweepReverseRevealSpec,
+  getCurtainMaskSpec,
   getCurtainRevealSpec,
+  getCurtainReverseRevealSpec,
   getDiamondMaskGeometry,
   getHexagonMaskGeometry,
   getFanBladeStepDeg,
@@ -798,6 +800,42 @@ describe('CURTAIN（双开门）', () => {
     expect(getMaskGeometry(ThemeAnimationType.CURTAIN, center, viewport)).toEqual(
       getCircleMaskGeometry(center, viewport),
     )
+  })
+
+  it('反向是两层 add（左板 90deg + 右板 270deg），不是把正向串取补', () => {
+    const spec = getCurtainReverseRevealSpec(viewport)
+    expect(spec.maskImage).toBe(
+      `linear-gradient(90deg, #000 0 ${v}, transparent calc(${v} + ${f}px)), ` +
+      `linear-gradient(270deg, #000 0 ${v}, transparent calc(${v} + ${f}px))`,
+    )
+    expect(spec.maskImage.match(/linear-gradient\(/g)).toHaveLength(2)
+    // 层数与 mask-size / mask-repeat 的逗号列表长度必须一致
+    expect(spec.maskSize).toBe('100% 100%, 100% 100%')
+    expect(spec.maskRepeat).toBe('no-repeat, no-repeat')
+  })
+
+  it('反向两端各留一个软边：from = -软边 让首帧两板全在屏外，to = 半屏 + 软边 让两板越过中线', () => {
+    const spec = getCurtainReverseRevealSpec(viewport)
+    expect(spec.from).toBe(-f)
+    expect(spec.to).toBe(viewport.width / 2 + f)
+    // 末帧每块板的实心段都要越过中线，靠 add 取最大把中央的软边重叠盖掉
+    expect(spec.to - viewport.width / 2).toBe(f)
+    // 首帧实心段终点为负 → 整块板在屏幕外，起始全隐
+    expect(spec.from).toBeLessThan(0)
+  })
+
+  it('反向终值随视口宽缩放，且与正向的"整宽 + 2 软边"不是一回事', () => {
+    const wide = getCurtainReverseRevealSpec({ width: 1920, height: 1080 })
+    const narrow = getCurtainReverseRevealSpec({ width: 375, height: 667 })
+    expect(wide.to - narrow.to).toBe((1920 - 375) / 2)
+    expect(wide.to).toBeLessThan(getCurtainRevealSpec({ width: 1920, height: 1080 }).to)
+  })
+
+  it('分发：getCurtainMaskSpec / getRevealMaskSpec 的 reverse 位在正反向之间切换，默认正向', () => {
+    expect(getCurtainMaskSpec(viewport, true)).toEqual(getCurtainReverseRevealSpec(viewport))
+    expect(getCurtainMaskSpec(viewport)).toEqual(getCurtainRevealSpec(viewport))
+    expect(getRevealMaskSpec(ThemeAnimationType.CURTAIN, ThemeAnimationDirection.LTR, 72, viewport, true))
+      .toEqual(getCurtainReverseRevealSpec(viewport))
   })
 
   it('视口宽度决定终值：窄屏与宽屏的 to 差等于视口宽之差', () => {

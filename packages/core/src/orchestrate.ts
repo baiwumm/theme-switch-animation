@@ -194,6 +194,7 @@ export function runThemeTransition(params: RunThemeTransitionParams): RunThemeTr
     || resolved.animationType === ThemeAnimationType.FAN
     || resolved.animationType === ThemeAnimationType.RIPPLE
     || resolved.animationType === ThemeAnimationType.CLOCK_SWEEP
+    || resolved.animationType === ThemeAnimationType.CURTAIN
   const collapse = isRevert
     ? !toDark
     : reverseCapable && (resolved.reverse === true || (resolved.reverse === 'auto' && !toDark))
@@ -206,7 +207,7 @@ export function runThemeTransition(params: RunThemeTransitionParams): RunThemeTr
   // 属性驱动揭开（BLINDS / SCAN / RIPPLE / CLOCK_SWEEP / FAN）：蒙版盒子静止、注册属性在动，
   // 共用同一 CSS 生成器。BLINDS / SCAN 无触发点；RIPPLE 与角度族以触发点为波源 / 轴心。
   const reveal = isRevealAnimationType(resolved.animationType)
-    ? getRevealMaskSpec(resolved.animationType, resolved.direction, resolved.slatWidth, viewport)
+    ? getRevealMaskSpec(resolved.animationType, resolved.direction, resolved.slatWidth, viewport, collapse)
     : isRippleAnimationType(resolved.animationType)
       ? getRippleMaskSpec(center, viewport, resolved.waveWidth, collapse)
       : isSweepAnimationType(resolved.animationType)
