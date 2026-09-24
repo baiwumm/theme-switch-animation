@@ -208,13 +208,47 @@ describe('runThemeTransition 动画路径（jsdom + 模拟 startViewTransition�
     expect(expanding).toBe(styleNode()!.textContent!)
   })
 
-  it('reverse 只作用于 CIRCLE：其余类型传 true 也静默无效（CSS 与不传完全一致）', () => {
+  it('reverse 已接入 FAN：取补串 + 区间反向，keyframes 从周期角度收到 0', () => {
     installFakeViewTransition()
     vi.spyOn(window, 'innerWidth', 'get').mockReturnValue(800)
     vi.spyOn(window, 'innerHeight', 'get').mockReturnValue(600)
     const trigger = { getBoundingClientRect: () => ({ left: 100, top: 50, width: 40, height: 20 }) }
 
-    for (const animationType of [ThemeAnimationType.SQUARE, ThemeAnimationType.RIPPLE, ThemeAnimationType.CURTAIN]) {
+    runThemeTransition({
+      domUpdate: () => {},
+      trigger,
+      options: { animationType: ThemeAnimationType.FAN, bladeCount: 8, reverse: true },
+    })
+    const reversed = styleNode()!.textContent!
+    removeAnimationStyle(document)
+    runThemeTransition({
+      domUpdate: () => {},
+      trigger,
+      options: { animationType: ThemeAnimationType.FAN, bladeCount: 8 },
+    })
+    const forward = styleNode()!.textContent!
+
+    // 反向：透明带在前、实心段在后，且 --sweep 从 45deg 起、收到 0deg
+    expect(reversed).toContain('transparent 0 var(--theme-switch-sweep)')
+    expect(reversed).toContain('--theme-switch-sweep: 45deg;')
+    expect(reversed).toContain('--theme-switch-sweep: 0deg;')
+    // 正向不该被连带改动：仍是 #000 在前、0 → 45deg
+    expect(forward).toContain('#000 0 var(--theme-switch-sweep)')
+    expect(forward).not.toContain('transparent 0 var(--theme-switch-sweep)')
+    // FAN 反向走的是角度属性，不该把 CIRCLE 的洞式半径属性带进来
+    expect(reversed).not.toContain('@property --theme-switch-radius')
+  })
+
+  it('reverse 只作用于已接入的类型：CLOCK_SWEEP / CURTAIN / SQUARE / RIPPLE 传 true 输出不变', () => {
+    installFakeViewTransition()
+    vi.spyOn(window, 'innerWidth', 'get').mockReturnValue(800)
+    vi.spyOn(window, 'innerHeight', 'get').mockReturnValue(600)
+    const trigger = { getBoundingClientRect: () => ({ left: 100, top: 50, width: 40, height: 20 }) }
+
+    for (const animationType of [
+      ThemeAnimationType.CLOCK_SWEEP, ThemeAnimationType.CURTAIN,
+      ThemeAnimationType.SQUARE, ThemeAnimationType.RIPPLE,
+    ]) {
       runThemeTransition({ domUpdate: () => {}, trigger, options: { animationType } })
       const baseline = styleNode()!.textContent!
       removeAnimationStyle(document)

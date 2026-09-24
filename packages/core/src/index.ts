@@ -63,6 +63,7 @@ export {
   getHexagonMaskGeometry,
   getFanBladeStepDeg,
   getFanRevealSpec,
+  getFanReverseRevealSpec,
   getMaskGeometry,
   getMaxRadiusToCorners,
   getQrGridMaskSpec,

@@ -184,19 +184,23 @@ export function runThemeTransition(params: RunThemeTransitionParams): RunThemeTr
   const toDark = nextIsDark ?? !hasThemeClass(doc, resolved.darkClassName)
   const isRevert = resolved.animationType === ThemeAnimationType.CIRCLE_REVERT
   if (isRevert) warnDeprecatedRevert()
-  // 是否走"收起"形态（洞式蒙版挂新层、洞从全屏收缩到 0）。两条来源：
-  // - CIRCLE_REVERT（已废弃）：跟随切换方向，切亮才收起——行为与 0.3.0 逐字节一致；
-  // - CIRCLE + reverse：`true` 恒收起，`'auto'` 切亮收起（即上面那条的替代写法）。
-  // 其余类型一律不收起：reverse 目前只接通了 CIRCLE（docs/reverse-option-design.md §4）。
+  // 本次转场是否走反向形态。两条来源：
+  // - CIRCLE_REVERT（已废弃）：跟随切换方向，切亮才反向——行为与 0.3.0 逐字节一致；
+  // - reverse 选项：`true` 恒反向，`'auto'` 切亮反向（即上面那条的替代写法）。
+  // 只有已接入的类型才算数：目前 CIRCLE 与 FAN。其余类型传 reverse 静默忽略——
+  // 形状族要走反向只能动 mask-size（附录四/五的抖动病根），CURTAIN 的软边在末帧会
+  // 塌出一条居中半透明带，两者都做不到无副作用，故不接入（见 roadmap §4）。
+  const reverseCapable = resolved.animationType === ThemeAnimationType.CIRCLE
+    || resolved.animationType === ThemeAnimationType.FAN
   const collapse = isRevert
     ? !toDark
-    : resolved.animationType === ThemeAnimationType.CIRCLE
-      ? resolved.reverse === true || (resolved.reverse === 'auto' && !toDark)
-      : false
+    : reverseCapable && (resolved.reverse === true || (resolved.reverse === 'auto' && !toDark))
   const revertDirection = isRevert ? (toDark ? 'expand' : 'collapse') : undefined
   // 收起方向：蒙版挂新截图层、掏一个收缩的"洞"（层序与 CIRCLE 一致，不需要给旧层 z-index），
-  // 蒙版盒子静止、只有注册半径在动（详见 §附录六）。
-  const holeGeometry = collapse ? getCircleRevertHoleGeometry(center, viewport) : undefined
+  // 蒙版盒子静止、只有注册半径在动（详见 §附录六）。仅 CIRCLE 家族用洞式；FAN 的反向是
+  // 由自己的 spec 生成器出串，不经过这里。
+  const circleFamily = isRevert || resolved.animationType === ThemeAnimationType.CIRCLE
+  const holeGeometry = collapse && circleFamily ? getCircleRevertHoleGeometry(center, viewport) : undefined
   // 属性驱动揭开（BLINDS / SCAN / RIPPLE / CLOCK_SWEEP / FAN）：蒙版盒子静止、注册属性在动，
   // 共用同一 CSS 生成器。BLINDS / SCAN 无触发点；RIPPLE 与角度族以触发点为波源 / 轴心。
   const reveal = isRevealAnimationType(resolved.animationType)
@@ -204,7 +208,7 @@ export function runThemeTransition(params: RunThemeTransitionParams): RunThemeTr
     : isRippleAnimationType(resolved.animationType)
       ? getRippleRevealSpec(center, viewport, resolved.waveWidth)
       : isSweepAnimationType(resolved.animationType)
-        ? getSweepMaskSpec(resolved.animationType, center, resolved.bladeCount)
+        ? getSweepMaskSpec(resolved.animationType, center, resolved.bladeCount, collapse)
         : undefined
   // QR_GRID：新层"列 ∩ 行"方块格子双层蒙版，同样无触发点。
   const qrGrid = isQrGridAnimationType(resolved.animationType)

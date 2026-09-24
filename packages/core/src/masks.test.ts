@@ -35,6 +35,7 @@ import {
   getHexagonMaskGeometry,
   getFanBladeStepDeg,
   getFanRevealSpec,
+  getFanReverseRevealSpec,
   getMaskGeometry,
   getMaxRadiusToCorners,
   getQrGridMaskSpec,
@@ -606,6 +607,50 @@ describe('角度驱动族（CLOCK_SWEEP / FAN）', () => {
     expect(spec.maskImage).not.toContain('calc(')
     // 末帧实心段止于 open = step，透明段退化为零长度区间
     expect(spec.maskImage).toContain(`#000 0 ${v}`)
+  })
+
+  it('FAN 反向：正向串取补（#000 ↔ transparent 互换）+ 区间反向，周期与 varName / unit 不变', () => {
+    const spec = getFanReverseRevealSpec(center, 8)
+    expect(spec.maskImage).toBe(
+      `repeating-conic-gradient(from 0deg at 640px 400px, transparent 0 ${v}, #000 ${v} 45deg)`,
+    )
+    expect(spec.from).toBe(45)
+    expect(spec.to).toBe(0)
+    expect(spec.varName).toBe(SWEEP_VAR)
+    expect(spec.unit).toBe('deg')
+    expect(spec.maskSize).toBe('100% 100%')
+    expect(spec.maskRepeat).toBe('no-repeat')
+  })
+
+  it('FAN 反向末帧干净的前提是硬边：to = 0 时两组 stop 同时归位到 0deg，透明带塌成零宽而非留缝', () => {
+    const spec = getFanReverseRevealSpec(center, 8)
+    // 区间端点：from 是完整周期（新层全隐）、to 是 0（新层全显）
+    expect(spec.from).toBe(getFanBladeStepDeg(8))
+    expect(spec.to).toBe(0)
+    // 串里不得出现 calc / 软尾——一旦加了羽化，带子塌零时两条斜坡会交叉出凹陷（CURTAIN 就栽在这）
+    expect(spec.maskImage).not.toContain('calc(')
+    // 透明带是 `transparent 0 var`、实心段是 `#000 var step`：两者共用同一个 var，
+    // var→0 时带子塌成零宽且 #000 的起点同步落到 0deg，所以末帧不留任何缝隙
+    expect(spec.maskImage).toContain(`transparent 0 ${v}, #000 ${v} `)
+  })
+
+  it('FAN 反向同样随 bladeCount 缩放周期', () => {
+    expect(getFanReverseRevealSpec(center, 4).from).toBe(90)
+    expect(getFanReverseRevealSpec(center, 16).from).toBe(22.5)
+    expect(getFanReverseRevealSpec(center, 6).maskImage).toBe(
+      `repeating-conic-gradient(from 0deg at 640px 400px, transparent 0 ${v}, #000 ${v} 60deg)`,
+    )
+  })
+
+  it('分发：getSweepMaskSpec 的 reverse 位只对 FAN 生效，CLOCK_SWEEP 两态输出一致（未接入即忽略）', () => {
+    expect(getSweepMaskSpec(ThemeAnimationType.FAN, center, 8, true))
+      .toEqual(getFanReverseRevealSpec(center, 8))
+    expect(getSweepMaskSpec(ThemeAnimationType.FAN, center, 8, false))
+      .toEqual(getFanRevealSpec(center, 8))
+    // 省略第三参即正向
+    expect(getSweepMaskSpec(ThemeAnimationType.FAN, center, 8)).toEqual(getFanRevealSpec(center, 8))
+    const fwd = getClockSweepRevealSpec(center)
+    expect(getSweepMaskSpec(ThemeAnimationType.CLOCK_SWEEP, center, 8, true)).toEqual(fwd)
   })
 
   it('分发与守卫：角度族两类型命中 isSweepAnimationType，且不落入 px 驱动的三个守卫', () => {

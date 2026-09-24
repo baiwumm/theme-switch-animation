@@ -652,13 +652,42 @@ export function isSweepAnimationType(type: ThemeAnimationType): boolean {
   return type === ThemeAnimationType.CLOCK_SWEEP || type === ThemeAnimationType.FAN
 }
 
+/**
+ * FAN 的反向规格：扇叶"合拢"——已旋开的部分反过来变透明，新主题从各片扇叶的终止边
+ * 显出、向起始边收拢。构造是**正向串取补 + 区间反向**（`--sweep` 从 step 收到 0）。
+ *
+ * 之所以只有 FAN 能这么做：它是硬边（无羽化），透明带塌到零宽时 `transparent` 与 `#000`
+ * 两组 stop 同时归位到 0deg，末帧不留任何残留。CURTAIN 那种带软边的对称带做不到——
+ * 两条斜坡在带子塌零时必然交叉出一个凹陷，实测末帧留一条约 38px 的居中半透明带，
+ * 违反"末帧必须完全覆盖"，所以 CURTAIN 不接入 reverse（见 docs/animation-roadmap.md §4）。
+ */
+export function getFanReverseRevealSpec(center: Point, bladeCount: number): RevealMaskSpec {
+  const v = `var(${SWEEP_VAR})`
+  const step = getFanBladeStepDeg(bladeCount)
+  return {
+    from: step,
+    to: 0,
+    maskImage:
+      `repeating-conic-gradient(from 0deg at ${conicAt(center)}, ` +
+      `transparent 0 ${v}, #000 ${v} ${step}deg)`,
+    maskSize: '100% 100%',
+    maskRepeat: 'no-repeat',
+    varName: SWEEP_VAR,
+    unit: 'deg',
+  }
+}
+
 /** 角度族分发；仅接受 isSweepAnimationType 命中的类型，其余按 CLOCK_SWEEP 处理 */
 export function getSweepMaskSpec(
   type: ThemeAnimationType,
   center: Point,
   bladeCount: number,
+  reverse = false,
 ): RevealMaskSpec {
-  return type === ThemeAnimationType.FAN ? getFanRevealSpec(center, bladeCount) : getClockSweepRevealSpec(center)
+  if (type === ThemeAnimationType.FAN) {
+    return reverse ? getFanReverseRevealSpec(center, bladeCount) : getFanRevealSpec(center, bladeCount)
+  }
+  return getClockSweepRevealSpec(center)
 }
 
 /** 中心扩散形状的几何函数表（含 CIRCLE）；`type in` 即类型守卫 */

@@ -90,7 +90,7 @@ export interface ThemeAnimationOptions {
   /**
    * 反向揭开：`false` 总是正向（默认）、`true` 总是反向、`'auto'` 切暗正向 / 切亮反向。
    * 与 `direction` 正交——`direction` 决定推进轴，`reverse` 决定从内还是从外揭开。
-   * 非法值静默回落 `false`。当前仅 `CIRCLE` 生效，其余类型忽略（见 docs/reverse-option-design.md §4）。
+   * 非法值静默回落 `false`。当前 `CIRCLE` 与 `FAN` 生效，其余类型忽略（原因见 docs/animation-roadmap.md §4）。
    */
   reverse?: boolean | 'auto'
   /** 受控模式：外部暗色状态。与 `onChange` 同时提供才进入受控模式 */

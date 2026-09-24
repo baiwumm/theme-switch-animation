@@ -64,6 +64,7 @@ describe('core 公开导出', () => {
         'getHexagonMaskGeometry',
         'getFanBladeStepDeg',
         'getFanRevealSpec',
+        'getFanReverseRevealSpec',
         'getMaskGeometry',
         'getMaxRadiusToCorners',
         'getQrGridMaskSpec',
