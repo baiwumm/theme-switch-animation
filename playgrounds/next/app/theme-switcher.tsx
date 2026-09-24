@@ -34,7 +34,7 @@ const ANIMATION_TYPES: Array<{
   { type: ThemeAnimationType.QR_GRID, label: 'QR_GRID', hint: '方块格子 · 方块逐格生长，direction 控方位', initialDirection: ThemeAnimationDirection.LTR },
   { type: ThemeAnimationType.RIPPLE, label: 'RIPPLE', hint: '水滴涟漪 · 环带前缘向外推，waveWidth 控波长', initialWaveWidth: 18 },
   { type: ThemeAnimationType.CLOCK_SWEEP, label: 'CLOCK_SWEEP', hint: '时钟扇形 · 自 12 点顺时针扫开' },
-  { type: ThemeAnimationType.FAN, label: 'FAN', hint: '扇叶旋开 · bladeCount 控扇叶数', initialBladeCount: 8 },
+  { type: ThemeAnimationType.FAN, label: 'FAN', hint: '扇叶旋开 · bladeCount 控扇叶数，reverse 改为合拢', initialBladeCount: 8, initialReverse: false },
   { type: ThemeAnimationType.CURTAIN, label: 'CURTAIN', hint: '双开门 · 中线向两侧推开' },
 ]
 
