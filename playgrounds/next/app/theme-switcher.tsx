@@ -33,6 +33,7 @@ const ANIMATION_TYPES: Array<{
   { type: ThemeAnimationType.RIPPLE, label: 'RIPPLE', hint: '水滴涟漪 · 环带前缘向外推，waveWidth 控波长', initialWaveWidth: 18 },
   { type: ThemeAnimationType.CLOCK_SWEEP, label: 'CLOCK_SWEEP', hint: '时钟扇形 · 自 12 点顺时针扫开' },
   { type: ThemeAnimationType.FAN, label: 'FAN', hint: '扇叶旋开 · bladeCount 控扇叶数', initialBladeCount: 8 },
+  { type: ThemeAnimationType.CURTAIN, label: 'CURTAIN', hint: '双开门 · 中线向两侧推开' },
 ]
 
 /** duration / easing 全局预设：选中后所有按钮的下一次切换立即生效 */
@@ -230,10 +231,11 @@ export function ThemeSwitcher() {
         <b>{mounted ? (isDark ? 'dark' : 'light') : '…'}</b>）
       </p>
       <p>
-        15 个按钮各自是独立的受控 <code>useThemeAnimation</code> 实例：库不写 localStorage、不改 class，
+        16 个按钮各自是独立的受控 <code>useThemeAnimation</code> 实例：库不写 localStorage、不改 class，
         在转场回调内调用 <code>setTheme</code> 并等待 next-themes 写入 class 后截图（300ms 未同步则自动直切）。
-        中心扩散与角度扫开类动画（含 RIPPLE / CLOCK_SWEEP / FAN）的起收点是按钮中心，可验证点击位置跟随；BLINDS / SCAN / QR_GRID
-        卡片下方各有独立的 direction 选择，RIPPLE 另有 waveWidth 档位、FAN 另有 bladeCount 档位，都只影响本卡片。
+        中心扩散与角度扫开类动画（含 RIPPLE / CLOCK_SWEEP / FAN）的起收点是按钮中心，可验证点击位置跟随；BLINDS / SCAN /
+        QR_GRID / CURTAIN 不读触发元素几何。前一组卡片下方各有独立的 direction 选择，RIPPLE 另有 waveWidth 档位、FAN
+        另有 bladeCount 档位，都只影响本卡片。
       </p>
       <div className="presets" role="group" aria-label="duration 预设">
         <span>duration</span>
