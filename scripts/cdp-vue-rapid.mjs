@@ -6,7 +6,7 @@
  *
  * 前置：`playgrounds/vue` 下 `pnpm build` 后 `npx vite preview --port 5224`；
  * 无头 Chromium 以 `--remote-debugging-port=19222` 启动。或运行 `pnpm test:acceptance`。
- * 按钮数量从 DOM 读取（Phase 6 起为 13 种动画类型矩阵，新增类型无需改本脚本）。
+ * 按钮数量从 DOM 读取（Phase 6 起为动画类型全矩阵，新增类型无需改本脚本）。
  */
 import { CDP_PORT, connectPage, sleep } from './cdp-lib.mjs'
 

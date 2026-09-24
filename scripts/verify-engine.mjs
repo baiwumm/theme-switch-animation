@@ -18,7 +18,7 @@
  *        解析成具体长度），否则对明暗边界做最小二乘圆拟合；半径必须单调收缩；
  *      支持 getAnimations 捕获伪元素动画的引擎走"暂停 + 按毫秒 seek"的确定性取样，
  *      否则退化为实时抓帧（duration 拉长到 2000ms 以获得足够帧数）；
- *   3. 全部 13 种动画类型（light→dark）：起点/中点/终点三帧亮度呈 亮→中→暗，start↔mid 像素差异 >2%；
+ *   3. 全部动画类型（数量取自库的 ThemeAnimationType，light→dark）：起点/中点/终点三帧亮度呈 亮→中→暗，start↔mid 像素差异 >2%；
  *   4. finished 结算 ok；全程无 console.error / pageerror。
  *
  * 运行：node scripts/verify-engine.mjs [--engine=webkit|firefox|chromium] [--channel=chrome|msedge]
@@ -231,8 +231,8 @@ try {
   if (revertOutcome !== 'ok') failures.push(`收起方向 outcome=${revertOutcome}`)
   if (lumOk && !failures.length) console.log('=> @property 注册半径在该引擎的 VT 伪元素上逐帧插值，蒙版随之推进 ✓')
 
-  // ---------- 3. 13 种动画类型 ----------
-  console.log(`\n=== 13 种动画类型逐一验证（light→dark，${REPORT.mode} 模式） ===`)
+  // ---------- 3. 全部动画类型（数量随库的 ThemeAnimationType 自动变化） ----------
+  console.log(`\n=== ${TYPE_ENTRIES.length} 种动画类型逐一验证（light→dark，${REPORT.mode} 模式） ===`)
   for (const [key, value] of TYPE_ENTRIES) {
     await page.evaluate(`window.__lab.reset('light')`)
     await sleep(120)
@@ -288,7 +288,7 @@ try {
     for (const f of failures) console.error(`  - ${f}`)
     process.exitCode = 1
   } else {
-    console.log(`13 种类型全部推进并结算 ok，报错 0 条 —— [${LABEL}] 全部通过 ✓`)
+    console.log(`${TYPE_ENTRIES.length} 种类型全部推进并结算 ok，报错 0 条 —— [${LABEL}] 全部通过 ✓`)
   }
 } catch (e) {
   console.error(`FAILED [${LABEL}]:`, e?.message ?? e)

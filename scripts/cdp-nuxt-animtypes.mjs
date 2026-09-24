@@ -1,6 +1,6 @@
 /**
- * Nuxt playground 动画类型独立性检查（Phase 4 真机反馈回归，Phase 6 扩到全部 13 种）：
- * 13 个按钮各自声明不同动画类型（data-animation-type），逐个点击后注入的 @keyframes 名
+ * Nuxt playground 动画类型独立性检查（Phase 4 真机反馈回归，Phase 6 起覆盖当时全部类型；
+ * 每个按钮各自声明不同动画类型（data-animation-type），逐个点击后注入的 @keyframes 名
  * 必须与按钮类型匹配——防止"所有按钮都播同一个动画"（共享单实例的缺陷）。
  * 按钮清单从 DOM 读取（data-animation-type），新增动画类型时无需改本脚本。
  * 前置：playgrounds/nuxt `nuxt build` + `node .output/server/index.mjs`（3000）；无头 Chromium 19222。
