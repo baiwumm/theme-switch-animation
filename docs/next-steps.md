@@ -437,6 +437,35 @@ iPhone 与 Mac 同一局域网访问 `http://<mac-ip>:5224/`（或直接把 `pla
 
 ---
 
+## 9. 新增 CURTAIN 双开门 + README 计数方式改革（2026-09-23 记录）
+
+`docs/animation-roadmap.md` 的 P0-1 落地，节奏同前两批（先 core + 画廊拿结论 → 验证通过 → 补门面）。
+
+### 本轮判断
+
+- **候选池开始兑现，排序判据有效**：roadmap 把 CURTAIN 排 P0-1 的理由是"最不可能失败，先用它把节奏跑顺"。结果它落进现成的 px 族分发器，`orchestrate.ts` 与 `styles.ts` **零改动**，只加了守卫里一个 `||`、分发里一个 `if`——比文档里预估的还便宜。
+- **README 不再写死类型数量（需求方批准）**：特性清单与 options 表改成"分族 + 指向下方类型表"，首段枚举加"等"字。动机是三轮下来"每加一个类型要改五处数字"的固定成本。文档站 hero 仍保留数字（那是门面卖点），所以 hero 一改门面截图照旧要重出。
+- **一处重复只登记不动**：`masks.ts` 的私有函数 `qrCenterGradient(90, f)` 返回的渐变串与 `getCurtainRevealSpec` 逐字符相同。合并要重命名私有函数，属本轮范围外，已写进 §10 修订记录第 5 条等排期。
+
+### 实测结果
+
+| 探针（headless Chrome 冻结进度截图） | 结果 |
+| --- | --- |
+| 中缝有没有可见接缝 | **无**。r=640 时实心段精确落在 320→960，带内均匀无暗线 |
+| 两侧对称 / 末帧覆盖 | 两条 24px 软边等宽对称；末帧整平面实心 |
+| 起始帧 | 中缝透出一道约 ±24px 的光——判为幕布观感的加分项，不是缺陷 |
+| 根 test / lint / tsc / build | 246 例通过（新增 10）/ 0 / 0 / 产物含 CURTAIN |
+
+### 待办
+
+- [x] core 实现 + 10 例单测 + 画廊第 16 张卡
+- [x] README 类型表与家族枚举 / 需求文档 v1.9 / 文档站文案 / 四个 playground / changeset / 门面截图
+- [ ] **分数缩放 dpr 一档仍未验**：125% / 150% 下中缝与软边会不会出现 1px 级亮暗线——这是 roadmap P0-1 唯一遗留的待验点
+- [ ] 下一批按 roadmap 顺序是 **P0-2 `SPIRAL`**（conic ∩ radial 求交）；开工前要先验"两个 `@property` 在同一 keyframes 里是否都逐帧插值"——单个已实测成立，两个未验
+- [ ] 待排期的小重构：`qrCenterGradient` 与 `getCurtainRevealSpec` 合并成一个中性命名的对称渐变构造器
+
+---
+
 **长期遗留（不属本轮）**：Playwright e2e 矩阵（需求 §9-8 只跑 Chromium + WebKit）至今未正式建立，
 引擎覆盖靠 `scripts/verify-engine.mjs` 手动跑，Playwright 仍是 `%TEMP%/pw-webkit` 的临时安装。
 ~~`apps/docs` 的 Biome 自始跑不通~~——2026-09-22 已修（`biome.json` 的 `vcs.root` 指向仓库根复用根
