@@ -433,7 +433,7 @@ iPhone 与 Mac 同一局域网访问 `http://<mac-ip>:5224/`（或直接把 `pla
 - [x] README / 需求文档 v1.8 / 文档站 hero·features·SEO / 四个 playground / changeset / 门面截图
 - [ ] 真机视觉验收：`CLOCK_SWEEP` 的 12° 前缘软尾在 750ms 下看不看得见、`FAN` 三档扇叶末帧是否无缝
 - [ ] Safari / Firefox 真机确认 `conic-gradient` + `@property <angle>`：版本面理论上与 `<length>` 一致（Safari 16.4+ / Firefox 128+），但 conic 这层没在真机跑过，不支持时退化为直切、状态仍正确
-- [x] ~~旋转方向（顺 / 逆）按三个方案留着，需要时再开~~ —— **作废（2026-09-24）**：动画类型扩展已冻结在 16 种，这条不再排期。真要重开先看 `docs/animation-roadmap.md` §1 的四条约束。
+- [x] ~~旋转方向（顺 / 逆）按三个方案留着，需要时再开~~ —— **由 `reverse` 选项吸收（2026-09-24）**：`CLOCK_SWEEP` 的 `reverse: true` 在数学上就是逆时针扫开（补集扇形 `[θ,360]` 的边界随 θ 从 360→0 逆时针回退），所以不再单开顺/逆参数。设计见 `docs/reverse-option-design.md` §3 末与 §4。
 
 ---
 
@@ -461,7 +461,8 @@ iPhone 与 Mac 同一局域网访问 `http://<mac-ip>:5224/`（或直接把 `pla
 - [x] core 实现 + 10 例单测 + 画廊第 16 张卡
 - [x] README 类型表与家族枚举 / 需求文档 v1.9 / 文档站文案 / 四个 playground / changeset / 门面截图
 - [ ] **分数缩放 dpr 一档仍未验**：125% / 150% 下中缝与软边会不会出现 1px 级亮暗线——这是 roadmap P0-1 唯一遗留的待验点
-- [x] ~~下一批按 roadmap 顺序是 P0-2 `SPIRAL`~~ —— **动画类型扩展到此冻结（2026-09-24 需求方决定）**。`SPIRAL` / `SEEDS` / `COMB` 三个都实现过又整体撤回，候选池剩下的 P2-1 通用 `revert` 与 P2-2 `LOGO_MASK` 都不做。停在 16 种，后续若要再加先看 `docs/animation-roadmap.md` 的 §1 四条约束（第 4 条是这三轮换来的判据）
+- [x] ~~下一批按 roadmap 顺序是 P0-2 `SPIRAL`~~ —— **动画类型扩展到此冻结（2026-09-24 需求方决定）**。`SPIRAL` / `SEEDS` / `COMB` 三个都实现过又整体撤回，不再加新类型，停在 16 种；候选池剩下的 P2-2 `LOGO_MASK` 也不做。后续判据见 `docs/animation-roadmap.md` §1 四条约束（第 4 条是这三轮换来的）。
+- [ ] **`reverse` 选项已批准，排在 0.3.0 发包之后做**（作为 0.4.0）：三态 `boolean | 'auto'`、12 个类型开放、`BLINDS`/`SCAN`/`QR_GRID` 不开、`CIRCLE_REVERT` 先 deprecated 再删。设计定稿在 `docs/reverse-option-design.md`，含分期 PR1–PR4 与验收计划。**0.3.0 未发之前不动这块代码**——当前工作区是排查干净的待发包状态。
 - [ ] 待排期的小重构：`qrCenterGradient` 与 `getCurtainRevealSpec` 合并成一个中性命名的对称渐变构造器
 
 ---
