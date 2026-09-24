@@ -129,12 +129,14 @@ const ANIMATION_TYPES: Array<{
   initialWaveWidth?: number
   /** 仅 FAN：卡片内渲染扇叶数选择器（初始扇叶数） */
   initialBladeCount?: number
+  /** 仅 CIRCLE（reverse 已接通的类型）：卡片内渲染反向三档选择器（初始值） */
+  initialReverse?: boolean | 'auto'
   Icon: (props: SVGProps<SVGSVGElement>) => JSX.Element
   /** 渐变图标砖：亮 / 暗两套底色 + 图标色（写全类名，避免动态拼接被 Tailwind 摇掉） */
   tile: string
 }> = [
-  { type: ThemeAnimationType.CIRCLE, label: 'CIRCLE', hint: '圆形扩散 · 圆心 = 点击位置', Icon: IcoCircle, tile: 'from-rose-100 to-rose-200 text-rose-600 dark:from-rose-500/15 dark:to-rose-500/5 dark:text-rose-400' },
-  { type: ThemeAnimationType.CIRCLE_REVERT, label: 'CIRCLE_REVERT', hint: '切暗扩散、切亮收起', Icon: IcoRevert, tile: 'from-orange-100 to-orange-200 text-orange-600 dark:from-orange-500/15 dark:to-orange-500/5 dark:text-orange-400' },
+  { type: ThemeAnimationType.CIRCLE, label: 'CIRCLE', hint: '圆形扩散 · 圆心 = 点击位置', initialReverse: false, Icon: IcoCircle, tile: 'from-rose-100 to-rose-200 text-rose-600 dark:from-rose-500/15 dark:to-rose-500/5 dark:text-rose-400' },
+  { type: ThemeAnimationType.CIRCLE_REVERT, label: 'CIRCLE_REVERT', hint: '已废弃 · 等价于 CIRCLE + reverse:auto', Icon: IcoRevert, tile: 'from-orange-100 to-orange-200 text-orange-600 dark:from-orange-500/15 dark:to-orange-500/5 dark:text-orange-400' },
   { type: ThemeAnimationType.CIRCLE_BLUR, label: 'CIRCLE_BLUR', hint: '圆形模糊扩散', Icon: IcoBlur, tile: 'from-amber-100 to-amber-200 text-amber-600 dark:from-amber-500/15 dark:to-amber-500/5 dark:text-amber-400' },
   { type: ThemeAnimationType.SQUARE, label: 'SQUARE', hint: '正方形扩散', Icon: IcoShape('5,5 19,5 19,19 5,19'), tile: 'from-emerald-100 to-emerald-200 text-emerald-600 dark:from-emerald-500/15 dark:to-emerald-500/5 dark:text-emerald-400' },
   { type: ThemeAnimationType.DIAMOND, label: 'DIAMOND', hint: '菱形扩散', Icon: IcoShape('12,3.5 20.5,12 12,20.5 3.5,12'), tile: 'from-teal-100 to-teal-200 text-teal-600 dark:from-teal-500/15 dark:to-teal-500/5 dark:text-teal-400' },
@@ -170,6 +172,16 @@ const DIRECTION_OPTIONS: ReadonlyArray<{ value: ThemeAnimationDirection; label: 
   { value: ThemeAnimationDirection.BTT, label: 'BTT' },
 ]
 
+/**
+ * reverse 三档：仅 CIRCLE 卡片展示。与 Direction 正交——Direction 定推进轴，
+ * Reverse 定从内还是从外揭开；`auto` 是"切暗正向、切亮收起"，即旧 CIRCLE_REVERT 的行为。
+ */
+const REVERSE_OPTIONS: ReadonlyArray<{ value: boolean | 'auto'; label: string }> = [
+  { value: false, label: 'off' },
+  { value: true, label: 'on' },
+  { value: 'auto', label: 'auto' },
+]
+
 /** 叶宽档位（px，合法区间 [16, 200]）：仅 BLINDS 卡片展示，同样卡片级独立 */
 const SLAT_OPTIONS: ReadonlyArray<{ value: number; label: string }> = [
   { value: 32, label: '32px' },
@@ -199,6 +211,7 @@ function GalleryCard({
   initialSlatWidth,
   initialWaveWidth,
   initialBladeCount,
+  initialReverse,
   Icon,
   tile,
   duration,
@@ -212,6 +225,7 @@ function GalleryCard({
   initialSlatWidth?: number
   initialWaveWidth?: number
   initialBladeCount?: number
+  initialReverse?: boolean | 'auto'
   Icon: (props: SVGProps<SVGSVGElement>) => JSX.Element
   tile: string
   duration: number
@@ -224,6 +238,7 @@ function GalleryCard({
   const [slatWidth, setSlatWidth] = useState(initialSlatWidth ?? 72)
   const [waveWidth, setWaveWidth] = useState(initialWaveWidth ?? 18)
   const [bladeCount, setBladeCount] = useState(initialBladeCount ?? 8)
+  const [reverse, setReverse] = useState<boolean | 'auto'>(initialReverse ?? false)
   const { resolvedTheme, setTheme } = useTheme()
   const { ref, toggleTheme, isDark } = useThemeAnimation<HTMLButtonElement>({
     animationType,
@@ -231,6 +246,7 @@ function GalleryCard({
     slatWidth,
     waveWidth,
     bladeCount,
+    reverse,
     duration,
     easing,
     isDark: resolvedTheme === 'dark',
@@ -359,6 +375,27 @@ function GalleryCard({
             </div>
           </div>
         )}
+        {initialReverse !== undefined && (
+          <div className="flex items-center justify-between gap-2">
+            <span className="text-muted-foreground">Reverse</span>
+            <div className="flex gap-1">
+              {REVERSE_OPTIONS.map((r) => (
+                <button
+                  key={String(r.value)}
+                  type="button"
+                  onClick={() => setReverse(r.value)}
+                  className={`rounded-md px-1.5 py-0.5 font-mono text-[10px] transition-colors ${
+                    reverse === r.value
+                      ? 'bg-primary font-semibold text-primary-foreground'
+                      : 'border border-border bg-card text-muted-foreground hover:text-foreground'
+                  }`}
+                >
+                  {r.label}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
     </motion.div>
   )
@@ -428,6 +465,7 @@ export function GallerySection() {
               initialSlatWidth={t.initialSlatWidth}
               initialWaveWidth={t.initialWaveWidth}
               initialBladeCount={t.initialBladeCount}
+              initialReverse={t.initialReverse}
               Icon={t.Icon}
               tile={t.tile}
               duration={duration}
