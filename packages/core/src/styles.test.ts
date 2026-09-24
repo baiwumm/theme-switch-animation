@@ -4,7 +4,6 @@ import { afterEach, describe, expect, it } from 'vitest'
 import {
   getBlurCircleMaskGeometry,
   getCircleMaskGeometry,
-  getCircleRevertMaskGeometry,
   getBlindsRevealSpec,
   getMaskGeometry,
   getQrGridMaskSpec,
@@ -27,7 +26,6 @@ import { REVEAL_VAR, THEME_ANIMATION_STYLE_ID, ThemeAnimationDirection, ThemeAni
 const viewport = { width: 800, height: 600 }
 const center = { x: 400, y: 300 }
 const circle = getCircleMaskGeometry(center, viewport)
-const revertGeometry = getCircleRevertMaskGeometry(center, viewport)
 
 /** 提取某个选择器块的正文（用于断言声明存在与顺序）；跳过作为分组选择器一部分（前面带逗号）的出现位置 */
 function blockOf(css: string, selector: string): string {
@@ -119,67 +117,17 @@ describe('buildAnimationCSS（CSS 变量化）', () => {
         duration: 400,
         easing: 'ease',
       })
-      // CIRCLE_REVERT 两个方向的 keyframes 名都是主名；其余类型唯一 keyframes 同名
+      // 每种类型只有一条 keyframes，名字即主名；其余类型唯一 keyframes 同名
       expect(out).toContain(`@keyframes theme-switch-${type} {`)
     }
   })
 })
 
-describe('buildAnimationCSS（CIRCLE_REVERT：方向感知）', () => {
-  it('collapse（切回亮色）：蒙版挂旧截图层并置顶，从全覆盖收缩到触发点', () => {
+describe('buildAnimationCSS（CIRCLE + reverse：新层反向蒙版「洞」）', () => {
+  it('传 holeGeometry 时收起走"新层反向蒙版 + 静止蒙版盒子"（§附录六）', () => {
     const css = buildAnimationCSS({
-      animationType: ThemeAnimationType.CIRCLE_REVERT,
-      geometry: revertGeometry,
-      revertDirection: 'collapse',
-      duration: 400,
-      easing: 'ease',
-    })
-    const block = blockOf(css, '::view-transition-old(root)')
-    expect(block).toContain(`mask-image: ${revertGeometry.maskImage};`)
-    expect(block).toContain('z-index: 1;')
-    expect(block).toContain('will-change: mask-size, mask-position;')
-    expect(block.match(/animation: theme-switch-circle-revert /g)).toHaveLength(2)
-    // 新层只出现在重置规则里（旧层收缩时四周露出的是新截图层）
-    expect(css.match(/::view-transition-new\(root\)\s*\{/g) ?? []).toHaveLength(1)
-    const keyframes = css.match(/@keyframes theme-switch-circle-revert \{([\s\S]*?)\n\}/)
-    expect(keyframes![1]).toContain(`mask-size: ${revertGeometry.startSize};`)
-    expect(keyframes![1]).toContain('mask-size: 0px 0px;')
-    expect(keyframes![1]).toContain(`mask-position: ${revertGeometry.endPosition};`)
-  })
-
-  it('expand（切到暗色）：蒙版挂新截图层扩散，旧层完整垫底、不置顶', () => {
-    const css = buildAnimationCSS({
-      animationType: ThemeAnimationType.CIRCLE_REVERT,
-      geometry: circle,
-      revertDirection: 'expand',
-      duration: 400,
-      easing: 'ease',
-    })
-    const block = blockOf(css, '::view-transition-new(root)')
-    expect(block).toContain(`mask-image: ${circle.maskImage};`)
-    expect(block).not.toContain('z-index')
-    // 旧层只以分组选择器形式出现在重置规则，没有独立规则
-    expect(css.match(/::view-transition-old\(root\),/g) ?? []).toHaveLength(1)
-    expect(css.match(/::view-transition-old\(root\)\s*\{/g) ?? []).toHaveLength(0)
-    expect(css.match(/::view-transition-new\(root\)\s*\{/g) ?? []).toHaveLength(2)
-  })
-
-  it('缺省方向按 collapse 处理（向后兼容）', () => {
-    const css = buildAnimationCSS({
-      animationType: ThemeAnimationType.CIRCLE_REVERT,
-      geometry: revertGeometry,
-      duration: 400,
-      easing: 'ease',
-    })
-    expect(blockOf(css, '::view-transition-old(root)')).toContain('z-index: 1;')
-  })
-
-  it('传 holeGeometry 时收起改走"新层反向蒙版 + 静止蒙版盒子"（§附录六）', () => {
-    const css = buildAnimationCSS({
-      animationType: ThemeAnimationType.CIRCLE_REVERT,
-      geometry: revertGeometry,
+      animationType: ThemeAnimationType.CIRCLE,
       holeGeometry: { cx: 120, cy: 60, startRadius: 1602.5 },
-      revertDirection: 'collapse',
       duration: 400,
       easing: 'linear',
     })
@@ -198,7 +146,7 @@ describe('buildAnimationCSS（CIRCLE_REVERT：方向感知）', () => {
     // 旧层只出现在重置规则里（不再被蒙版）
     expect(css.match(/::view-transition-old\(root\)\s*\{/g) ?? []).toHaveLength(0)
     // 缓存兜底与变量两条动画声明仍在
-    expect(block.match(/animation: theme-switch-circle-revert /g)).toHaveLength(2)
+    expect(block.match(/animation: theme-switch-circle /g)).toHaveLength(2)
   })
 })
 

@@ -3,16 +3,8 @@
  * Nuxt 自动导入扫描的是命名导出，`const` 对象对打包和 `isolatedModules` 更稳。
  */
 export const ThemeAnimationType = {
-  /** 以触发元素为中心的圆形扩散 */
+  /** 以触发元素为中心的圆形扩散；`reverse` 可改为从四周向内收拢（旧 CIRCLE_REVERT 的替代） */
   CIRCLE: 'circle',
-  /**
-   * 圆形收起：旧主题以圆形收缩进触发点，新主题从四周显现（动画作用于旧截图层）。
-   *
-   * @deprecated 改用 `animationType: CIRCLE` + `reverse: 'auto'`。二者产出的蒙版与关键帧
-   * 完全相同，只差 keyframes 名（它按类型生成：`theme-switch-circle` vs `theme-switch-circle-revert`），
-   * 单测归一化名字后锁这条等价性。本类型仍可用，但会在开发环境警告一次，计划在 0.5.0 移除。
-   */
-  CIRCLE_REVERT: 'circle-revert',
   /** 圆形模糊扩散：边缘高斯模糊的圆形蒙版（只挂新截图层，旧层完整垫底） */
   CIRCLE_BLUR: 'circle-blur',
   /** 正方形，从触发点扩散 */

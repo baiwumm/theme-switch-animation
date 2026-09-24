@@ -13,7 +13,7 @@ import {
 } from './masks'
 import type { RectProvider, Size } from './masks'
 import { buildAnimationCSS, injectAnimationStyle, removeAnimationStyle } from './styles'
-import { ThemeAnimationType, isDevEnvironment, resolveAnimationOptions } from './types'
+import { ThemeAnimationType, resolveAnimationOptions } from './types'
 import type { ThemeAnimationOptions } from './types'
 import { hasThemeClass } from './uncontrolled'
 
@@ -54,7 +54,7 @@ export interface RunThemeTransitionParams {
    */
   doc?: Document | null
   /**
-   * 本次切换的目标暗色状态（CIRCLE_REVERT 方向感知用）。缺省按非受控契约推导：
+   * 本次切换的目标暗色状态（`reverse: 'auto'` 判定方向用）。缺省按非受控契约推导：
    * 转场前 `<html>` 的类名即当前主题，toggle 后必为取反。
    * 受控模式下外部系统可能写 `data-theme` 而非 class，或状态与 class 短暂不同步，
    * 调用方已知 `next = !isDark`，应显式传入而不是让 core 从 class 反推。
@@ -144,22 +144,6 @@ function isSkippedTransitionError(error: unknown): boolean {
 }
 
 /**
- * `CIRCLE_REVERT` 的废弃提示：每次转场都会走到这里，但只提示一次——
- * 它是用户主动选择的类型而非误配，逐次刷日志会把控制台淹掉。
- * 只在开发环境输出，生产构建静默。
- */
-let deprecatedRevertWarned = false
-function warnDeprecatedRevert(): void {
-  if (deprecatedRevertWarned || !isDevEnvironment()) return
-  deprecatedRevertWarned = true
-  console.warn(
-    '[theme-switch-animation] `ThemeAnimationType.CIRCLE_REVERT` 已废弃，'
-    + "改用 { animationType: ThemeAnimationType.CIRCLE, reverse: 'auto' }——两者动画效果相同，"
-    + '只差 keyframes 名。计划在 0.5.0 移除。',
-  )
-}
-
-/**
  * 编排一次主题切换：
  * - 可以动画：注入样式 → `startViewTransition(wrapped)` → 结束后清理样式；
  * - 需要降级：直接调用 `domUpdate`，状态照常更新，只是没有动画。
@@ -178,32 +162,26 @@ export function runThemeTransition(params: RunThemeTransitionParams): RunThemeTr
 
   const viewport = getViewportSize(doc)
   const center = getTriggerCenter(trigger, viewport)
-  // 方向感知（CIRCLE_REVERT §7）：nextIsDark 显式传入（受控模式调用方已知 next = !isDark）；
-  // 缺省按非受控契约推导——转场前 <html> 的类名即当前（旧）主题，toggle 后必为取反——
-  // 切到暗色 = 暗色圆扩散（新截图层），切回亮色 = 暗色圆收起（旧截图层）。
+  // `reverse: 'auto'` 需要知道本次是不是切回亮色：nextIsDark 显式传入（受控模式调用方
+  // 已知 next = !isDark）；缺省按非受控契约推导——转场前 <html> 的类名即当前（旧）主题，
+  // toggle 后必为取反。
   const toDark = nextIsDark ?? !hasThemeClass(doc, resolved.darkClassName)
-  const isRevert = resolved.animationType === ThemeAnimationType.CIRCLE_REVERT
-  if (isRevert) warnDeprecatedRevert()
-  // 本次转场是否走反向形态。两条来源：
-  // - CIRCLE_REVERT（已废弃）：跟随切换方向，切亮才反向——行为与 0.3.0 逐字节一致；
-  // - reverse 选项：`true` 恒反向，`'auto'` 切亮反向（即上面那条的替代写法）。
-  // 只有已接入的类型才算数：CIRCLE / FAN / RIPPLE / CLOCK_SWEEP。其余传 reverse 静默忽略——
-  // 形状族要走反向只能动 mask-size（附录四/五的抖动病根），CURTAIN 的软边在末帧会
-  // 塌出一条居中半透明带，两者都做不到无副作用，故不接入（见 roadmap §4）。
+  // 本次转场是否走反向形态。只有已接入的类型才算数：CIRCLE / FAN / RIPPLE / CLOCK_SWEEP /
+  // CURTAIN。其余传 reverse 静默忽略——形状族要走反向只能动 mask-size（附录四/五的抖动病根），
+  // 做不到无副作用（见 roadmap §4）。
   const reverseCapable = resolved.animationType === ThemeAnimationType.CIRCLE
     || resolved.animationType === ThemeAnimationType.FAN
     || resolved.animationType === ThemeAnimationType.RIPPLE
     || resolved.animationType === ThemeAnimationType.CLOCK_SWEEP
     || resolved.animationType === ThemeAnimationType.CURTAIN
-  const collapse = isRevert
-    ? !toDark
-    : reverseCapable && (resolved.reverse === true || (resolved.reverse === 'auto' && !toDark))
-  const revertDirection = isRevert ? (toDark ? 'expand' : 'collapse') : undefined
-  // 收起方向：蒙版挂新截图层、掏一个收缩的"洞"（层序与 CIRCLE 一致，不需要给旧层 z-index），
-  // 蒙版盒子静止、只有注册半径在动（详见 §附录六）。仅 CIRCLE 家族用洞式；FAN 的反向是
-  // 由自己的 spec 生成器出串，不经过这里。
-  const circleFamily = isRevert || resolved.animationType === ThemeAnimationType.CIRCLE
-  const holeGeometry = collapse && circleFamily ? getCircleRevertHoleGeometry(center, viewport) : undefined
+  const collapse = reverseCapable
+    && (resolved.reverse === true || (resolved.reverse === 'auto' && !toDark))
+  // CIRCLE 的反向用洞式蒙版：挂新截图层、掏一个从全屏收缩到 0 的洞（层序与 CIRCLE 一致、
+  // 不需要给旧层 z-index），蒙版盒子静止、只有注册半径在动（详见 §附录六）。
+  // 其余四个接入类型由各自的 spec 生成器出反向串，不经过这里。
+  const holeGeometry = collapse && resolved.animationType === ThemeAnimationType.CIRCLE
+    ? getCircleRevertHoleGeometry(center, viewport)
+    : undefined
   // 属性驱动揭开（BLINDS / SCAN / RIPPLE / CLOCK_SWEEP / FAN）：蒙版盒子静止、注册属性在动，
   // 共用同一 CSS 生成器。BLINDS / SCAN 无触发点；RIPPLE 与角度族以触发点为波源 / 轴心。
   const reveal = isRevealAnimationType(resolved.animationType)
@@ -223,7 +201,6 @@ export function runThemeTransition(params: RunThemeTransitionParams): RunThemeTr
     geometry,
     reveal,
     qrGrid,
-    revertDirection,
     holeGeometry,
     duration: resolved.duration,
     easing: resolved.easing,

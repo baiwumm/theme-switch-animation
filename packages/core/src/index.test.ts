@@ -57,7 +57,6 @@ describe('core 公开导出', () => {
         'getBlindsFeatherPx',
         'getCircleMaskGeometry',
         'getCircleRevertHoleGeometry',
-        'getCircleRevertMaskGeometry',
         'getClockSweepRevealSpec',
         'getClockSweepReverseRevealSpec',
         'getCurtainMaskSpec',

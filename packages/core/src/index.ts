@@ -56,7 +56,6 @@ export {
   getCircleMaskGeometry,
   getBlurCircleMaskGeometry,
   getCircleRevertHoleGeometry,
-  getCircleRevertMaskGeometry,
   getClockSweepRevealSpec,
   getClockSweepReverseRevealSpec,
   getCurtainMaskSpec,

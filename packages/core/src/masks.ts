@@ -227,7 +227,8 @@ export function getStarMaskGeometry(center: Point, viewport: Size): MaskGeometry
 }
 
 /**
- * CIRCLE_REVERT 收起方向（切回亮色）的"反向蒙版（洞）"参数：
+ * 圆形收起方向的"反向蒙版（洞）"参数：由 `CIRCLE` + `reverse` 消费
+ * （0.4.0 前的 `CIRCLE_REVERT` 类型已移除，函数名沿用）。
  * 蒙版改挂 `::view-transition-new(root)`（层序回到 UA 默认，不再需要 z-index 置顶旧层），
  * 用"圆内透明、圆外不透明"的洞露出下面的旧主题，视觉上与"旧层圆形蒙版"等价
  * （见 docs/phase-6-report.md 附录六的逐像素等价性实测）。
@@ -247,26 +248,6 @@ export function getCircleRevertHoleGeometry(center: Point, viewport: Size): Circ
     cx: roundTo(center.x, 2),
     cy: roundTo(center.y, 2),
     startRadius: (getMaxRadiusToCorners(center, viewport) * CIRCLE_SIZE_FACTOR) / 2,
-  }
-}
-
-/**
- * CIRCLE_REVERT 收起方向（切回亮色）的几何：暗色圆从全覆盖收缩到触发点 0。
- * 起始尺寸与 CIRCLE 的终尺寸相同（2.1 × maxRadius，保证初始盖住整个视口），
- * 钉扎方向与 CIRCLE 相反：from 全尺寸居中 → to 触发点 0。
- * 扩散方向（切到暗色）直接复用 getCircleMaskGeometry（暗色圆从 0 长出）。
- *
- * 注：V1.6 起收起方向默认走上面的 `getCircleRevertHoleGeometry`（新层反向蒙版）；
- * 此函数保留为公开 API 与降级路径。
- */
-export function getCircleRevertMaskGeometry(center: Point, viewport: Size): MaskGeometry {
-  const side = getMaxRadiusToCorners(center, viewport) * CIRCLE_SIZE_FACTOR
-  return {
-    maskImage: CIRCLE_MASK_IMAGE,
-    startSize: `${px(side)} ${px(side)}`,
-    startPosition: `${px(center.x - side / 2)} ${px(center.y - side / 2)}`,
-    endSize: '0px 0px',
-    endPosition: `${px(center.x)} ${px(center.y)}`,
   }
 }
 
@@ -311,9 +292,9 @@ export function getBlurCircleMaskGeometry(center: Point, viewport: Size, blurAmo
 }
 
 /**
- * 属性驱动揭开（BLINDS / SCAN）：蒙版盒子完全静止（不动画 mask-size / mask-position），
+ * 属性驱动揭开（BLINDS / SCAN / CURTAIN）：蒙版盒子完全静止（不动画 mask-size / mask-position），
  * 只有注册属性 `REVEAL_VAR` 在动——渐变蒙版引用该属性，属性每帧变化时渐变重新解析。
- * 与 CIRCLE_REVERT 收起方向的"洞"（buildHoleAnimationCSS）同一机制，CSS 生成见 styles.ts。
+ * 与 `CIRCLE + reverse` 的"洞"（buildHoleAnimationCSS）同一机制，CSS 生成见 styles.ts。
  * 旧截图层完整垫底、新层挂蒙版。消费 center 的成员是 RIPPLE 与角度族——它们的圆心得
  * 写进渐变串（见 getRippleRevealSpec / getClockSweepRevealSpec）；BLINDS / SCAN / CURTAIN
  * 无触发点、不消费 center。
@@ -564,7 +545,7 @@ export function isQrGridAnimationType(type: ThemeAnimationType): boolean {
  * 而是主波峰 + 若干圈衰减余波的环带。与 BLINDS / SCAN 同属属性驱动揭开（蒙版盒子静止、
  * 只有 `REVEAL_VAR` 在动，CSS 复用 buildRevealAnimationCSS），差别有两处：
  *
- * 1. 渐变是 radial 且需要触发点——圆心写进 mask-image 串本身（同 CIRCLE_REVERT 的洞式），
+ * 1. 渐变是 radial 且需要触发点——圆心写进 mask-image 串本身（同 `CIRCLE + reverse` 的洞式），
  *    所以它消费 center，而 BLINDS / SCAN 不消费；
  * 2. 波峰用部分 alpha（而非 >1）：蒙版 alpha 就是新截图层的不透明度，半幅环带叠在完整
  *    垫底的旧层上，观感是透亮的水线；波谷用 transparent 露出旧主题，形成明暗相间的环。
@@ -817,8 +798,7 @@ export function isBlurAnimationType(type: ThemeAnimationType): boolean {
 
 /**
  * 按动画类型分发；未知类型按 CIRCLE 处理。blurAmount 仅被 CIRCLE_BLUR 消费。
- * CIRCLE_REVERT 的收起方向由 orchestrate 直接取 getCircleRevertMaskGeometry；
- * 扩散方向与本分发一致（暗色圆从触发点长出 = CIRCLE 几何），故回落 CIRCLE。
+ * `CIRCLE + reverse` 不走这里——它用的是洞式几何（getCircleRevertHoleGeometry）。
  */
 export function getMaskGeometry(
   type: ThemeAnimationType,

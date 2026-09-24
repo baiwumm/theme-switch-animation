@@ -28,7 +28,6 @@ import {
   getBlindsFeatherPx,
   getBlindsRevealSpec,
   getCircleMaskGeometry,
-  getCircleRevertMaskGeometry,
   getClockSweepRevealSpec,
   getClockSweepReverseRevealSpec,
   getCurtainMaskSpec,
@@ -248,22 +247,6 @@ describe('中心扩散形状几何（SQUARE / RECTANGLE / DIAMOND / HEXAGON / TR
   })
 })
 
-describe('getCircleRevertMaskGeometry（REVERT 收起方向：全尺寸收缩到触发点）', () => {
-  it('起始尺寸与 CIRCLE 终尺寸相同（2.1 × maxRadius），保证初始盖住视口', () => {
-    const revert = getCircleRevertMaskGeometry({ x: 400, y: 300 }, viewport)
-    const circle = getCircleMaskGeometry({ x: 400, y: 300 }, viewport)
-    expect(revert.startSize).toBe(circle.endSize)
-    expect(revert.startPosition).toBe(circle.endPosition)
-  })
-
-  it('收缩终点：尺寸 0、位置钉在触发点，蒙版为同一张圆形 SVG', () => {
-    const revert = getCircleRevertMaskGeometry({ x: 400, y: 300 }, viewport)
-    expect(revert.endSize).toBe('0px 0px')
-    expect(revert.endPosition).toBe('400px 300px')
-    expect(revert.maskImage).toBe(CIRCLE_MASK_IMAGE)
-  })
-})
-
 describe('getBlurCircleMaskImage / getBlurCircleMaskGeometry（CIRCLE_BLUR）', () => {
   it('模糊烘焙进 SVG：feGaussianBlur stdDeviation = blurAmount × 1.2，data-URI 完整编码', () => {
     expect(BLUR_MASK_DEVIATION_FACTOR).toBe(1.2)
@@ -406,7 +389,7 @@ describe('属性驱动揭开（BLINDS / SCAN）', () => {
     expect(spec.maskImage).toContain('linear-gradient(180deg')
   })
 
-  it('分发与守卫：仅 BLINDS / SCAN 命中 reveal，其余类型不命中', () => {
+  it('分发与守卫：BLINDS / SCAN 命中 reveal，圆 / 形状 / 格子类型不命中', () => {
     for (const type of [ThemeAnimationType.BLINDS, ThemeAnimationType.SCAN]) {
       expect(isRevealAnimationType(type)).toBe(true)
     }
@@ -414,7 +397,7 @@ describe('属性驱动揭开（BLINDS / SCAN）', () => {
       ThemeAnimationType.CIRCLE,
       ThemeAnimationType.SQUARE,
       ThemeAnimationType.STAR,
-      ThemeAnimationType.CIRCLE_REVERT,
+      ThemeAnimationType.QR_GRID,
     ] as const) {
       expect(isRevealAnimationType(type)).toBe(false)
     }

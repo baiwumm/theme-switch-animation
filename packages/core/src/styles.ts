@@ -1,5 +1,6 @@
 import type { CircleHoleGeometry, MaskGeometry, QrGridMaskSpec, RevealMaskSpec } from './masks'
-import { REVEAL_VAR, THEME_ANIMATION_DEFAULTS, THEME_ANIMATION_STYLE_ID, ThemeAnimationType } from './types'
+import { REVEAL_VAR, THEME_ANIMATION_DEFAULTS, THEME_ANIMATION_STYLE_ID } from './types'
+import type { ThemeAnimationType } from './types'
 
 /** 时长变量名；用户 duration 写进 `:root`，动画声明只引用变量 */
 export const DURATION_VAR = '--theme-switch-duration'
@@ -25,15 +26,13 @@ export interface BuildAnimationCSSParams {
   duration: number
   /** 任意合法 CSS timing-function */
   easing: string
-  /** 仅 CIRCLE_REVERT 使用：collapse = 切回亮色，暗色圆收起（挂旧截图层并置顶）；expand = 切到暗色，暗色圆扩散（挂新截图层）。缺省按 collapse */
-  revertDirection?: 'collapse' | 'expand'
   /**
-   * CIRCLE_REVERT 收起方向改用"新层反向蒙版（洞）"时传入；给了它就忽略 geometry，
+   * `CIRCLE` + `reverse` 用的"新层反向蒙版（洞）"；给了它就忽略 geometry，
    * 生成静止蒙版盒子 + 动画半径的 CSS（见 §附录六）。
    */
   holeGeometry?: CircleHoleGeometry
   /**
-   * 属性驱动揭开（BLINDS / SCAN）的蒙版规格；给了它就忽略 geometry，
+   * 属性驱动揭开（BLINDS / SCAN / CURTAIN，以及 RIPPLE 与角度族）的蒙版规格；给了它就忽略 geometry，
    * 生成 `@property` 注册属性 + 静止蒙版盒子 + 引用该属性的渐变（机制同洞式，见 masks.ts）。
    */
   reveal?: RevealMaskSpec
@@ -191,16 +190,14 @@ function buildQrGridAnimationCSS(spec: QrGridMaskSpec, duration: number, easing:
  *    clip-path 与 WAAPI，只能用 mask），触发点与终尺寸是运行时值，需要插进 keyframes；
  * 4. 动画声明写两遍：第一遍硬编码 `ease-in-out` 作为不支持 `var()` 的兜底，
  *    第二遍引用变量，支持 `var()` 的浏览器按后者生效，用户传 `linear()` / `steps()` 直接生效；
- * 5. CIRCLE_REVERT 方向感知（§7）：collapse 挂旧截图层并置顶（z-index: 1，暗色圆收起），
- *    expand 与其余类型一样挂新截图层（暗色圆扩散）；传了 `holeGeometry` 时收起方向走
- *    "新层反向蒙版（洞）+ 静止蒙版盒子"（§附录六），层序与 CIRCLE 一致。
+ * 5. `CIRCLE + reverse` 的收起形态传 `holeGeometry`：走"新层反向蒙版（洞）+ 静止蒙版盒子"
+ *    （§附录六），层序与 CIRCLE 一致；不传时 CIRCLE 与其余 mask-size 驱动类型同一条路径。
  */
 export function buildAnimationCSS({
   animationType,
   geometry,
   duration,
   easing,
-  revertDirection,
   holeGeometry,
   reveal,
   qrGrid,
@@ -211,9 +208,6 @@ export function buildAnimationCSS({
   if (qrGrid) return buildQrGridAnimationCSS(qrGrid, duration, easing, name)
   if (!geometry) throw new TypeError('buildAnimationCSS: mask-size 驱动的类型必须提供 geometry（reveal / holeGeometry 分支除外）')
   const safeDuration = Number.isFinite(duration) && duration >= 0 ? duration : THEME_ANIMATION_DEFAULTS.duration
-  const onOld = animationType === ThemeAnimationType.CIRCLE_REVERT && revertDirection !== 'expand'
-  const selector = onOld ? '::view-transition-old(root)' : '::view-transition-new(root)'
-  const zIndexLine = onOld ? '\n  z-index: 1;' : ''
   return `:root {
   ${DURATION_VAR}: ${safeDuration}ms;
   ${EASING_VAR}: ${easing};
@@ -233,9 +227,9 @@ export function buildAnimationCSS({
     mask-position: ${geometry.endPosition};
   }
 }
-${selector} {
+::view-transition-new(root) {
   mask-image: ${geometry.maskImage};
-  mask-repeat: no-repeat;${zIndexLine}
+  mask-repeat: no-repeat;
   will-change: mask-size, mask-position;
   animation: ${name} var(${DURATION_VAR}, ${THEME_ANIMATION_DEFAULTS.duration}ms) ease-in-out both;
   animation: ${name} var(${DURATION_VAR}, ${THEME_ANIMATION_DEFAULTS.duration}ms) var(${EASING_VAR}, ease-in-out) both;
