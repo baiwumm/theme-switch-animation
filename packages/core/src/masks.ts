@@ -231,7 +231,7 @@ export function getStarMaskGeometry(center: Point, viewport: Size): MaskGeometry
  * （0.4.0 前的 `CIRCLE_REVERT` 类型已移除，函数名沿用）。
  * 蒙版改挂 `::view-transition-new(root)`（层序回到 UA 默认，不再需要 z-index 置顶旧层），
  * 用"圆内透明、圆外不透明"的洞露出下面的旧主题，视觉上与"旧层圆形蒙版"等价
- * （见 docs/phase-6-report.md 附录六的逐像素等价性实测）。
+ * （逐像素等价性实测见 git 历史提交 8eec036 / 72b6f37；原报告文件已随 docs 精简移出工作树）。
  * 洞的圆心恒在触发点，起始半径 = CIRCLE 终尺寸的一半（保证初始整屏都是旧主题）。
  */
 export interface CircleHoleGeometry {

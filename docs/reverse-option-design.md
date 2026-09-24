@@ -142,7 +142,7 @@ deprecated 期至少跨一个 minor，给用户迁移窗口；不要在同一版
   4 个 playground + `gallery.tsx` + `README.md` + `requirements.md` / `next-steps.md` +
   `verify-engine.mjs` / `verify-firefox-video.mjs`。
 - **绝不改写**：`CHANGELOG.md`、`docs/phase-*-report.md`、`docs/release-0.1.0-smoke-report.md`
-  —— 那是历史事实，改它等于伪造发布历史。
+  —— 那是历史事实，改它等于伪造发布历史。（2026-09-24 注：后两类报告已随 docs 精简移出工作树，原文本在 git 历史。）
 - **PR4 落地时补上的两处漏点**：`scripts/jitter-lab/run.mjs` 与 `lab.html`（实验台默认测的就是洞式收起，
   默认值改为 `CIRCLE` + `reverse: true`，两个 verify 脚本显式传 `reverse` 位、不再依赖类型名），
   以及文档站的类型计数（`hero.tsx` / `features.tsx` / `site.ts` / `gallery.tsx` 注释）与

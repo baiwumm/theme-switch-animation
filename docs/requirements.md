@@ -20,13 +20,12 @@
 
 ## 2. 可行性评估（调研结论复述）
 
-- **核心机制**：建立在浏览器 View Transitions API（`document.startViewTransition`）上。切换时向 `<head>` 注入临时 `<style>`，对 `::view-transition-new(root)` 伪元素做 **mask 动画**（keyframes 只改 `mask-size` / `mask-position`），让新主题截图以指定形状揭示。约 95% 代码与框架无关。
-- **框架差异点**（仅两处）：
-  - React：转场回调内需 `flushSync` 强制同步渲染，保证截图前 DOM 已更新。
-  - Vue：`startViewTransition` 回调允许返回 Promise，写 `async () => { ...; await nextTick() }` 即可，浏览器等 DOM 更新完再截图（**需实测验证**，见 §9 验收 1）。
-- **浏览器兼容**：View Transitions 已 Baseline 2025（Chrome/Edge 111+、Safari 18+、Firefox 144+）。不支持或 `prefers-reduced-motion: reduce` 时降级为直接切换，旧浏览器不构成障碍。
-- **Safari 坑**（从参考库源码调研确认）：WebKit 忽略 view-transition 伪元素上的 clip-path 和 WAAPI，**只能用 mask 动画**；缓动用 `linear()` 时需双 `animation:` 声明降级；主题 class 必须在转场回调内同步生效，否则截图捕获到旧主题。
-- **结论**：技术风险低，架构为 1 个框架无关 core + 2 个薄适配层（React / Vue）+ 1 个 Nuxt 模块壳。可行。
+> 技术风险低，结论已随 0.1.0 发布实证。原始逐条调研记录见 git 历史（本文档早期版本），要点存档：
+
+- **核心机制**：View Transitions API（`document.startViewTransition`）+ 对 `::view-transition-new(root)` 做 **mask 动画**，约 95% 代码与框架无关。
+- **框架差异仅两处**：React 转场回调内 `flushSync` 强制同步渲染；Vue 回调写 `async () => { ...; await nextTick() }`。
+- **兼容**：View Transitions 已 Baseline 2025（Chrome/Edge 111+、Safari 18+、Firefox 144+），不支持或 `prefers-reduced-motion: reduce` 时降级直切。
+- **WebKit 硬约束**：忽略转场伪元素上的 clip-path 与 WAAPI，只能用 mask 动画；`linear()` 缓动需双 `animation:` 声明降级；主题 class 必须在转场回调内同步生效，否则截图捕获旧主题。
 
 ## 3. 命名
 
@@ -277,6 +276,8 @@ export type { ThemeAnimationOptions, ... } from '@theme-switch-animation/core'
 - **非受控持久化**：`localStorage` key 为 `'theme-switch-animation'`（v1.2 修订 #1）。
 
 ## 8. 里程碑（v1.1 修订 #4：Phase 2 拆分）
+
+> 2026-09-24 注：Phase 0–6 已全部交付，0.4.0 已发布，本节保留作规划原貌，不再更新。
 
 - **Phase 0**：脚手架——pnpm workspace、tsup、vitest、changesets、CI（lint + typecheck + test + build），theme-switch-animation 包名、exports 与 engines 字段就位。
 - **Phase 1**：core——5 种动画类型、CSS 变量化样式注入、降级逻辑；mask 几何计算（四角距离、终尺寸）单测。
