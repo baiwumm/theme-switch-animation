@@ -474,7 +474,12 @@ iPhone 与 Mac 同一局域网访问 `http://<mac-ip>:5224/`（或直接把 `pla
   - 曾被自己的初判误导一次：先看 seek 汇总"1.25/1.5 各 4 帧候选 vs 1.0 只有 1 帧"就断定分数缩放引入了伪影，量完才发现 dpr=1 的折点偏差本来更大（8–10.5 vs 5.5–6.5），差异全部来自检测器 `contrastMax=10` 那道邻域过滤在斜率变小后放行了折点。**教训：候选帧数不是证据，折点/极值的区分才是**。
 - [x] ~~下一批按 roadmap 顺序是 P0-2 `SPIRAL`~~ —— **动画类型扩展到此冻结（2026-09-24 需求方决定）**。`SPIRAL` / `SEEDS` / `COMB` 三个都实现过又整体撤回，不再加新类型，停在 16 种；候选池剩下的 P2-2 `LOGO_MASK` 也不做。后续判据见 `docs/animation-roadmap.md` §1 四条约束（第 4 条是这三轮换来的）。
 - [x] **`reverse` 选项 PR1–PR4 全部落地**（v1.10 – v1.13，待发版）：三态 `boolean | 'auto'`，接入 `CIRCLE` / `FAN` / `RIPPLE` / `CLOCK_SWEEP` / `CURTAIN` 五个；`BLINDS`/`SCAN`/`QR_GRID` 有意不开（`direction` 已占那根轴），形状族 6 个经实测做不到无副作用。PR4 按需求方指令**没有**等跨一个 minor，直接删掉 `CIRCLE_REVERT`（类型 16 → 15），迁移写法 `CIRCLE + reverse:'auto'` 记在 README「从 0.3.x 升级」。设计定稿在 `docs/reverse-option-design.md`
-- [ ] **PR4 之后待发 0.4.0**：`.changeset/reverse-option.md` 一条（minor，正文首行标 **breaking**，与 0.2.0 的 `caefb1b` 同口径：新增 `reverse` 与移除 `CIRCLE_REVERT` 合在一条里，不拆两条）。**push 侧 CI 已验**（见下条 3），剩 tag 触发的发版流水线未验
+- [x] **0.4.0 已发布（2026-09-24 22:01 本地 / 14:01Z）**：一条 changeset（minor + 正文标 breaking，与 0.2.0 的 `caefb1b` 同口径把新增与移除合在一条）→ `c8d1757` version 提交 → tag `v0.4.0`（轻量，与 v0.2.0/v0.3.0 同类型，指向 `bdd6651`）。**tag 侧流水线这次真验通过**：
+  - main CI run `36009201876` 全绿（lint / typecheck / test / build，node 22 + 24 双矩阵）；Release run `36009351459` 的 `Verify & Publish` 14 步全 success，`npm publish --provenance` 打出 `+ theme-switch-animation@0.4.0`，provenance 进 sigstore 透明日志 logIndex 2939391500。
+  - **npm 侧核实**：`latest = 0.4.0`、`time['0.4.0'] = 2026-09-24T14:03:45Z`；registry 直下 tarball 171398 B 与 CI 报的 171.4 kB 吻合；干净安装 `npm audit signatures` 报 registry signature + attestation **双 verified**；四个 exports 子路径从消费者视角解析到 `dist/{index,react,vue,nuxt}.mjs`；`dist/nuxt-runtime/composables/{index.mjs,index.d.ts}` 随包落地；已装包共 **18** 个文件与 `verify:package` 同口径；`ThemeAnimationType` 条目数 **15**、dist 内 `circle-revert` **0** 次、`getCircleRevertHoleGeometry` 按设计保留。GitHub Release 非 draft，正文直接取到 CHANGELOG 的 0.4.0 段（没走 generate-notes 兜底）；线上文档站同步到 15 张卡 / hero「15 种」。
+  - **两条"看着红其实不是"的读表经验**：① publish 成功到 packument 可见有约 2.5 分钟处理延迟，且 `npm i` 会命中滞后的缓存版 packument 报 `ETARGET`——干净安装加 `--prefer-online`；② 轻量 tag 的 Release `createdAt` 报的是 tag 指向**提交的 author 时间**（13:55:07Z），会早于 run 启动时间，不是有人抢先发过。
+  - 我自己的错误断言也记一条：拿"公开导出面里有没有 `isValidReverse`"去验，它是 `types.ts:178` 的**模块私有函数**（源码无 `export`），本来就不在导出面。§10 那句"产物含 reverse 与 isValidReverse"指的是标识符随 bundle 落地（实测 2 处 + `"auto"` 字面量判定在包内），不是 API 导出。
+  - **发包前仍未验、不随本次发布转为通过**：WebKit / Firefox 引擎档（本机 Playwright 临时装已丢失，只补装了包本体跑 `--engine=chromium --channel=chrome`）、系统缩放 125% / 150% 真机、Safari / iOS 真机、README「从 0.3.x 升级」迁移写法手抄。需求方本轮人工复核覆盖的是文档站画廊与四个 playground。
 - [x] **PR4 真机验证已做完（2026-09-24 二次收尾）**，四条证据：
   1. **`CIRCLE + reverse:'auto'` 两态正确**：暗→亮读到洞式 CSS（`--theme-switch-radius` + `@property`，`theme-switch-circle` 那套 keyframes），seek 13 帧 × dsf 1/1.25/1.5 **全部 0 线条候选**；亮→暗的注入 CSS 与 `reverse:false` **逐行相同** → auto 确实承担了旧 `CIRCLE_REVERT` 的全部行为。
   2. **真实 playground 产物 + 强制 dsf**：react @1/1.25/1.5、vue @1.25 各连点（先把该卡 reverse 选到 `auto` 再连点），第 2/4/… 次确认为"收起"；单帧亮度跳变 ≤1.7（阈值 25）。⚠ 的"横带 37–39px / 偏差 40–41"是检测器压线——同帧同值、跨 dpr 与跨框架一致，与本节 §2 已记录的那类误报同源。
@@ -550,7 +555,7 @@ tag 流水线第二次走通：`changeset version` → commit → push → `v0.3
   **但 `CURTAIN` 那半句判错了，PR3 后翻案**：当时只试了单渐变的三种写法（取补、过冲、单渐变两侧板）就下"结构性、非调参可解"的结论。换**两层 + `add`（取最大 alpha）**——左右板各自从边缘向中线长、软边朝内、重叠时取 max 而非抵消——末帧就干净了（首帧 6400/6400 全隐、末帧 0 残留）。**教训：证伪前先穷举构造空间**，已写进 roadmap §1 附近与需求 v1.12
 - [x] **PR3 已完成**：`RIPPLE` + `CLOCK_SWEEP` 接入，先探针后落码，两者末帧 6400 采样点零残留。`RIPPLE` 撞出两个"照抄正向"的坑——主峰 α=0.5 的补仍是 0.5 所以终点必须过冲整个前缘；正向 `to` 里那个 `2.1 × maxRadius` 是为正向覆盖留的余量，反向照抄会让**前 60% 时间屏幕毫无变化**，起点改成 `maxRadius + 前缘` 才铺满时间轴（与 SPIRAL 那轮照抄 2.1 是同一类错误的镜像）。`CLOCK_SWEEP` 反向的观感就是当初搁置的**逆时针扫开**，顺/逆方向不必再单开选项
 - [ ] **PR4**：删 `CIRCLE_REVERT`（破坏性，按 0.2.0 先例走 minor + 条目标 breaking）。洞式机制保留并泛化，别连带删掉
-- [ ] 攒够后一起走 0.4.0 发布；`.changeset/` 当前一条待切
+- [x] ~~攒够后一起走 0.4.0 发布；`.changeset/` 当前一条待切~~ —— **0.4.0 已发**（2026-09-24，`v0.4.0` → `bdd6651`），发布链路与 npm 侧核实见 §9「0.4.0 已发布」一条；`.changeset/` 现已清空，下一条用户可见变更需重新 `pnpm changeset`。
 
 ---
 
