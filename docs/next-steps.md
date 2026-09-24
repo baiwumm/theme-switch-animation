@@ -466,7 +466,7 @@ iPhone 与 Mac 同一局域网访问 `http://<mac-ip>:5224/`（或直接把 `pla
 - [x] README 类型表与家族枚举 / 需求文档 v1.9 / 文档站文案 / 四个 playground / changeset / 门面截图
 - [ ] **分数缩放 dpr 一档仍未验**：125% / 150% 下中缝与软边会不会出现 1px 级亮暗线——这是 roadmap P0-1 唯一遗留的待验点
 - [x] ~~下一批按 roadmap 顺序是 P0-2 `SPIRAL`~~ —— **动画类型扩展到此冻结（2026-09-24 需求方决定）**。`SPIRAL` / `SEEDS` / `COMB` 三个都实现过又整体撤回，不再加新类型，停在 16 种；候选池剩下的 P2-2 `LOGO_MASK` 也不做。后续判据见 `docs/animation-roadmap.md` §1 四条约束（第 4 条是这三轮换来的）。
-- [ ] **`reverse` 选项已批准，排在 0.3.0 发包之后做**（作为 0.4.0）：三态 `boolean | 'auto'`、12 个类型开放、`BLINDS`/`SCAN`/`QR_GRID` 不开、`CIRCLE_REVERT` 先 deprecated 再删。设计定稿在 `docs/reverse-option-design.md`，含分期 PR1–PR4 与验收计划。**0.3.0 未发之前不动这块代码**——当前工作区是排查干净的待发包状态。
+- [ ] **`reverse` 选项 PR1 + PR2 已落地**（v1.10，待发版）：三态 `boolean | 'auto'`，接入 `CIRCLE` 与 `FAN`；`BLINDS`/`SCAN`/`QR_GRID` 有意不开（`direction` 已占那根轴），形状族与 `CURTAIN` 经实测做不到无副作用而撤出。`CIRCLE_REVERT` 已标 deprecated，PR4 才删。设计定稿在 `docs/reverse-option-design.md`
 - [ ] 待排期的小重构：`qrCenterGradient` 与 `getCurtainRevealSpec` 合并成一个中性命名的对称渐变构造器
 
 ---
@@ -505,8 +505,8 @@ tag 流水线第二次走通：`changeset version` → commit → push → `v0.3
 - [x] core：`reverse` 三态 + 校验 + `CIRCLE` 接通 + `CIRCLE_REVERT` 标废弃 + 7 例单测
 - [x] 文档站 CIRCLE 卡与四个 playground 的 `Reverse` 控件；README / 需求文档 v1.10 / 设计文档状态 / changeset
 - [ ] **真机验证 PR1**：文档站 CIRCLE 卡切 `off` / `on` / `auto` 三档，`on` 与 `auto`（切回亮色）应看到"新主题从四周显出、向按钮中心收拢"；`auto` 的另一半（切到暗色）应与 `off` 完全一致。四个 playground 各验一遍
-- [ ] **PR2**：形状族 6 个 + `FAN` + `CURTAIN` 接入 `reverse`。注意 `polygonMaskImage` 只覆盖 4 个形状，`SQUARE` / `RECTANGLE` 走各自常量要单独加反色版；`STAR` 正向那套"内凹谷也要盖住最远角"的放大系数在反向落在起始帧，要重算不能照抄
-- [ ] **PR3**：`RIPPLE` + `CLOCK_SWEEP` 接入，环带与 12° 软尾要镜像。**先探针再落码**——求补之后边界漏光比正向更容易出现（`COMB` 那轮的 `max(...,0px)` 漏光是同类风险）
+- [x] ~~**PR2**：形状族 6 个 + `FAN` + `CURTAIN` 接入 `reverse`~~ —— **落地时缩到只剩 `FAN`**：形状族与 `CURTAIN` 经反证/实测**做不到无副作用**，撤出并进 roadmap §4。形状族反向必须动 `mask-size`，那是 phase-6 附录四/五查过的像素对齐抖动病根；`CURTAIN` 的 24px 羽化带塌零时两斜坡交叉出凹陷，末帧实测约 38px 居中半透明带（"终值过冲"与"两侧板向中心重叠生长"两种补救都只减小不消除）。`FAN` 能做的唯一理由是硬边无羽化：末帧扫描 0 残留，并用 start/mid 两点对照排除了"mask 解析失败也报 0"的假阳性
+- [ ] **PR3**：`RIPPLE` + `CLOCK_SWEEP` 接入，环带与 12° 软尾要镜像。**先探针再落码**——`CURTAIN` 这轮的教训正是软边塌零会交叉出凹陷，RIPPLE 的余波软边很可能同病；救不回来就照 `CURTAIN` 撤出，不要硬做
 - [ ] **PR4**：删 `CIRCLE_REVERT`（破坏性，按 0.2.0 先例走 minor + 条目标 breaking）。洞式机制保留并泛化，别连带删掉
 - [ ] 攒够后一起走 0.4.0 发布；`.changeset/` 当前一条待切
 

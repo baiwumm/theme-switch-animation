@@ -115,7 +115,7 @@ export default defineNuxtConfig({
 | `QR_GRID` | 方块格子逐格生长、末帧融为整屏 | 无触发点（按 `direction` 锚定方位） | `direction` |
 | `RIPPLE` | 水滴涟漪：实心水面外推，前缘是主波峰 + 两圈衰减余波的环带 | 触发元素中心（波源） | `waveWidth` |
 | `CLOCK_SWEEP` | 时钟扇形：扇形自 12 点顺时针扫开，前缘带 12° 软尾 | 触发元素中心（轴心） | — |
-| `FAN` | 扇叶旋开：`bladeCount` 片楔形扇叶同时从轴心旋开，末帧拼成整屏 | 触发元素中心（轴心） | `bladeCount` |
+| `FAN` | 扇叶旋开：`bladeCount` 片楔形扇叶同时从轴心旋开，末帧拼成整屏；`reverse` 改为合拢 | 触发元素中心（轴心） | `bladeCount` / `reverse` |
 | `CURTAIN` | 双开门：新主题自屏幕中线向两侧对称推开，起始帧中缝先透一道光 | 无触发点（全屏按中线对称） | — |
 
 `BLINDS` / `SCAN` / `QR_GRID` / `CURTAIN` 是属性驱动蒙版（`@property --theme-switch-reveal` + 静止蒙版盒子），不读触发元素几何——`ref` 只用于点击与状态。`RIPPLE` / `CLOCK_SWEEP` / `FAN` 用同一机制但把轴心写进渐变串，因此消费 `ref` 几何；角度族另用 `--theme-switch-sweep`（`@property` 的 syntax 一经注册不可改，`<angle>` 不能与 `<length>` 同名）。`QR_GRID` 的"列 ∩ 行"双层蒙版交集经 `@supports (mask-composite: intersect)` 门控，不支持的引擎自动降级为推进轴单层条带（观感同百叶窗），状态始终正确。
@@ -134,7 +134,7 @@ export default defineNuxtConfig({
 | `slatWidth` | `number` | 百叶窗叶片宽度 px，范围 `[16, 200]`，默认 72。仅 `BLINDS` 生效，越界静默回落默认 |
 | `waveWidth` | `number` | 涟漪波长 px（相邻两圈波峰间距），范围 `[8, 60]`，默认 18。仅 `RIPPLE` 生效，越界静默回落默认 |
 | `bladeCount` | `number` | 扇叶数，范围 `[4, 16]` 的**整数**，默认 8。仅 `FAN` 生效，非整数或越界静默回落默认（非整数会让 `360 / bladeCount` 不整除，末帧留一条永不闭合的缝） |
-| `reverse` | `boolean \| 'auto'` | 反向揭开，默认 `false`。`true` 恒反向；`'auto'` 切暗正向、切亮收起（即旧 `CIRCLE_REVERT` 的行为）。**与 `direction` 正交**：`direction` 决定推进轴，`reverse` 决定从内还是从外揭开。目前仅 `CIRCLE` 生效，其余类型静默忽略（规划见 `docs/reverse-option-design.md`），非法值静默回落 `false` |
+| `reverse` | `boolean \| 'auto'` | 反向揭开，默认 `false`。`true` 恒反向；`'auto'` 切暗正向、切亮收起（即旧 `CIRCLE_REVERT` 的行为）。**与 `direction` 正交**：`direction` 决定推进轴，`reverse` 决定从内还是从外揭开。目前 `CIRCLE` 与 `FAN` 生效，其余类型静默忽略——形状族反向只能靠动 `mask-size`（会重新引入已修完的像素对齐抖动），`CURTAIN` 的软边在末帧会塌出一条居中半透明带，两者都做不到无副作用（见 `docs/animation-roadmap.md` §4），非法值静默回落 `false` |
 | `darkClassName` | `string` | 暗色类名，默认 `dark`（与 next-themes / color-mode 默认一致） |
 | `isDark` + `onChange` | — | 同时提供 → 受控模式；都缺省 → 非受控（localStorage key 为 `THEME_STORAGE_KEY` 常量 `theme-switch-animation`，`observeThemeClass` 可带自定义 key）；只提供其一 → 契约不完整（开发环境 console.warn，按非受控工作） |
 

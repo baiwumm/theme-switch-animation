@@ -1,10 +1,12 @@
 # `reverse` 选项设计（PR1 已落地）
 
 > 批准于 2026-09-24。0.3.0 已发布（npm `latest = 0.3.0`），本特性作为 0.4.0 落地。
-> **当前进度**：PR1 完成（三态选项 + `CIRCLE` 全量 + `CIRCLE_REVERT` 标 deprecated + 文档站与四个
-> playground 的 `Reverse` 控件 + 7 例单测）。PR2（形状族 6 个 + `FAN` + `CURTAIN`）、PR3（`RIPPLE` +
-> `CLOCK_SWEEP`）、PR4（删类型）未开始。
-> 一处与设计原文的偏差已在 §3 修正：CSS 不可能逐字节相同，keyframes 名按类型生成，等价性锁走"归一化名字后比较"。
+> **当前进度**：PR1 + PR2 完成 —— `CIRCLE`（洞式）与 `FAN`（取补串）接入，文档站与四个
+> playground 的 `Reverse` 控件、共 12 例单测。**PR2 缩了水**：原计划的形状族 6 个与 `CURTAIN`
+> 在实现前被反证为**做不到无副作用**，已撤出（见 §4 表末两行与 roadmap §4）。
+> PR3（`RIPPLE` / `CLOCK_SWEEP`）、PR4（删类型）未开始。
+> 两处与设计原文的偏差已修正：① CSS 不可能逐字节相同（keyframes 名按类型生成），等价性锁走归一化比较；
+> ② §4 原先给形状族写的"反色一处开关、成本≈0"是错的。
 > 实现时以下文为准。
 
 ---
@@ -84,12 +86,12 @@ const revertDirection = isRevert ? (toDark ? 'expand' : 'collapse') : undefined
 
 | 类型 | 开放 | 反向观感 | 实现要点 / 待验点 |
 | --- | --- | --- | --- |
-| `CIRCLE` | ✅ | 新主题从四周显出、向触发点收拢 | `'auto'` 必须与现 `CIRCLE_REVERT` **逐像素等价**，要有断言锁死 |
-| `SQUARE` `DIAMOND` `RECTANGLE` `HEXAGON` `TRIANGLE` `STAR` | ✅ | 同上，形状换成各自轮廓 | 反色 SVG 开关。**注意覆盖面**：`polygonMaskImage` 只生成 `DIAMOND` / `HEXAGON` / `TRIANGLE` / `STAR` 四个，`SQUARE` 与 `RECTANGLE` 走各自的常量（`SOLID_RECT_MASK_IMAGE` 等），要单独加反色版，别以为一处改完全覆盖。另：`STAR` 正向终尺寸已按"内凹谷也要盖住最远角"放大过（README FAQ 有记），求补后这个余量落在**起始帧**，要重算起始尺寸而不是照抄 |
-| `CURTAIN` | ✅ | 两侧向中线合拢 | `direction` 对它无效 → reverse 是它唯一的方向轴，零重叠 |
-| `RIPPLE` | ✅ | 环带向内收 | 环带必须镜像：主峰 α 落在内缘、余波衰减方向翻转。**要探针**，`from`/`to` 的软边越界行为与正向不同 |
-| `CLOCK_SWEEP` | ✅ | 逆时针扫开（见 §3） | 12° 软尾要镜像到内缘，否则起始帧会在 12 点留一道反向亮线 |
-| `FAN` | ✅ | 扇叶合拢 | `repeating-conic` 反色。**叶片必须仍是硬边**——正向那条"软尾会留永不闭合的缝"的结论在反向同样成立 |
+| `CIRCLE` | ✅ **PR1 已落地** | 新主题从四周显出、向触发点收拢 | 复用洞式生成器。`'auto'` 与现 `CIRCLE_REVERT` 的等价性**不能按字面 CSS 相等来锁**——keyframes 名按类型生成，必然差 `theme-switch-circle` 与 `theme-switch-circle-revert`；单测归一化名字后比较 |
+| `SQUARE` `DIAMOND` `RECTANGLE` `HEXAGON` `TRIANGLE` `STAR` | ❌ **撤出（PR2 反证）** | 同上，形状换成各自轮廓 | **原判断"反色一处开关、成本≈0"是错的。** 形状蒙版是 SVG data-URI，反向必须动 `mask-size` / `mask-position`，而那正是 phase-6 附录四/五排查过的**设备像素对齐抖动**病根（约 1 设备像素、与 dpr 无关、取整只缓解不根除）——当初正是为此才另造静止盒子的洞式方案。多边形硬直线比圆弧更显 hairline。做不到无副作用，不接入 |
+| `CURTAIN` | ❌ **撤出（PR2 实测）** | 两侧向中线合拢 | 带 24px 羽化的对称透明带塌到零宽时，两侧斜坡必然交叉出凹陷。末帧扫描实测 40 全透 + 150 半透 / 6400（约 38px 居中半透明带），违反约束 2；终值过冲到 `-2×软边` 只剩 20/75，改"两侧不透明板向中心重叠生长"仍剩 20/75 —— 结构性，非调参可解 |
+| `FAN` | ✅ **PR2 已落地** | 扇叶合拢 | `getFanReverseRevealSpec`：正向串取补 + `--sweep` 从 step 收到 0。**它能干净的唯一理由是硬边无羽化**——`transparent 0 var` 与 `#000 var step` 共用同一个 var，var→0 时两组 stop 同归 0deg，带子塌零而不留缝。三位置探针：start 6400/6400 全透、mid 3272 半揭、end 0/0 |
+| `RIPPLE` | ⏳ PR3 未做 | 环带向内收 | 环带必须镜像：主峰 α 落在内缘、余波衰减方向翻转。**要先探针**——`CURTAIN` 的教训是软边在塌零时会交叉出凹陷，RIPPLE 的余波软边很可能同病 |
+| `CLOCK_SWEEP` | ⏳ PR3 未做 | 逆时针扫开（见 §3） | 12° 软尾要镜像到内缘，否则起始帧会在 12 点留一道反向亮线 |
 | `BLINDS` `SCAN` `QR_GRID` | ❌ | — | **不是做不到，是 `direction` 已占这根轴**：`SCAN` 的 reverse ≈ `direction:'rtl'`。两轴表达同一件事 → 四种组合必有两组重复，README 得写一堆仲裁规则 |
 | `CIRCLE_BLUR` | ⏸ 暂缓 | — | 决策 4 |
 
