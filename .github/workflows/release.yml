@@ -42,15 +42,15 @@ jobs:
     environment: npm
     timeout-minutes: 30
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           # 下面要判 tag 是否落在 main 上，需要 origin/main 可达
           fetch-depth: 0
 
-      - uses: pnpm/action-setup@v4
+      - uses: pnpm/action-setup@v5
         # 版本取自 package.json 的 packageManager 字段
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
         with:
           node-version: 22
           cache: pnpm
