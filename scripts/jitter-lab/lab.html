@@ -2,7 +2,7 @@
 <html lang="zh-CN">
   <head>
     <meta charset="utf-8" />
-    <title>CIRCLE_REVERT 抖动实验台</title>
+    <title>CIRCLE + reverse 抖动实验台</title>
     <style>
       /* 两个主题只换颜色，绝不改布局/尺寸，避免布局位移污染实验 */
       :root {
@@ -79,7 +79,7 @@
   </head>
   <body>
     <main>
-      <h1>CIRCLE_REVERT 抖动实验台</h1>
+      <h1>CIRCLE + reverse 抖动实验台</h1>
       <p>
         纯色大平面 + 卡片网格：收起（暗 → 亮）时逐帧采样，检测 1px 级线条伪影。 触发点固定在
         <code>#target</code>（62% / 34%）。
@@ -211,7 +211,9 @@ ${selector} {
               html.classList.toggle('dark')
             },
             options: {
-              animationType: opts.animationType ?? ThemeAnimationType.CIRCLE_REVERT,
+              animationType: opts.animationType ?? ThemeAnimationType.CIRCLE,
+              // 本实验台默认就是"洞式收起"这条路径（附录四/五查的抖动它）；要测正向扩散得显式传 reverse:false
+              reverse: opts.reverse ?? true,
               duration: opts.duration ?? 750,
               easing: opts.easing ?? 'ease-in-out',
             },
@@ -350,7 +352,7 @@ ${selector} {
             domUpdate: () => {
               html.classList.toggle('dark')
             },
-            options: { animationType: ThemeAnimationType.CIRCLE_REVERT, duration, easing: 'ease-in-out' },
+            options: { animationType: ThemeAnimationType.CIRCLE, reverse: true, duration, easing: 'ease-in-out' },
             trigger: target,
           })
           window.__lastResult = result

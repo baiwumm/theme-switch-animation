@@ -5,7 +5,7 @@
  * 拍到的是已切换主题的实时 DOM，verify-engine.mjs 的截图亮度判据在 Firefox 上失效（CSS 层判据仍有效）。
  * 本脚本改用 recordVideo（screencast，捕获合成器输出）取证，分两个阶段：
  *
- * A. 自由播放：录一次 CIRCLE_REVERT 收起 + 一次 CIRCLE 扩散，逐帧统计亮度。
+ * A. 自由播放：录一次 CIRCLE + reverse 收起 + 一次 CIRCLE 扩散，逐帧统计亮度。
  *    判据（存在性）：中间态帧（亮度介于两端极值之间）≥6 个不同取值 —— 证明合成器在动画期间
  *    真的画了蒙版中间态；若 Firefox 不绘制 VT 伪元素，只会看到旧态→新态的一次性跳变。
  *    注意：实测 Playwright Firefox 录制的 webm 帧序存在局部乱序（录制管道伪影：帧内容正确、
@@ -94,11 +94,11 @@ async function extractFrames(label, page) {
 }
 
 /** A 阶段：自由播放一次转场，返回逐帧平均亮度 */
-async function liveRun(label, startTheme, animationType) {
+async function liveRun(label, startTheme, runOpts) {
   const page = await newRecording()
   await page.evaluate(`window.__lab.reset(${JSON.stringify(startTheme)})`)
   await sleep(600)
-  const res = await page.evaluate(`window.__lab.start({ duration: 2000, animationType: ${JSON.stringify(animationType)} })`)
+  const res = await page.evaluate(`window.__lab.start(${JSON.stringify({ duration: 2000, animationType: 'circle', ...runOpts })})`)
   if (!res?.animated) throw new Error(`${label}: 转场未启动`)
   await sleep(2800)
   const frames = await extractFrames(label, page)
@@ -106,7 +106,7 @@ async function liveRun(label, startTheme, animationType) {
 }
 
 /** B 阶段：暂停动画后按时间表逐档 seek，每档停留让 screencast 落帧；帧序即 seek 序 */
-async function steppedRun(label, startTheme, animationType, { markerBlip = false } = {}) {
+async function steppedRun(label, startTheme, runOpts, { markerBlip = false } = {}) {
   const page = await newRecording()
   if (markerBlip) {
     // 扩散方向起始为亮色：先切到暗色制造一个分割帧，再回到起始主题，把加载突发帧与取样序列分开
@@ -115,7 +115,7 @@ async function steppedRun(label, startTheme, animationType, { markerBlip = false
   }
   await page.evaluate(`window.__lab.reset(${JSON.stringify(startTheme)})`)
   await sleep(600)
-  const res = await page.evaluate(`window.__lab.start({ duration: 2000, animationType: ${JSON.stringify(animationType)} })`)
+  const res = await page.evaluate(`window.__lab.start(${JSON.stringify({ duration: 2000, animationType: 'circle', ...runOpts })})`)
   if (!res?.animated) throw new Error(`${label}: 转场未启动`)
   const n = await page.evaluate('window.__lab.waitForAnimation()')
   if (!n) throw new Error(`${label}: 未捕获蒙版动画，无法 seek 取样`)
@@ -191,17 +191,17 @@ function judgeStepped(name, rows, dir) {
 
 try {
   console.log('\n=== A. 自由播放：合成器是否绘制蒙版中间态 ===')
-  const collapseLive = await liveRun('collapse-live', 'dark', 'circle-revert')
+  const collapseLive = await liveRun('collapse-live', 'dark', { reverse: true })
   console.log(`收起 dark→light 自由播放逐帧亮度（${collapseLive.length} 帧）: ${collapseLive.join(' ')}`)
   judgeLive('收起（@property 洞）', collapseLive)
-  const expandLive = await liveRun('expand-live', 'light', 'circle')
+  const expandLive = await liveRun('expand-live', 'light', { reverse: false })
   console.log(`扩散 light→dark 自由播放逐帧亮度（${expandLive.length} 帧）: ${expandLive.join(' ')}`)
   judgeLive('扩散（mask-size/position）', expandLive)
 
   console.log('\n=== B. 暂停 + 逐步 seek：确定性帧序下的单调性 ===')
-  const collapseSteps = await steppedRun('collapse-steps', 'dark', 'circle-revert')
+  const collapseSteps = await steppedRun('collapse-steps', 'dark', { reverse: true })
   judgeStepped('收起（@property 洞）', collapseSteps, 'up')
-  const expandSteps = await steppedRun('expand-steps', 'light', 'circle', { markerBlip: true })
+  const expandSteps = await steppedRun('expand-steps', 'light', { reverse: false }, { markerBlip: true })
   judgeStepped('扩散（mask-size/position）', expandSteps, 'down')
 } catch (e) {
   failures.push(String(e?.message ?? e))

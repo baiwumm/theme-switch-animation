@@ -1,6 +1,6 @@
 /* global Buffer */
 /**
- * CIRCLE_REVERT 收起（暗 → 亮）线条抖动实验台。
+ * CIRCLE + reverse 收起（暗 → 亮）线条抖动实验台。
  *
  * 思路：用真实库（dist/index.mjs）在受控页面里跑一次真转场，把 view-transition 伪元素上的
  * 蒙版动画暂停后按毫秒 seek，逐帧截图并检测"孤立 1px 线条"；再对照基线帧（无动画）排除误报。
@@ -433,7 +433,7 @@ async function main() {
       }
     } else if (mode === 'cycles') {
       // 复刻真机操作：亮→暗→亮→暗 连续点，按固定间隔，逐帧抓像素找闪屏
-      // --click=<selector> 时直接点真实页面上的按钮（例如 playground 的 CIRCLE_REVERT）
+      // --click=<selector> 时直接点真实页面上的按钮（例如 playground 的 CIRCLE 卡）
       // --jitter=<ms>：间隔随机抖动，避免点击相位与 60Hz 帧周期锁死
       // --cpu=<n>：CPU 节流，放大时序竞态
       const runs = Number(args.runs ?? 20)

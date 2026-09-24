@@ -2,7 +2,7 @@
 /**
  * PC 端浏览器引擎矩阵验证（next-steps 待办 2）。
  *
- * 背景：CIRCLE_REVERT 收起方向依赖「view-transition 伪元素上动画 @property 注册半径
+ * 背景：`CIRCLE + reverse` 收起方向依赖「view-transition 伪元素上动画 @property 注册半径
  * （--theme-switch-radius）+ mask-image: radial-gradient(var(...))」，该组合此前只在 Chrome 验证过。
  * 本脚本用 Playwright 驱动多引擎跑同一套判据：
  *   --engine=webkit    Playwright WebKit 构建（Safari 内核；本机无 Safari 时的最近似手段）
@@ -11,7 +11,7 @@
  *
  * 判据（页面用 scripts/jitter-lab/lab.html?variant=clean 纯色平面，几何拟合不受卡片/文字干扰）：
  *   1. 支持面：startViewTransition / getAnimations / CSS.registerProperty / mask radial-gradient(calc(var()))；
- *   2. CIRCLE_REVERT 收起（dark→light，@property 洞路径）：
+ *   2. CIRCLE + reverse 收起（dark→light，@property 洞路径）：
  *      - 亮度：截图平均亮度必须从暗(<40)连续推进到亮(>200)，≥6 个取值且单调 —— 引擎无关的
  *        "逐帧推进"证明（属性未注册会离散翻转 → 只有 2 个取值；var() 失效 → 恒为终态）；
  *      - 几何：优先从 ::view-transition-new(root) 计算样式解析洞半径（WebKit/Chrome 会把 var()
@@ -157,11 +157,11 @@ try {
   console.log('支持面:', JSON.stringify(REPORT.probes))
   if (!REPORT.probes.startViewTransition) throw new Error('不支持 startViewTransition —— 该引擎走降级直切路径，无动画可验')
 
-  // ---------- 2. CIRCLE_REVERT 收起 ----------
-  console.log('\n=== CIRCLE_REVERT 收起（dark→light，@property 洞半径） ===')
+  // ---------- 2. CIRCLE + reverse 收起 ----------
+  console.log('\n=== CIRCLE + reverse 收起（dark→light，@property 洞半径） ===')
   await page.evaluate(`window.__lab.reset('dark')`)
   await sleep(150)
-  let started = await page.evaluate(`window.__lab.start({ duration: 750 })`)
+  let started = await page.evaluate(`window.__lab.start({ duration: 750, animationType: 'circle', reverse: true })`)
   if (!started?.animated) throw new Error('转场未启动（animated=false）')
   let animCount = await page.evaluate('window.__lab.waitForAnimation()')
   const meta = await page.evaluate('window.__lab.center()')
@@ -187,7 +187,7 @@ try {
     await page.evaluate(`window.__lab.reset('dark')`)
     await sleep(200)
     const t0 = Date.now()
-    started = await page.evaluate(`window.__lab.start({ duration: 2000 })`)
+    started = await page.evaluate(`window.__lab.start({ duration: 2000, animationType: 'circle', reverse: true })`)
     if (!started?.animated) throw new Error('转场未启动（animated=false）')
     for (;;) {
       const elapsed = Date.now() - t0
@@ -239,7 +239,7 @@ try {
     const frames = {}
     let n = 0
     if (REPORT.mode === 'seek') {
-      const res = await page.evaluate(`window.__lab.start({ duration: 600, animationType: ${JSON.stringify(value)} })`)
+      const res = await page.evaluate(`window.__lab.start({ duration: 600, animationType: ${JSON.stringify(value)}, reverse: false })`)
       if (!res?.animated) throw new Error(`${key}: 转场未启动`)
       n = await page.evaluate('window.__lab.waitForAnimation()')
       await page.evaluate('window.__lab.pause()')
@@ -249,7 +249,7 @@ try {
       }
       await page.evaluate('window.__lab.finish()')
     } else {
-      const res = await page.evaluate(`window.__lab.start({ duration: 1600, animationType: ${JSON.stringify(value)} })`)
+      const res = await page.evaluate(`window.__lab.start({ duration: 1600, animationType: ${JSON.stringify(value)}, reverse: false })`)
       if (!res?.animated) throw new Error(`${key}: 转场未启动`)
       frames.start = decodePng(await page.screenshot({ type: 'png' }))
       await sleep(Math.max(0, 800 - 250))
