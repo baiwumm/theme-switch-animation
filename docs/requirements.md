@@ -2,7 +2,7 @@
 
 | 项目 | 内容 |
 |---|---|
-| 版本 | v1.12（`reverse` 接入 `CURTAIN`，翻案 PR2 的错判；见 §10 修订记录） |
+| 版本 | v1.13（删除 `CIRCLE_REVERT` 类型，收起形态改由 `CIRCLE + reverse` 承担；见 §10 修订记录） |
 | 日期 | 2026-09-21 |
 | 状态 | 已评审通过，待开发指令 |
 | 仓库 / npm 包名 | `theme-switch-animation`（npm 已确认未注册） |
@@ -15,7 +15,7 @@
 做一个**主题切换动画库**：用户点击按钮切换 light / dark 主题时，新主题以指定形状"揭开"覆盖旧主题，而不是生硬跳变。定位参考 `react-theme-switch-animation`（React-only），差异点：
 
 1. **跨框架**：同时支持 React、Vue、Next.js、Nuxt.js（参考库仅 React）。
-2. **自定义图案**：16 种动画类型（`CIRCLE` / `CIRCLE_REVERT` / `CIRCLE_BLUR` / `SQUARE` / `DIAMOND` / `RECTANGLE` / `HEXAGON` / `TRIANGLE` / `STAR` / `BLINDS` / `SCAN` / `QR_GRID` / `RIPPLE` / `CLOCK_SWEEP` / `FAN` / `CURTAIN`，形状观感对齐 magicui 的 animated-theme-toggler，技术路线仅用 mask；`BLINDS` / `SCAN` / `QR_GRID` 由 `direction` 选项控制四方向，v1.6；`RIPPLE` 由 `waveWidth` 控制环带波长，v1.7；`CLOCK_SWEEP` / `FAN` 为角度驱动族、`FAN` 由 `bladeCount` 控制扇叶数，v1.8；`CURTAIN` 中线对开、无参数，v1.9）。另有跨类型选项 `reverse`（三态 `boolean | 'auto'`，反向揭开；`CIRCLE` / `FAN` / `RIPPLE` / `CLOCK_SWEEP` / `CURTAIN` 五个生效，v1.10 起）。其余类型**经实测判定无法无副作用地接入**（形状族、`CURTAIN`），理由见 §7 与 `docs/animation-roadmap.md` §4。
+2. **自定义图案**：15 种动画类型（`CIRCLE` / `CIRCLE_BLUR` / `SQUARE` / `DIAMOND` / `RECTANGLE` / `HEXAGON` / `TRIANGLE` / `STAR` / `BLINDS` / `SCAN` / `QR_GRID` / `RIPPLE` / `CLOCK_SWEEP` / `FAN` / `CURTAIN`，形状观感对齐 magicui 的 animated-theme-toggler，技术路线仅用 mask；`BLINDS` / `SCAN` / `QR_GRID` 由 `direction` 选项控制四方向，v1.6；`RIPPLE` 由 `waveWidth` 控制环带波长，v1.7；`CLOCK_SWEEP` / `FAN` 为角度驱动族、`FAN` 由 `bladeCount` 控制扇叶数，v1.8；`CURTAIN` 中线对开、无参数，v1.9）。另有跨类型选项 `reverse`（三态 `boolean | 'auto'`，反向揭开；`CIRCLE` / `FAN` / `RIPPLE` / `CLOCK_SWEEP` / `CURTAIN` 五个生效，v1.10 起；v1.13 起独立的 `CIRCLE_REVERT` 类型移除，收起形态即 `CIRCLE + reverse`，故类型数 16 → 15）。其余 10 个类型**不接入 `reverse`**：`BLINDS` / `SCAN` / `QR_GRID` 是 `direction` 已占那根轴（接入会留下重复组合），形状族 6 个经实测判定做不到无副作用（反向必须动 `mask-size`，重新引入已修完的像素对齐抖动），理由见 §7 与 `docs/animation-roadmap.md` §4。
 3. **受控模式**：不独占主题状态管理，`next-themes`、`@nuxtjs/color-mode` 用户可直接接入复用动画能力。
 
 ## 2. 可行性评估（调研结论复述）
@@ -106,7 +106,7 @@ theme-switch-animation/                  # 仓库名 = 包名
 
 | 参数 | 类型 | 默认值 | 说明 |
 |---|---|---|---|
-| `animationType` | `ThemeAnimationType` | `CIRCLE` | 动画类型：`CIRCLE` \| `CIRCLE_REVERT` \| `CIRCLE_BLUR` \| `SQUARE` \| `DIAMOND` \| `RECTANGLE` \| `HEXAGON` \| `TRIANGLE` \| `STAR` \| `BLINDS` \| `SCAN` \| `QR_GRID` \| `RIPPLE` \| `CLOCK_SWEEP` \| `FAN` \| `CURTAIN`（v1.6：四向类型 `LTR`/`RTL`/`TTB`/`BTT` 移除，改由 `direction` 承接） |
+| `animationType` | `ThemeAnimationType` | `CIRCLE` | 动画类型：`CIRCLE` \| `CIRCLE_BLUR` \| `SQUARE` \| `DIAMOND` \| `RECTANGLE` \| `HEXAGON` \| `TRIANGLE` \| `STAR` \| `BLINDS` \| `SCAN` \| `QR_GRID` \| `RIPPLE` \| `CLOCK_SWEEP` \| `FAN` \| `CURTAIN`（v1.6：四向类型 `LTR`/`RTL`/`TTB`/`BTT` 移除，改由 `direction` 承接；v1.13：`CIRCLE_REVERT` 移除，改由 `CIRCLE` + `reverse` 承接） |
 | `darkClassName` | `string` | `'dark'` | 暗色类名，可配置 |
 | `duration` | `number` | `750` | 动画时长 ms |
 | `easing` | `string` | `'ease-in-out'` | 任意合法 CSS timing-function |
@@ -115,7 +115,7 @@ theme-switch-animation/                  # 仓库名 = 包名
 | `slatWidth` | `number` | `72` | 百叶窗叶片宽度 px，合法区间 `[16, 200]`（仅 `BLINDS` 生效；越界静默回落默认，v1.6 新增） |
 | `waveWidth` | `number` | `18` | 涟漪波长 px（相邻两圈波峰间距），合法区间 `[8, 60]`（仅 `RIPPLE` 生效；越界静默回落默认，v1.7 新增） |
 | `bladeCount` | `number` | `8` | 扇叶数，合法区间 `[4, 16]` 的**整数**（仅 `FAN` 生效；非整数或越界静默回落默认，v1.8 新增） |
-| `reverse` | `boolean \| 'auto'` | `false` | 反向揭开：`true` 恒反向、`'auto'` 切暗正向 / 切亮收起。与 `direction` 正交（后者定推进轴、前者定从内还是从外揭开）。`CIRCLE` / `FAN` / `RIPPLE` / `CLOCK_SWEEP` / `CURTAIN` 生效，其余静默忽略（形状族做不到无副作用，见 §7）；非法值静默回落 `false`（v1.10 新增） |
+| `reverse` | `boolean \| 'auto'` | `false` | 反向揭开：`true` 恒反向、`'auto'` 切暗正向 / 切亮收起。与 `direction` 正交（后者定推进轴、前者定从内还是从外揭开）。`CIRCLE` / `FAN` / `RIPPLE` / `CLOCK_SWEEP` / `CURTAIN` 生效，其余静默忽略（形状族做不到无副作用、`BLINDS` / `SCAN` / `QR_GRID` 由 `direction` 占那根轴，见 §7）；非法值静默回落 `false`（v1.10 新增） |
 | `isDark` | `boolean` | 可选 | 受控模式：外部暗色状态 |
 | `onChange` | `(next: boolean) => void` | 可选 | 受控模式：状态变更回调 |
 
@@ -251,16 +251,15 @@ export type { ThemeAnimationOptions, ... } from '@theme-switch-animation/core'
 
 - **CIRCLE**：`getBoundingClientRect` 取触发元素中心，`Math.hypot` 算到视口四角最大距离定蒙版终值；SVG data-URI 圆形蒙版从 `mask-size: 0` 长到 `2.1 × maxRadius`（留余量防角落锯齿）。
 - **形状家族（v1.5：SQUARE / DIAMOND / RECTANGLE / HEXAGON / TRIANGLE / STAR）**：与 CIRCLE 同构（SVG data-URI 多边形蒙版从触发点 0 长到终尺寸），形状观感对齐 magicui（六边形/三角形/星形顶点朝上、星形内顶点半径比 0.42）。终尺寸按各形状**内切半径盖住视口最远角**计算：SQUARE/RECTANGLE 用轴对齐半边界 × 1.05；DIAMOND/HEXAGON 用 `√2 × 1.05 × maxRadius` 外接圆；TRIANGLE 外接圆 `2.2 × maxRadius`（内切半径 1.1×）；STAR 外接圆 `2.5 × maxRadius`（内凹谷半径 0.42 × 2.5 = 1.05×）——**有意大于 magicui**：它的星形凹谷盖不住视口角落（clip-path 随转场组销毁所以它可接受），本库 mask 在样式移除前持续生效（fill both），必须保证完全覆盖。RECTANGLE 贴合视口宽高比（实心矩形蒙版 `preserveAspectRatio="none"`）。
-- **CIRCLE_REVERT（v1.5，桌面真机反馈两轮后定稿）**：**方向感知的暗色圆**——切到暗色：暗色圆从点击点**扩散**（复用 CIRCLE 几何，蒙版挂新截图层）；切回亮色：暗色圆**收起**进点击点（蒙版挂旧截图层并置顶 `z-index: 1`，从全覆盖收缩到 0）。方向由 core 在转场前读取 `<html>` 类名推导（toggle 后必为取反），来回切换自然产生一次扩散、一次收起；无点击奇偶等隐藏状态。仍纯 mask 实现，Safari 约束不变。**单次点击内"收起 → 扩散"两段不可行**：收起结束时屏幕已是新主题，紧随的扩散圆与背景重合不可见（transform 整页缩放与双层蒙版两种实现试错后，与需求方确认本方案）。
 - **CIRCLE_BLUR（v1.5，桌面真机反馈后修正）**：`feGaussianBlur` **烘焙进 SVG data-URI 蒙版本身**（非 CSS filter，Safari 兼容性同其余类型）；模糊蒙版**只挂新截图层**，旧截图层完整垫底——蒙版外是旧主题，直到模糊圆扫过（若两层同蒙版，透明区露出的是已翻转的实时页面，主题会瞬间全变）。强度由 `blurAmount`（默认 2，×1.2 得 stdDeviation）控制；终尺寸 `max(4 × (长边+200), 2.5 × maxRadius)` 封顶 8000px 防超大屏 GPU 纹理过大。技术参考 `useBlurCircleTheme`（next-daily-hot；其 old 层的 maskScale 动画无 mask-image，实为无效代码，勿照抄"双层同蒙版"的误读）。
-- **BLINDS / SCAN / QR_GRID（v1.6，属性驱动揭开）**：仓库首批"注册属性驱动"的常规类型，与 CIRCLE_REVERT 收起方向的洞式蒙版同一机制——`@property --theme-switch-reveal`（`REVEAL_VAR`，`syntax: "<length>"`、`inherits: false`）注册后，蒙版盒子完全静止、keyframes 只动该属性，引用它的 `mask-image` 渐变逐帧重新解析（`mask-image` 本身不可动画）。三者均**无触发点、不消费 `ref` 中心**；旧截图层完整垫底、蒙版挂新层。
+- **BLINDS / SCAN / QR_GRID（v1.6，属性驱动揭开）**：仓库首批"注册属性驱动"的常规类型，与 `CIRCLE + reverse` 的洞式蒙版同一机制——`@property --theme-switch-reveal`（`REVEAL_VAR`，`syntax: "<length>"`、`inherits: false`）注册后，蒙版盒子完全静止、keyframes 只动该属性，引用它的 `mask-image` 渐变逐帧重新解析（`mask-image` 本身不可动画）。三者均**无触发点、不消费 `ref` 中心**；旧截图层完整垫底、蒙版挂新层。
 - **BLINDS**：叶片宽 `slatWidth`（默认 72）的条带平铺（`mask-repeat: repeat`），每根叶片的不透明段从 `-feather` 长到 `slatWidth`；软边 `feather = min(20, round(slatWidth × 0.28))`（`BLINDS_FEATHER_RATIO` / `BLINDS_MAX_FEATHER_PX`），超出叶片边界的部分被平铺裁掉，形成相邻叶片硬边相接的百叶窗观感。`direction` 决定渐变角与平铺轴（LTR/RTL 竖条沿 x、TTB/BTT 横条沿 y）。
 - **SCAN**：单层满铺（`no-repeat`），实心段之后跟一条 12px、α=0.4 的前缘光束 + 4px 渐隐尾（`SCAN_BAND_WIDTH_PX` / `SCAN_BAND_ALPHA` / `SCAN_FADE_WIDTH_PX`）；`to = 推进轴全长 + 光束总宽`，保证末帧实心段盖满视口、光束整体扫出画面（覆盖余量同 CIRCLE 的哲学）。
 - **QR_GRID**：百叶窗的二维版——"列约束 ∩ 行约束"两条渐变以 `mask-composite: intersect` 求交，交集即每格一个方块（格距 `QR_GRID_CELL_PX` = 64，软边比例同 BLINDS）；推进轴层从格子起始边生长、垂直轴层从格子中心对称生长，`direction` 决定锚定方位（LTR 左上 / RTL 右上 / TTB 顶边中点 / BTT 底边中点）。双层交集写在 `@supports (mask-composite: intersect)` 内，不支持的引擎落回基线的推进轴单层条带（观感同百叶窗），状态始终正确；**不写 `-webkit-mask-composite`**——仅支持旧语法的引擎落入基线即可，避免新旧两套 composite 关键字的级联歧义。
-- **RIPPLE（v1.7，环带前缘）**：属性驱动揭开族的第四个成员，复用 `REVEAL_VAR` 与 `buildRevealAnimationCSS` 的静止蒙版盒子（`styles.ts` 零改动），差别只在渐变换成 `radial-gradient` 且**波源中心写进 `mask-image` 串**（同 CIRCLE_REVERT 洞式的写法）——它是该族里唯一消费 `ref` 几何的类型。环带以波长 `waveWidth`（默认 18，合法区间 `[8, 60]`）为格：实心水面止于 `R − 1×W`，其后波峰落在整数格、波谷落在半整数格，主峰 α = `RIPPLE_CREST_ALPHA`(0.5)，余波按 0.55 逐圈相乘共 `RIPPLE_TRAIL_COUNT`(2) 圈（α 0.275 / 0.151）。波峰用部分 α 而非 >1：蒙版 α 就是新截图层的不透明度，半幅环带叠在完整垫底的旧层上即透亮的水线。`to = 2.1 × maxRadius + (TRAIL + 0.5) × W`，末帧实心段仍远超视口最远角（覆盖约束同其余类型）。`from = 0` 时实心段落在负半径，靠渐变规范的 stop 单调化夹成 0 长度——起始帧只剩中心一圈极淡水纹，不提前漏出新主题（无头 Chrome 冻结半径截图已核）。
-- **CLOCK_SWEEP / FAN（v1.8，角度驱动族）**：与 RIPPLE 同一套静止蒙版盒子，只是动画量从 `<length>` 换成 `<angle>`、渐变换成 conic。**注册属性必须另起一名** `SWEEP_VAR`（`--theme-switch-sweep`）——`@property` 的 syntax 一经注册不可改，与 `<length>` 的 `REVEAL_VAR` 同名属非法注册；为此 `buildRevealAnimationCSS` 不再把 px / `<length>` 写死，改按 `RevealMaskSpec.varName` / `unit` 出 syntax 与值后缀（px 族输出逐字节不变）。**conic 覆盖的是角度而不是面积**：从轴心出发的任意射线都有颜色，扫满一周即盖住整平面，不需要 CIRCLE 家族"终半径够到视口最远角"的那套计算；CSS conic 的 `0deg` 就是 12 点方向、顺时针为正，做时钟擦除不需要角度偏移。`CLOCK_SWEEP` 是单层 conic + 12° 前缘软尾（`CLOCK_SWEEP_TAIL_DEG`），`to = 360 + 12`。`FAN` 用 `repeating-conic-gradient`，周期 `step = 360 / bladeCount`、`to = step`；**叶片是硬边**——软尾会在每个周期末留下渐变淡出，末帧必留一条永不闭合的缝，违反覆盖约束，`bladeCount` 限整数同理。命名：观感是"扇叶从各自起始边旋开"，不是相机光圈的"中央孔径收缩"（后者要半径维度，conic 表达不了），故定名 `FAN` 而非 `IRIS`。旋转方向（顺 / 逆）本轮**有意未开放**：options 里"仅某类型生效"的局部参数已占 5 个，再加第 6 个性价比低；真要加，首选让方向跟随 `toDark`（复用 `CIRCLE_REVERT` 的编排、零参数），次选复用 `direction` 的 `ltr`/`rtl`，最差才是新选项。
+- **RIPPLE（v1.7，环带前缘）**：属性驱动揭开族的第四个成员，复用 `REVEAL_VAR` 与 `buildRevealAnimationCSS` 的静止蒙版盒子（`styles.ts` 零改动），差别只在渐变换成 `radial-gradient` 且**波源中心写进 `mask-image` 串**（同 `CIRCLE + reverse` 洞式的写法）——它是该族里唯一消费 `ref` 几何的类型。环带以波长 `waveWidth`（默认 18，合法区间 `[8, 60]`）为格：实心水面止于 `R − 1×W`，其后波峰落在整数格、波谷落在半整数格，主峰 α = `RIPPLE_CREST_ALPHA`(0.5)，余波按 0.55 逐圈相乘共 `RIPPLE_TRAIL_COUNT`(2) 圈（α 0.275 / 0.151）。波峰用部分 α 而非 >1：蒙版 α 就是新截图层的不透明度，半幅环带叠在完整垫底的旧层上即透亮的水线。`to = 2.1 × maxRadius + (TRAIL + 0.5) × W`，末帧实心段仍远超视口最远角（覆盖约束同其余类型）。`from = 0` 时实心段落在负半径，靠渐变规范的 stop 单调化夹成 0 长度——起始帧只剩中心一圈极淡水纹，不提前漏出新主题（无头 Chrome 冻结半径截图已核）。
+- **CLOCK_SWEEP / FAN（v1.8，角度驱动族）**：与 RIPPLE 同一套静止蒙版盒子，只是动画量从 `<length>` 换成 `<angle>`、渐变换成 conic。**注册属性必须另起一名** `SWEEP_VAR`（`--theme-switch-sweep`）——`@property` 的 syntax 一经注册不可改，与 `<length>` 的 `REVEAL_VAR` 同名属非法注册；为此 `buildRevealAnimationCSS` 不再把 px / `<length>` 写死，改按 `RevealMaskSpec.varName` / `unit` 出 syntax 与值后缀（px 族输出逐字节不变）。**conic 覆盖的是角度而不是面积**：从轴心出发的任意射线都有颜色，扫满一周即盖住整平面，不需要 CIRCLE 家族"终半径够到视口最远角"的那套计算；CSS conic 的 `0deg` 就是 12 点方向、顺时针为正，做时钟擦除不需要角度偏移。`CLOCK_SWEEP` 是单层 conic + 12° 前缘软尾（`CLOCK_SWEEP_TAIL_DEG`），`to = 360 + 12`。`FAN` 用 `repeating-conic-gradient`，周期 `step = 360 / bladeCount`、`to = step`；**叶片是硬边**——软尾会在每个周期末留下渐变淡出，末帧必留一条永不闭合的缝，违反覆盖约束，`bladeCount` 限整数同理。命名：观感是"扇叶从各自起始边旋开"，不是相机光圈的"中央孔径收缩"（后者要半径维度，conic 表达不了），故定名 `FAN` 而非 `IRIS`。旋转方向（顺 / 逆）本轮**有意未开放**：options 里"仅某类型生效"的局部参数已占 5 个，再加第 6 个性价比低；真要加，首选让方向跟随 `toDark`（复用 `reverse: 'auto'` 的编排、零新参数），次选复用 `direction` 的 `ltr`/`rtl`，最差才是新选项。
 - **CURTAIN（v1.9，中线对开）**：px 驱动族的第四个成员，落在现成的 `isRevealAnimationType` / `getRevealMaskSpec` 分发里——`orchestrate.ts` 与 `styles.ts` 零改动。蒙版是单层满铺的"从中心向两侧对称生长"三段渐变（`transparent calc(50% - r/2 - f)` / `#000 calc(50% - r/2) calc(50% + r/2)` / `transparent calc(50% + r/2 + f)`），与 QR_GRID 的垂直轴层同构。软边固定 `CURTAIN_FEATHER_PX` = 24，`to = 视口宽 + 2 × 软边`——两条软边都要推出画面才算盖满。**既不消费 `direction`**（中线对称没有方向语义）**也不消费触发点**。起始帧 `r = 0` 时实心段零宽、两侧各留一条软边，表现为中缝先透出一道光，是幕布观感的一部分而非缺陷（同 RIPPLE 起始帧的中心淡纹）。
-- **`reverse` 选项（v1.10，跨类型）**：语义是**蒙版求补 + 动画反向**，不是新写一套动画——正向是"实心段长到盖满"，反向是"洞收缩到 0"，两者都必须在末帧达到"新层完全不透明"，只是证明方向相反（约束 2 换了一道验证）。当前只接通 `CIRCLE`：复用已有的洞式生成器 `buildHoleAnimationCSS`（`HOLE_RADIUS_VAR` + 静止蒙版盒子），`orchestrate.ts` 里把原来单一的 `isRevert` 判定换成 `collapse` 三源判定——`CIRCLE_REVERT` 仍走 `!toDark`（行为与 0.3.0 逐字节一致），`CIRCLE + reverse:true` 恒收起，`CIRCLE + reverse:'auto'` 等价于前者。**必须是三态而不是布尔**：`CIRCLE_REVERT` 的语义是"跟随切换方向"（`toDark ? 'expand' : 'collapse'`），布尔的两个值都不等于它，用布尔就删不掉那个类型、只会多出一个语义重叠的选项。`CIRCLE_REVERT` 自 v1.10 标 `@deprecated`，开发环境提示一次（模块级 flag 去重，生产静默），计划在 0.5.0 移除。`BLINDS` / `SCAN` / `QR_GRID` **有意不接入**：`direction` 已占那根轴，两轴表达同一件事会留下重复组合。逐类型接入判据与分期见 `docs/reverse-option-design.md`。
+- **`reverse` 选项（v1.10，跨类型；v1.13 起 `CIRCLE` 的收起形态也由它承担）**：语义是**蒙版求补 + 动画反向**，不是新写一套动画——正向是"实心段长到盖满"，反向是"洞收缩到 0"，两者都必须在末帧达到"新层完全不透明"，只是证明方向相反（约束 2 换了一道验证）。`CIRCLE` 复用洞式生成器 `buildHoleAnimationCSS`（`HOLE_RADIUS_VAR` + 静止蒙版盒子），`orchestrate.ts` 里一个 `collapse` 判定决定是否走反向：`reverse: true` 恒收起，`reverse: 'auto'` 在 `!toDark` 时收起（`toDark` 取显式传入的 `nextIsDark`，缺省时从转场前 `<html>` 类名推导——toggle 后必为取反；无点击奇偶等隐藏状态）。**必须是三态而不是布尔**：0.3.x 的 `CIRCLE_REVERT` 语义是"跟随切换方向"，布尔的两个值都不等于它，用布尔就删不掉那个类型、只会多出一个语义重叠的选项。v1.13 按此把 `CIRCLE_REVERT` 删除（连带 `styles.ts` 里 V1.5 那条"挂旧截图层 + `z-index: 1`"的路径——V1.6 起已被洞式取代、当时就不再是默认）。**单次点击内"收起 → 扩散"两段不可行**：收起结束时屏幕已是新主题，紧随的扩散圆与背景重合不可见（transform 整页缩放与双层蒙版两种实现试错后，与需求方确认本方案）。`BLINDS` / `SCAN` / `QR_GRID` **有意不接入**：`direction` 已占那根轴，两轴表达同一件事会留下重复组合。逐类型接入判据与分期见 `docs/reverse-option-design.md`。
 - **`reverse` 的接入面：`CIRCLE` / `FAN` / `RIPPLE` / `CLOCK_SWEEP` / `CURTAIN` 五个，为什么不是全部（v1.10–v1.12 实测判定）**：设计阶段写过"形状族反色成本≈0"，实现前反证，**不成立**。
   - **形状族 6 个**：蒙版是 SVG data-URI（`polygonMaskImage` 生成白色多边形），反向要"洞收缩到 0"就必须动 `mask-size` / `mask-position` —— 而这正是 phase-6 附录四/五排查过的**蒙版层设备像素对齐抖动**的病根（约 1 设备像素、与 dpr 无关、取整只缓解不根除），当初正是为此才造了静止盒子的洞式方案。多边形的硬直线比圆弧更容易显出 hairline。做不到干净，故不接入。
   - **`CURTAIN` 曾被判"做不到"，那是错判，PR3 后翻案**：错在**只试了单渐变**。正向串取补得到的居中透明带被钉在 50%，无论 `r` 收到多负都消不掉（末帧实测 40 全透 + 150 半透 / 6400；过冲与"单渐变两侧板"两种改法都只减小不消除）。换**两层 + 默认 `mask-composite: add`（取最大 alpha）**就干净了：左板 `90deg`、右板 `270deg`，软边都朝内，两板在中央重叠时取 max 而不是相互抵消。`from = -软边`（首帧两板整体在屏外）/ `to = 半屏 + 软边`（两板都越过中线），探针实测首帧 6400/6400 全隐、末帧 0 残留、推进近似线性。**教训：证伪一个方案之前要先穷举构造空间**，"单渐变取补"只是其中一类。
@@ -298,10 +297,20 @@ export type { ThemeAnimationOptions, ... } from '@theme-switch-animation/core'
 7. **受控协议超时压力测试**（v1.1 修订 #1、v1.2 微调 #2）：在 Chrome DevTools 中开启 CPU 4x/6x throttling + Slow 3G 网络节流，实测 next-themes / color-mode 的 300ms 超时触发频率；若频繁触发，按 §5.4 备选方案改混合模式（库回调内直接改 class + 同步通知外部状态），并重测。
 8. **Playwright e2e 矩阵**（v1.1 修订 #5）：**只跑 Chromium 和 WebKit**。理由：Playwright 的 WebKit 引擎与 Safari 存在差异；Firefox 的 View Transitions 自 144 才支持，Playwright 自带的 Firefox 版本可能未默认启用。Firefox 用**真机手动测试**，暂时跳过，并在文档（README + 文档站）注明。
 9. **Nuxt 自动导入完整性**（v1.1 修订 #2 新增）：全新 Nuxt 项目仅加 `modules: ['theme-switch-animation/nuxt']`，`useThemeAnimation`、`ThemeAnimationType` 及所有类型**无需 import 即可使用且有完整类型提示**（`nuxt prepare` 通过、TS 无报错）。
-10. **单测**：mask 几何（四角最大距离、终尺寸）与 v1.6 的属性驱动规格（BLINDS / SCAN / QR_GRID 的起止值、渐变角、平铺尺寸、`@supports` 双层与降级基线）、v1.7 的 RIPPLE 环带（stop 序列与衰减 alpha、波长缩放、末帧实心段覆盖最远角、波源取自触发点）、v1.8 的角度族（conic 串与软尾、`to = 360 + 尾宽` 与视口无关、扇叶周期随 bladeCount 缩放及非整除精度、注册属性分名、守卫互斥）、v1.9 的 CURTAIN（三段对称渐变串、`to = 视口宽 + 2×软边`、四个 direction 取值结果一致、分发命中与守卫互斥）、v1.10 的 reverse（三态校验与非法值回落、`CIRCLE + true` 与 `CIRCLE_REVERT` 收起态归一化后 CSS 相同、`'auto'` 两态分别等于 `false` / `true`、`FAN` / `RIPPLE` / `CLOCK_SWEEP` 反向取补串与端点（RIPPLE 起点去掉 2.1 余量、终点过冲整个前缘）、`CURTAIN` 反向的两层 add 结构与两端软边、补集与正向的 stop 位置一格不差、分发 reverse 位对已接入类型都生效、未接入类型传 `true` 输出不变、废弃提示仅开发环境且只提示一次）全覆盖；TS strict 通过。
+10. **单测**：mask 几何（四角最大距离、终尺寸）与 v1.6 的属性驱动规格（BLINDS / SCAN / QR_GRID 的起止值、渐变角、平铺尺寸、`@supports` 双层与降级基线）、v1.7 的 RIPPLE 环带（stop 序列与衰减 alpha、波长缩放、末帧实心段覆盖最远角、波源取自触发点）、v1.8 的角度族（conic 串与软尾、`to = 360 + 尾宽` 与视口无关、扇叶周期随 bladeCount 缩放及非整除精度、注册属性分名、守卫互斥）、v1.9 的 CURTAIN（三段对称渐变串、`to = 视口宽 + 2×软边`、四个 direction 取值结果一致、分发命中与守卫互斥）、v1.10 的 reverse（三态校验与非法值回落、`CIRCLE + true` 的洞式 CSS 结构基线（注册属性声明、渐变两侧 stop、静止蒙版盒子、末帧半径收零、无 `z-index`）、`'auto'` 两态分别等于 `false` / `true`、`FAN` / `RIPPLE` / `CLOCK_SWEEP` 反向取补串与端点（RIPPLE 起点去掉 2.1 余量、终点过冲整个前缘）、`CURTAIN` 反向的两层 add 结构与两端软边、补集与正向的 stop 位置一格不差、分发 reverse 位对已接入类型都生效、未接入类型传 `true` 输出不变）全覆盖；TS strict 通过。
 11. **发布清单**：`npm pack` 内容 = dist（含 nuxt-runtime 目录）+ LICENSE + README；四个子路径（`.` / `./react` / `./vue` / `./nuxt`）exports 均可解析。
 
 ## 10. 修订记录
+
+### v1.13（2026-09-24）
+
+`reverse` PR4：**删除 `CIRCLE_REVERT` 类型**（破坏性，与 PR1–PR3 一起进 0.4.0）。
+
+1. **移除 `ThemeAnimationType.CIRCLE_REVERT`（值 `'circle-revert'`）与导出函数 `getCircleRevertMaskGeometry`**，动画类型 16 → 15 种。等价写法 `CIRCLE + reverse: 'auto'`（无论切哪个方向都收拢则 `reverse: true`）。需求方指令"PR4 一起改了，在迁移文档上标明就行"，**覆盖了设计文档决策 7** 原定的"先 deprecated 跨一个 minor 再删"——`@deprecated` 标记、开发环境一次性提示、两个 release 的迁移窗口随之作废，迁移说明落到 README「从 0.3.x 升级」一节。
+2. **`styles.ts` 一并删掉 V1.5 那条"收起挂旧截图层 + `z-index: 1`"的路径**（`revertDirection` 参数与 `onOld` 分支），`::view-transition-new(root)` 选择器从此写死：V1.6 起洞式已是默认，那条分支只剩公开 API 的兜底，`orchestrate` 从未走到。
+3. **洞式机制整体保留**：`CircleHoleGeometry` / `getCircleRevertHoleGeometry` / `buildHoleAnimationCSS` / `HOLE_RADIUS_VAR` 就是 `CIRCLE + reverse` 的实现，函数名沿用（纯改名另轮再做）。
+4. **等价性锁改为结构基线**：原断言"归一化 keyframes 名后与 `CIRCLE_REVERT` 输出相同"无法再与被删类型对拍，换成整串结构断言（注册属性声明、渐变两侧 stop、静止蒙版盒子、起始半径算式、末帧半径收零、无 `z-index`、旧层不参与）。
+5. **探测与验收脚本跟进**：`scripts/jitter-lab/lab.html` 默认改为 `CIRCLE` + `reverse: true`（该实验台测的正是洞式收起，默认语义不变），`verify-engine.mjs` / `verify-firefox-video.mjs` 显式传 `reverse` 位，不再依赖类型名。
 
 ### v1.12（2026-09-24）
 
@@ -423,4 +432,4 @@ export type { ThemeAnimationOptions, ... } from '@theme-switch-animation/core'
 
 ---
 
-**当前状态（2026-09-24）**：**0.1.0 / 0.2.0 / 0.3.0 均已发布**，npm `latest = 0.3.0`（tag 分别是不带前缀的 `theme-switch-animation@0.1.0`、换成 tag 触发流程后的 `v0.2.0` 与 `v0.3.0`；0.2.0 起走 OIDC Trusted Publishing，provenance 已实测挂上）。本文档随实现推进到 v1.11。v1.10（`reverse` PR1 + PR2 + `CIRCLE_REVERT` 标废弃）与 v1.11（PR3：`RIPPLE` / `CLOCK_SWEEP` 接入）已落地、文档已同步，**尚未发版**——`.changeset/` 下有一条待切，攒够后走 0.4.0。动画类型扩展已冻结在 16 种（理由见 `docs/animation-roadmap.md` §4），`reverse` 的后续接入见 `docs/reverse-option-design.md`；剩余真机验证与发版事项见 `docs/next-steps.md`。
+**当前状态（2026-09-24）**：**0.1.0 / 0.2.0 / 0.3.0 均已发布**，npm `latest = 0.3.0`（tag 分别是不带前缀的 `theme-switch-animation@0.1.0`、换成 tag 触发流程后的 `v0.2.0` 与 `v0.3.0`；0.2.0 起走 OIDC Trusted Publishing，provenance 已实测挂上）。本文档随实现推进到 v1.13。`reverse` 的四轮 PR 已全部落地（v1.10 PR1 `CIRCLE` + PR2 `FAN`、v1.11 PR3 `RIPPLE` + `CLOCK_SWEEP`、v1.12 PR3 追加 `CURTAIN`、v1.13 PR4 删 `CIRCLE_REVERT`），**尚未发版**——`.changeset/` 下的待切条目合起来走 0.4.0，其中 PR4 是破坏性变更。动画类型扩展已冻结（v1.13 起 15 种，理由见 `docs/animation-roadmap.md` §4），`reverse` 的接入判据与分期见 `docs/reverse-option-design.md`；剩余真机验证与发版事项见 `docs/next-steps.md`。

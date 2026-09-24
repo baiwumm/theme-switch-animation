@@ -1,12 +1,13 @@
-# `reverse` 选项设计（PR1 已落地）
+# `reverse` 选项设计（PR1–PR4 全部落地）
 
 > 批准于 2026-09-24。0.3.0 已发布（npm `latest = 0.3.0`），本特性作为 0.4.0 落地。
-> **当前进度**：PR1 + PR2 + PR3 完成 —— `CIRCLE`（洞式）、`FAN`、`RIPPLE`、`CLOCK_SWEEP` 四个接入，
-> 文档站与四个 playground 的 `Reverse` 控件齐了。**PR2 缩了水**：原计划的形状族 6 个与 `CURTAIN`
-> 在实现前被反证为**做不到无副作用**，已撤出（见 §4 表末两行与 roadmap §4）。
-> PR4（删类型）未开始。
-> 两处与设计原文的偏差已修正：① CSS 不可能逐字节相同（keyframes 名按类型生成），等价性锁走归一化比较；
-> ② §4 原先给形状族写的"反色一处开关、成本≈0"是错的。
+> **当前进度**：PR1 + PR2 + PR3 + PR4 完成 —— `CIRCLE`（洞式）、`FAN`、`RIPPLE`、`CLOCK_SWEEP`、
+> `CURTAIN` 五个接入，**PR4 已删掉 `CIRCLE_REVERT`**（类型 16 → 15）。文档站与四个 playground 的
+> `Reverse` 控件齐了。**PR2 缩了水**：原计划的形状族 6 个在实现前被反证为**做不到无副作用**，已撤出
+> （见 §4 表末行与 roadmap §4）；`CURTAIN` 同批撤出、PR3 翻案后接入。
+> 三处与设计原文的偏差：① CSS 不可能逐字节相同（keyframes 名按类型生成），等价性锁走归一化比较，
+> PR4 删掉被对比的类型后进一步改为结构基线；② §4 原先给形状族写的"反色一处开关、成本≈0"是错的；
+> ③ 决策 7 的"先 deprecated 跨一个 minor 再删"在 PR4 被需求方当场改为一起删 + 迁移文档。
 > 实现时以下文为准。
 
 ---
@@ -22,7 +23,7 @@
 | 4b | `CURTAIN` | ~~PR2 实测撤出~~ —— **PR3 翻案，已接入**。当时判"结构性、非调参可解"错在**只试了单渐变**；两层 `add` 构造末帧零残留。教训：证伪一个方案前要先穷举构造空间，单渐变取补只是其中一类 |
 | 5 | 命名 | **`reverse`**。歧义靠 README 一句正交说明消掉（§2 末） |
 | 6 | 与 0.3.0 的先后 | **先发包**。本特性有 3 块需要真机验观感，不压在已验完的发布前面 |
-| 7 | 删 `CIRCLE_REVERT` 的方式 | **先 deprecated 跨一个 minor，再删**。拆成"加选项（非破坏）→ 删类型（破坏）"两步 |
+| 7 | 删 `CIRCLE_REVERT` 的方式 | ~~**先 deprecated 跨一个 minor，再删**。拆成"加选项（非破坏）→ 删类型（破坏）"两步~~ —— PR1–PR3 按此做了 `@deprecated` + 开发环境一次性提示，**PR4 落地时需求方改为一起删**（"PR4 一起改了，在迁移文档上标明就行"），窗口期作废。迁移写法 `CIRCLE + reverse: 'auto'` 记在 README「从 0.3.x 升级（0.4.0 破坏性变更）」一节 |
 
 ---
 
@@ -142,3 +143,7 @@ deprecated 期至少跨一个 minor，给用户迁移窗口；不要在同一版
   `verify-engine.mjs` / `verify-firefox-video.mjs`。
 - **绝不改写**：`CHANGELOG.md`、`docs/phase-*-report.md`、`docs/release-0.1.0-smoke-report.md`
   —— 那是历史事实，改它等于伪造发布历史。
+- **PR4 落地时补上的两处漏点**：`scripts/jitter-lab/run.mjs` 与 `lab.html`（实验台默认测的就是洞式收起，
+  默认值改为 `CIRCLE` + `reverse: true`，两个 verify 脚本显式传 `reverse` 位、不再依赖类型名），
+  以及文档站的类型计数（`hero.tsx` / `features.tsx` / `site.ts` / `gallery.tsx` 注释）与
+  `animation-roadmap.md` §2 的维度表。门面截图 `assets/screen.jpg` 含 hero 数字，必须重拍。

@@ -15,7 +15,8 @@
 > 六+七笔提交都在本地**未 push、未发版**。后续还想加类型请看 `docs/animation-roadmap.md`
 > ——候选池、优先级与排序理由、明确不做清单、以及"做完一个验证一个、不行就整个撤回"的撤回面。
 > 2026-09-24 追加：`CURTAIN` 落地（§9）后 **0.3.0 已发布**（tag 流水线第二次走通，npm `latest = 0.3.0`、
-> provenance 实测挂上）。同期间 `SPIRAL` / `SEEDS` / `COMB` 三个候选都实现过又整体撤回，动画类型冻结在 16 种。
+> provenance 实测挂上）。同期间 `SPIRAL` / `SEEDS` / `COMB` 三个候选都实现过又整体撤回，动画类型冻结；
+> v1.13 删掉 `CIRCLE_REVERT` 后为 **15 种**。
 > 接着是 `reverse` 选项 PR1（§10）。**push 与打 tag 都会触发外部动作**（CI、文档站部署、npm 审批闸门），
 > 由需求方本人执行。
 
@@ -179,13 +180,14 @@ ffmpeg（无 fps 滤镜，全帧导出）抽帧统计：
 iPhone 与 Mac 同一局域网访问 `http://<mac-ip>:5224/`（或直接把 `playgrounds/vue/dist` 丢到任意静态托管）。
 
 **macOS Safari 18+（重点）**
-1. 点 CIRCLE_REVERT 两次：切到暗色应是暗色圆从按钮**扩散**；切回亮色应是暗色圆**收起进按钮**，
+1. 点 CIRCLE 卡两次（Reverse 停在 auto）：切到暗色应是暗色圆从按钮**扩散**；切回亮色应是暗色圆**收起进按钮**，
    全程平滑约 750ms。失败形态：瞬间切换（`@property` 失效）或前半段不动、50% 处一跳（属性未注册、离散插值）。
-2. 12 个按钮各点一次：每个都有自己的形状/方向动画，没有"全部播同一个圆"（v0.2 起按钮矩阵由 13
-   改为 12，新增 BLINDS / SCAN / QR_GRID 三卡，见 §5 补测项）。
+   再把 Reverse 切到 on 单点一次：无论切暗还是切亮都应收起。
+2. 15 个按钮各点一次：每个都有自己的形状/方向动画，没有"全部播同一个圆"（矩阵随类型增减：v0.2 是 12，
+   v1.7–v1.9 加到 16，v1.13 删 CIRCLE_REVERT 后 15）。
 3. 3 秒内在不同按钮上连点 10 次：结束后 `<html>` class、按钮文案（🌙/☀️）、`localStorage['theme-switch-animation']`
    三者一致；Web Inspector 控制台无红色报错、无 unhandled rejection。
-4. 切 duration 1000ms + easing linear 再点一次 CIRCLE_REVERT 收起：确认 `var()` 缓动生效（匀速，非先慢后快）。
+4. 切 duration 1000ms + easing linear 再点一次 CIRCLE（Reverse = on）收起：确认 `var()` 缓动生效（匀速，非先慢后快）。
 5. 系统设置 → 辅助功能 → 减弱动态效果 开启：点击应直接切换、状态仍正确。
 6. 若手边有 Safari < 18（如 macOS 13/14 未升级）：应降级为直接切换，无报错。
 
@@ -194,7 +196,7 @@ iPhone 与 Mac 同一局域网访问 `http://<mac-ip>:5224/`（或直接把 `pla
 8. 横竖屏各来一次收起，观察边缘是否有锯齿/线条（Apple GPU 合成路径与桌面不同）。
 
 **Windows 真机 125% / 150%（可选，本机已用 forced dsf 覆盖，此项只为最后一公里的肉眼观感）**
-9. 系统缩放调到 125%，Chrome / Edge 打开 React playground，连点 CIRCLE_REVERT 收起 ~20 次，
+9. 系统缩放调到 125%，Chrome / Edge 打开 React playground，连点 CIRCLE（Reverse = on）收起 ~20 次，
    看有没有"电视故障式闪一下 + 横带"（附录六原症状，期望 0 次）；150% 再来一遍。
 
 ## 3. 文档更新（README + docs 站 + playground 文案）——2026-09-14 完成
@@ -466,7 +468,28 @@ iPhone 与 Mac 同一局域网访问 `http://<mac-ip>:5224/`（或直接把 `pla
 - [x] README 类型表与家族枚举 / 需求文档 v1.9 / 文档站文案 / 四个 playground / changeset / 门面截图
 - [ ] **分数缩放 dpr 一档仍未验**：125% / 150% 下中缝与软边会不会出现 1px 级亮暗线——这是 roadmap P0-1 唯一遗留的待验点
 - [x] ~~下一批按 roadmap 顺序是 P0-2 `SPIRAL`~~ —— **动画类型扩展到此冻结（2026-09-24 需求方决定）**。`SPIRAL` / `SEEDS` / `COMB` 三个都实现过又整体撤回，不再加新类型，停在 16 种；候选池剩下的 P2-2 `LOGO_MASK` 也不做。后续判据见 `docs/animation-roadmap.md` §1 四条约束（第 4 条是这三轮换来的）。
-- [ ] **`reverse` 选项 PR1–PR3 已落地**（v1.10 / v1.11 / v1.12，待发版）：三态 `boolean | 'auto'`，接入 `CIRCLE` / `FAN` / `RIPPLE` / `CLOCK_SWEEP` / `CURTAIN` 五个；`BLINDS`/`SCAN`/`QR_GRID` 有意不开（`direction` 已占那根轴），形状族 6 个经实测做不到无副作用。`CIRCLE_REVERT` 已标 deprecated，PR4 才删。设计定稿在 `docs/reverse-option-design.md`
+- [x] **`reverse` 选项 PR1–PR4 全部落地**（v1.10 – v1.13，待发版）：三态 `boolean | 'auto'`，接入 `CIRCLE` / `FAN` / `RIPPLE` / `CLOCK_SWEEP` / `CURTAIN` 五个；`BLINDS`/`SCAN`/`QR_GRID` 有意不开（`direction` 已占那根轴），形状族 6 个经实测做不到无副作用。PR4 按需求方指令**没有**等跨一个 minor，直接删掉 `CIRCLE_REVERT`（类型 16 → 15），迁移写法 `CIRCLE + reverse:'auto'` 记在 README「从 0.3.x 升级」。设计定稿在 `docs/reverse-option-design.md`
+- [ ] **PR4 之后待发 0.4.0**：`.changeset/reverse-option.md` 一条（minor，正文首行标 **breaking**，与 0.2.0 的 `caefb1b` 同口径：新增 `reverse` 与移除 `CIRCLE_REVERT` 合在一条里，不拆两条）；顺带第一次真验 `350aa2f` 那批 action 升 v5 后的 CI 与 tag 流水线
+- [ ] **PR4 真机验证**：画廊与四个 playground 少一张 CIRCLE_REVERT 卡（16 → 15），CIRCLE 卡的 `Reverse = auto` 承担原类型全部观感；`pnpm build` 后跑 `scripts/verify-engine.mjs`（已改用 `CIRCLE + reverse:true` 走洞式路径）
+- [x] **PR4 收尾（2026-09-24）**：
+  1. **门面截图已重拍**：`assets/screen.jpg` 换成 15 张卡的新图（1910×911、亮色、与旧图取景逐位对齐，
+     只有 hero 数字 16 → 15）。一次性断言脚本在仓库外（`%TEMP%/screen-shot.mjs`：起 3311 静态服务指向
+     `apps/docs/out/`、CDP 1923），四项全过才落盘——`EXPECT_CARDS=15` / `EXPECT_HERO="15 种"` /
+     `EXPECT_CARD_TYPE=curtain` 三条正向，外加一条**反向断言 `circle-revert` 不在场**；先写临时文件、
+     肉眼比对取景后才覆盖仓库资产。新踩的一条：`spawn` Chrome 之后必须轮询 `/json/list` 等 CDP 就绪，
+     直接 `connectPage` 会 `ECONNREFUSED`。
+  2. **31 个文件按四刀提交并推送**（比原计划多一刀：脚本单开，同 `cfe7cbe` 的口径）：
+     `feat(core)` 删类型与旧收起路径 → `feat(docs+playgrounds)` 撤卡与文案 →
+     `chore(scripts)` 实验台与引擎矩阵探测 → `docs` README / 需求文档 v1.13 / roadmap / 本台账 /
+     设计文档 + changeset + 门面截图。
+     提交前已验绿：根 `tsc` / `eslint` / `vitest` 260 例、`pnpm build` + `verify:package`（18 文件、
+     `dist` 内已无 `circle-revert`）、四个 playground 各自 typecheck（vue 走 `vue-tsc`、nuxt 先
+     `nuxt prepare`）、文档站 `next build` + `out/index.html` 15 张卡。
+     `apps/docs` 的 `pnpm lint`（biome）报 39 个错，全是 CRLF 与 `noImgElement` / `noSvgWithoutTitle`
+     的既有噪音，不在本次改动面上，CI 也不跑它。
+  3. **本次推送一并带上了 PR1–PR3 与 CI 升 v5**：远端此前停在 `fdce013`（0.3.0 发版），
+     之后 15 个提交一直没推。所以推上去的内容 = 0.3.0 之后的全部待发面，CI 会第一次跑
+     `350aa2f` 那批 v5 action。
 - [ ] 待排期的小重构：`qrCenterGradient` 与 `getCurtainRevealSpec` 合并成一个中性命名的对称渐变构造器
 
 ---
