@@ -16,9 +16,10 @@
 | # | 决策 | 结论 |
 | --- | --- | --- |
 | 1 | 取值形态 | **`boolean \| 'auto'` 三态**。纯布尔删不掉 `CIRCLE_REVERT`——见 §2 的语义核对，这是本设计最关键的一条 |
-| 2 | 形状族 6 个（`SQUARE` / `DIAMOND` / `RECTANGLE` / `HEXAGON` / `TRIANGLE` / `STAR`） | **开放**。反色只是 SVG 生成器的一处开关，成本≈0；不开会留下"`CIRCLE` 能 reverse、`SQUARE` 不能"的裂缝 |
-| 3 | `FAN` | **开放**。扇叶合拢与展开是两种读感，且不与其他轴重叠 |
+| 2 | 形状族 6 个（`SQUARE` / `DIAMOND` / `RECTANGLE` / `HEXAGON` / `TRIANGLE` / `STAR`） | ~~**开放**。反色只是 SVG 生成器的一处开关，成本≈0~~ —— **PR2 实现前反证，撤出**：形状蒙版是 SVG data-URI，反向必须动 `mask-size`，而那正是 phase-6 附录四/五排查过的设备像素对齐抖动病根。做不到无副作用，理由见 §4 表与 roadmap §4 |
+| 3 | `FAN` | **开放，PR2 已落地**。扇叶合拢与展开是两种读感，且不与其他轴重叠；能干净的唯一理由是硬边无羽化（见 §4） |
 | 4 | `CIRCLE_BLUR` | **暂缓，本批不做**。反色会让高斯模糊边出现在内侧，观感未验 |
+| 4b | `CURTAIN` | ~~开放~~ —— **PR2 实测撤出**：24px 羽化带塌零时两斜坡交叉出凹陷，末帧约 38px 居中半透明带，违反约束 2；两种补救都只减小不消除 |
 | 5 | 命名 | **`reverse`**。歧义靠 README 一句正交说明消掉（§2 末） |
 | 6 | 与 0.3.0 的先后 | **先发包**。本特性有 3 块需要真机验观感，不压在已验完的发布前面 |
 | 7 | 删 `CIRCLE_REVERT` 的方式 | **先 deprecated 跨一个 minor，再删**。拆成"加选项（非破坏）→ 删类型（破坏）"两步 |
@@ -104,7 +105,7 @@ const revertDirection = isRevert ? (toDark ? 'expand' : 'collapse') : undefined
 | PR | 内容 | 破坏性 |
 | --- | --- | --- |
 | **PR1** | 加 `reverse?: boolean \| 'auto'` + `resolveAnimationOptions` 校验 + `CIRCLE` 全量（含 `'auto'` 复刻）+ `CIRCLE_REVERT` 标 deprecated（开发环境 warn 一次）+ README / options 表 / 需求文档 | 非破坏 |
-| **PR2** | 形状族 6 个 + `FAN` + `CURTAIN` —— 纯机械（反色开关 + from/to 互换） | 非破坏 |
+| **PR2** | ~~形状族 6 个 + `FAN` + `CURTAIN` —— 纯机械~~ → **实际只落 `FAN`**：形状族与 `CURTAIN` 反证/实测做不到无副作用，撤出进 §4 | 非破坏 |
 | **PR3** | `RIPPLE` + `CLOCK_SWEEP` —— 环带 / 软尾镜像，**先探针再落码** | 非破坏 |
 | **PR4** | 删 `ThemeAnimationType.CIRCLE_REVERT` 枚举项 + `getCircleRevertMaskGeometry`（mask-size 的旧收起路径，已被洞式取代、仅留作降级）+ 画廊那张独立卡片 + 各处文案 | **破坏**，按 0.2.0 先例走 minor + 条目标 **breaking** |
 
