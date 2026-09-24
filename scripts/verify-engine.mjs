@@ -18,7 +18,8 @@
  *        解析成具体长度），否则对明暗边界做最小二乘圆拟合；半径必须单调收缩；
  *      支持 getAnimations 捕获伪元素动画的引擎走"暂停 + 按毫秒 seek"的确定性取样，
  *      否则退化为实时抓帧（duration 拉长到 2000ms 以获得足够帧数）；
- *   3. 全部动画类型（数量取自库的 ThemeAnimationType，light→dark）：起点/中点/终点三帧亮度呈 亮→中→暗，start↔mid 像素差异 >2%；
+ *   3. 全部动画类型（数量取自库的 ThemeAnimationType，light→dark）：7 点亮度轨迹从亮单调降到暗、
+ *      末帧之前至少 3 个档位（离散翻转只有 1 档）、起↔中点像素差异 >2%；
  *   4. finished 结算 ok；全程无 console.error / pageerror。
  *
  * 运行：node scripts/verify-engine.mjs [--engine=webkit|firefox|chromium] [--channel=chrome|msedge]
@@ -232,45 +233,62 @@ try {
   if (lumOk && !failures.length) console.log('=> @property 注册半径在该引擎的 VT 伪元素上逐帧插值，蒙版随之推进 ✓')
 
   // ---------- 3. 全部动画类型（数量随库的 ThemeAnimationType 自动变化） ----------
-  console.log(`\n=== ${TYPE_ENTRIES.length} 种动画类型逐一验证（light→dark，${REPORT.mode} 模式） ===`)
+  // 轨迹取样（相对 duration 的比例）。不用"单点中帧"判据：RIPPLE 这类类型的几何覆盖在中点前
+  // 就完成了、后半段是余波衰减，中帧亮度必然等于终帧，会把正常动画误判成"未推进"。
+  const REL = [0, 0.15, 0.3, 0.45, 0.6, 0.75, 1]
+  console.log(`\n=== ${TYPE_ENTRIES.length} 种动画类型逐一验证（light→dark，${REPORT.mode} 模式，${REL.length} 点轨迹） ===`)
   for (const [key, value] of TYPE_ENTRIES) {
     await page.evaluate(`window.__lab.reset('light')`)
     await sleep(120)
-    const frames = {}
     let n = 0
+    const dur = REPORT.mode === 'seek' ? 600 : 1600
+    const res = await page.evaluate(
+      `window.__lab.start({ duration: ${dur}, animationType: ${JSON.stringify(value)}, reverse: false })`,
+    )
+    if (!res?.animated) throw new Error(`${key}: 转场未启动`)
     if (REPORT.mode === 'seek') {
-      const res = await page.evaluate(`window.__lab.start({ duration: 600, animationType: ${JSON.stringify(value)}, reverse: false })`)
-      if (!res?.animated) throw new Error(`${key}: 转场未启动`)
       n = await page.evaluate('window.__lab.waitForAnimation()')
       await page.evaluate('window.__lab.pause()')
-      for (const [label, t] of [['start', 0], ['mid', 300], ['end', 600]]) {
-        await page.evaluate(`window.__lab.seek(${t})`)
-        frames[label] = await shot()
-      }
-      await page.evaluate('window.__lab.finish()')
-    } else {
-      const res = await page.evaluate(`window.__lab.start({ duration: 1600, animationType: ${JSON.stringify(value)}, reverse: false })`)
-      if (!res?.animated) throw new Error(`${key}: 转场未启动`)
-      frames.start = decodePng(await page.screenshot({ type: 'png' }))
-      await sleep(Math.max(0, 800 - 250))
-      frames.mid = decodePng(await page.screenshot({ type: 'png' }))
     }
+    const shots = []
+    const t0 = Date.now()
+    for (const f of REL) {
+      if (REPORT.mode === 'seek') await page.evaluate(`window.__lab.seek(${Math.round(dur * f)})`)
+      else await sleep(Math.max(0, dur * f - (Date.now() - t0)))
+      shots.push(await shot())
+    }
+    if (REPORT.mode === 'seek') await page.evaluate('window.__lab.finish()')
     const outcome = await waitOutcome()
-    if (!frames.end) frames.end = await shot()
-    const L = { start: meanLum(frames.start), mid: meanLum(frames.mid), end: meanLum(frames.end) }
+    shots[shots.length - 1] = await shot() // 实时模式下末帧要取结算后的稳定态
+    const L = shots.map(meanLum)
+    const midIdx = Math.floor(REL.length / 2)
     let diff = 0
     let n2 = 0
-    for (let i = 0; i < frames.start.lum.length; i += 5) {
-      if (Math.abs(frames.start.lum[i] - frames.mid.lum[i]) > 30) diff++
+    for (let i = 0; i < shots[0].lum.length; i += 5) {
+      if (Math.abs(shots[0].lum[i] - shots[midIdx].lum[i]) > 30) diff++
       n2++
     }
     const diffFrac = diff / n2
-    const progressing = L.start > 200 && L.end < 60 && L.mid > L.end + 12 && L.mid < L.start - 12 && diffFrac > 0.02
-    REPORT.types.push({ key, value, maskAnimations: n, lum: L, diffFrac: Math.round(diffFrac * 1000) / 1000, outcome, progressing })
+    const distinct = distinctCount(L.slice(0, -1), 8) // 末帧之前的档位数（1 档 = 离散翻转，不是推进）
+    const tol = REPORT.mode === 'seek' ? 2 : 8 // 实时抓帧有时间抖动，逆序容忍放宽
+    const badStep = monotonic(L, 'down', tol)
+    const lumText = L.map((v) => v.toFixed(0)).join('→')
+    const progressing = L[0] > 200 && L.at(-1) < 60 && distinct >= 3 && badStep === 0 && diffFrac > 0.02
+    REPORT.types.push({
+      key,
+      value,
+      maskAnimations: n,
+      lum: L,
+      distinct,
+      badStep,
+      diffFrac: Math.round(diffFrac * 1000) / 1000,
+      outcome,
+      progressing,
+    })
     console.log(
-      `  ${key.padEnd(14)} ${REPORT.mode === 'seek' ? `蒙版动画=${n}  ` : ''}亮度 ${L.start.toFixed(0)}→${L.mid.toFixed(0)}→${L.end.toFixed(0)}  Δ(start,mid)=${(diffFrac * 100).toFixed(1)}%  outcome=${outcome}  ${progressing ? '✓' : '✗'}`,
+      `  ${key.padEnd(14)} ${REPORT.mode === 'seek' ? `蒙版动画=${n}  ` : ''}亮度 ${lumText}  中段档数 ${distinct}  逆序 ${badStep}  Δ(起,中)=${(diffFrac * 100).toFixed(1)}%  outcome=${outcome}  ${progressing ? '✓' : '✗'}`,
     )
-    if (!progressing) failures.push(`${key}：蒙版未推进（亮度 ${L.start.toFixed(0)}/${L.mid.toFixed(0)}/${L.end.toFixed(0)}，差异 ${(diffFrac * 100).toFixed(1)}%）`)
+    if (!progressing) failures.push(`${key}：蒙版轨迹未推进（亮度 ${lumText}，中段档数 ${distinct}，逆序 ${badStep}，差异 ${(diffFrac * 100).toFixed(1)}%）`)
     if (outcome !== 'ok') failures.push(`${key}：outcome=${outcome}`)
     await sleep(150)
   }

@@ -466,11 +466,21 @@ iPhone 与 Mac 同一局域网访问 `http://<mac-ip>:5224/`（或直接把 `pla
 
 - [x] core 实现 + 10 例单测 + 画廊第 16 张卡
 - [x] README 类型表与家族枚举 / 需求文档 v1.9 / 文档站文案 / 四个 playground / changeset / 门面截图
-- [ ] **分数缩放 dpr 一档仍未验**：125% / 150% 下中缝与软边会不会出现 1px 级亮暗线——这是 roadmap P0-1 唯一遗留的待验点
+- [x] **分数缩放 dpr 一档已验（2026-09-24 二次收尾）：通过**。jitter-lab seek 模式（`captureScreenshot`，真按 dsf 出设备像素：1280 / 1600 / 1920 宽）跑 CURTAIN 正向 expand + clean 纯色平面，25 帧 × dsf 1 / 1.25 / 1.5：
+  - **中缝无接缝**：t>0 的每一个采样时刻"中心比内侧更亮"的露缝量 = **0.0 /255**（三档全 0）；唯一的局部极值是 t=0 起始帧那道设计上透光，且随 dpr **变弱**（偏差 14.6 → 12.0 → 10.5）。
+  - **无 1px 亮暗线**：全帧二阶差扫描（三条行剖面），除 t=0 中缝那 6 个点之外，dev≥5 的采样点**全是单调折点**（24px 羽化斜坡端点），非线。
+  - **左右对称**：两条边的偏心 = **0.0 设备像素**（仅 1.5 的 t=188 出现一次 −1 设备像素 = −0.67 CSS 像素）；实心段半宽按 CSS 像素三档一致（11.5/11.6/11.7、32.5/32.4/32.3、97.5/98.0/98.0）；末帧 >MID 采样残留 0。
+  - **一处诚实备注**：125% 末帧视口**最外圈 1 设备像素**部分未盖满（CURTAIN 5196 采样 / 峰值亮度 105）。同口径 **CIRCLE 与 SQUARE 在 1.25 同样存在且更亮**（2599 采样 / 峰值 195），1.0 与 1.5 均为 0 → 分数 dpr 下蒙版盒边界的通用量化，**不是 CURTAIN 引入、也不是 0.4.0 新增**；肉眼可见性留给你在真机 125% 下判。
+  - 曾被自己的初判误导一次：先看 seek 汇总"1.25/1.5 各 4 帧候选 vs 1.0 只有 1 帧"就断定分数缩放引入了伪影，量完才发现 dpr=1 的折点偏差本来更大（8–10.5 vs 5.5–6.5），差异全部来自检测器 `contrastMax=10` 那道邻域过滤在斜率变小后放行了折点。**教训：候选帧数不是证据，折点/极值的区分才是**。
 - [x] ~~下一批按 roadmap 顺序是 P0-2 `SPIRAL`~~ —— **动画类型扩展到此冻结（2026-09-24 需求方决定）**。`SPIRAL` / `SEEDS` / `COMB` 三个都实现过又整体撤回，不再加新类型，停在 16 种；候选池剩下的 P2-2 `LOGO_MASK` 也不做。后续判据见 `docs/animation-roadmap.md` §1 四条约束（第 4 条是这三轮换来的）。
 - [x] **`reverse` 选项 PR1–PR4 全部落地**（v1.10 – v1.13，待发版）：三态 `boolean | 'auto'`，接入 `CIRCLE` / `FAN` / `RIPPLE` / `CLOCK_SWEEP` / `CURTAIN` 五个；`BLINDS`/`SCAN`/`QR_GRID` 有意不开（`direction` 已占那根轴），形状族 6 个经实测做不到无副作用。PR4 按需求方指令**没有**等跨一个 minor，直接删掉 `CIRCLE_REVERT`（类型 16 → 15），迁移写法 `CIRCLE + reverse:'auto'` 记在 README「从 0.3.x 升级」。设计定稿在 `docs/reverse-option-design.md`
 - [ ] **PR4 之后待发 0.4.0**：`.changeset/reverse-option.md` 一条（minor，正文首行标 **breaking**，与 0.2.0 的 `caefb1b` 同口径：新增 `reverse` 与移除 `CIRCLE_REVERT` 合在一条里，不拆两条）。**push 侧 CI 已验**（见下条 3），剩 tag 触发的发版流水线未验
-- [ ] **PR4 真机验证**：画廊与四个 playground 少一张 CIRCLE_REVERT 卡（16 → 15），CIRCLE 卡的 `Reverse = auto` 承担原类型全部观感；`pnpm build` 后跑 `scripts/verify-engine.mjs`（已改用 `CIRCLE + reverse:true` 走洞式路径）
+- [x] **PR4 真机验证已做完（2026-09-24 二次收尾）**，四条证据：
+  1. **`CIRCLE + reverse:'auto'` 两态正确**：暗→亮读到洞式 CSS（`--theme-switch-radius` + `@property`，`theme-switch-circle` 那套 keyframes），seek 13 帧 × dsf 1/1.25/1.5 **全部 0 线条候选**；亮→暗的注入 CSS 与 `reverse:false` **逐行相同** → auto 确实承担了旧 `CIRCLE_REVERT` 的全部行为。
+  2. **真实 playground 产物 + 强制 dsf**：react @1/1.25/1.5、vue @1.25 各连点（先把该卡 reverse 选到 `auto` 再连点），第 2/4/… 次确认为"收起"；单帧亮度跳变 ≤1.7（阈值 25）。⚠ 的"横带 37–39px / 偏差 40–41"是检测器压线——同帧同值、跨 dpr 与跨框架一致，与本节 §2 已记录的那类误报同源。
+  3. **`pnpm test:acceptance` 7/7 PASS**（自 13 类型以来第一次重跑）：含 vue-rapid 挂载 **.switch-button × 15**、**cdp-nuxt-animtypes 15 个按钮各自播放声明的那套 @keyframes**、measure 四档各 25 样本 0 超时 p95 ≤32ms。
+  4. **`scripts/verify-engine.mjs --engine=chromium --channel=chrome`：15/15 类型推进 + 结算 ok、0 报错**；文档站 `next build` 干净重出后 `out/index.html` 与实机 DOM 都是 15 张卡、0 处 circle-revert；四个 playground typecheck 全 0（vue 走 `vue-tsc`、nuxt 先 `nuxt prepare`）。
+  **仍未验**：WebKit / Firefox 引擎档（`%TEMP%/pw-webkit` 的 Playwright 临时装与 webkit/firefox 浏览器构建都已不在，本机 `ms-playwright` 缓存只剩 chromium-1243；本轮只装了 playwright@1.63.0 包本体跑通 chrome 通道）。0.3.0 当时同样没重跑，所以不算 0.4.0 的回退，但 CURTAIN 的 `mask-composite: add` 与 FAN 的 `repeating-conic-gradient` 目前只有 Chrome 系证据。**系统缩放 125%/150% 真机、Safari/iOS 真机、README 迁移写法手抄验证**三条也不在本次人工复核范围内（需求方本轮只过了文档站与 playgrounds）。
 - [x] **PR4 收尾（2026-09-24）**：
   1. **门面截图已重拍**：`assets/screen.jpg` 换成 15 张卡的新图（1910×911、亮色、与旧图取景逐位对齐，
      只有 hero 数字 16 → 15）。一次性断言脚本在仓库外（`%TEMP%/screen-shot.mjs`：起 3311 静态服务指向
@@ -492,6 +502,12 @@ iPhone 与 Mac 同一局域网访问 `http://<mac-ip>:5224/`（或直接把 `pla
      **`350aa2f` 那批 v5 action 就此真验通过**：run `35981440065` 全绿，node 22 / node 24 两个矩阵都过，
      `Post Run actions/checkout@v5` 正常收尾，**Node 20 弃用告警不再出现**；唯一标注是
      `ubuntu-latest` 将于 2026-10-19 迁到 Ubuntu 26 的预告，与本仓配置无关。
+- [x] **工装三处口径修正（2026-09-24 二次收尾，`chore(scripts)`）**：
+  1. `jitter-lab` 的 `run.mjs` 原先**硬编码 CIRCLE + reverse:true**，跑不了其他类型 → 补 `--type` / `--reverse`（`auto` 要带引号透传）与 `--preclick`（真实站点连点前先把控件点到某个态）；`lab.html` 对未知类型名改为**抛错**而不是静默回落 CIRCLE——否则一份"CURTAIN 报告"实测的其实是 CIRCLE。
+  2. **cycles / live 模式的 screencast 帧恒为 1280×800，不随 `deviceScaleFactor` 放大**（只有 seek 模式的 `captureScreenshot` 出 1600×1000 / 1920×1200）。所以本节 §2 里"live/cycles dsf=1.25 / 1.5"那几行的**证据强度低于其文字表述**——分数 dpr 的像素级判据只能靠 seek 模式。以后判"某伪影是否随 dpr 变化"，先看抓帧尺寸是不是真的变了。
+  3. **`verify-engine.mjs` 的逐类型判据换掉**：原来只取一个中帧（duration 的 50%）要求 `end < mid < start`，RIPPLE 因此被误报"蒙版未推进"——它的几何覆盖在 ~50% 前就完成、后半段是余波衰减，mid 必然等于 end。现改为 **7 点轨迹**（复用文件里已有的 `monotonic` / `distinctCount`）：起亮末暗 + 末帧前 ≥3 个档位 + 单调 0 逆序 + 起↔中像素差 >2%，**比原判据更严**（离散翻转仍会被抓）。改完 RIPPLE 读作 255→249→149→19→15→15→15，15/15 全绿。
+  4. 顺带：站点模式的"选择器等不到节点"现在会带 `location.href` / `readyState` / body 长度立刻失败，导航被 CDP 拒绝时直接把 URL 和原因打出来。这次靠它定位到一个**纯操作错误**——Git Bash 会把 `--page=/index.html` 改写成 `E:/git/Git/index.html`，页面停在 about:blank 却只报"没找到按钮"。跑站点模式要 `MSYS2_ARG_CONV_EXCL='*'`。
+- [x] **一条假警报，已证伪（值得记住的失败模式）**：nuxt 生产产物 SSR 500 `ThemeAnimationType is not defined`。根因是我自己的跑序把 `.nuxt` 的自动导入扫描缓存搞脏（`nuxt prepare/typecheck` 之后又重出了 `dist/nuxt-runtime`），清 `.nuxt` + `node_modules/.cache` 重 build 即恢复 200 + 15 张卡。**产品代码一行没动**。但要注意：这类断链 **`nuxt typecheck` 抓不到**——模块用 `addTypeTemplate` 补的是全局类型别名，类型面永远绿，只有真跑产物才暴露。发版前 nuxt 必须验 `.output/server/index.mjs`，不能只看 typecheck。
 - [ ] 待排期的小重构：`qrCenterGradient` 与 `getCurtainRevealSpec` 合并成一个中性命名的对称渐变构造器
 
 ---
@@ -529,7 +545,7 @@ tag 流水线第二次走通：`changeset version` → commit → push → `v0.3
 
 - [x] core：`reverse` 三态 + 校验 + `CIRCLE` 接通 + `CIRCLE_REVERT` 标废弃 + 7 例单测
 - [x] 文档站 CIRCLE 卡与四个 playground 的 `Reverse` 控件；README / 需求文档 v1.10 / 设计文档状态 / changeset
-- [ ] **真机验证 PR1**：文档站 CIRCLE 卡切 `off` / `on` / `auto` 三档，`on` 与 `auto`（切回亮色）应看到"新主题从四周显出、向按钮中心收拢"；`auto` 的另一半（切到暗色）应与 `off` 完全一致。四个 playground 各验一遍
+- [x] **真机验证 PR1 已完成（2026-09-24 二次收尾，需求方人工复核）**：文档站画廊与四个 playground 的 `reverse` 三档 `off` / `on` / `auto` 均按预期——`on` 与 `auto`（切回亮色）为"新主题从四周显出、向按钮中心收拢"，`auto` 的另一半（切到暗色）与 `off` 一致。机器侧配套证据见 §9「PR4 真机验证已做完」第 1 条（auto 两态的注入 CSS 与 `reverse:false` 逐行相同、洞式路径 `@property` 半径在三个 dsf 下 0 线条候选）。
 - [x] ~~**PR2**：形状族 6 个 + `FAN` + `CURTAIN` 接入 `reverse`~~ —— **落地时缩到只剩 `FAN`**：形状族与 `CURTAIN` 经反证/实测**做不到无副作用**，撤出并进 roadmap §4。形状族反向必须动 `mask-size`，那是 phase-6 附录四/五查过的像素对齐抖动病根；`CURTAIN` 的 24px 羽化带塌零时两斜坡交叉出凹陷，末帧实测约 38px 居中半透明带（"终值过冲"与"两侧板向中心重叠生长"两种补救都只减小不消除）。`FAN` 能做的唯一理由是硬边无羽化：末帧扫描 0 残留，并用 start/mid 两点对照排除了"mask 解析失败也报 0"的假阳性。
   **但 `CURTAIN` 那半句判错了，PR3 后翻案**：当时只试了单渐变的三种写法（取补、过冲、单渐变两侧板）就下"结构性、非调参可解"的结论。换**两层 + `add`（取最大 alpha）**——左右板各自从边缘向中线长、软边朝内、重叠时取 max 而非抵消——末帧就干净了（首帧 6400/6400 全隐、末帧 0 残留）。**教训：证伪前先穷举构造空间**，已写进 roadmap §1 附近与需求 v1.12
 - [x] **PR3 已完成**：`RIPPLE` + `CLOCK_SWEEP` 接入，先探针后落码，两者末帧 6400 采样点零残留。`RIPPLE` 撞出两个"照抄正向"的坑——主峰 α=0.5 的补仍是 0.5 所以终点必须过冲整个前缘；正向 `to` 里那个 `2.1 × maxRadius` 是为正向覆盖留的余量，反向照抄会让**前 60% 时间屏幕毫无变化**，起点改成 `maxRadius + 前缘` 才铺满时间轴（与 SPIRAL 那轮照抄 2.1 是同一类错误的镜像）。`CLOCK_SWEEP` 反向的观感就是当初搁置的**逆时针扫开**，顺/逆方向不必再单开选项

@@ -9,6 +9,9 @@
  *   node scripts/jitter-lab/run.mjs --dsf=1.5 --samples=48
  *   node scripts/jitter-lab/run.mjs --direction=expand --dsf=1
  *   node scripts/jitter-lab/run.mjs --patch="will-change: mask-size, mask-position;=>"
+ *   node scripts/jitter-lab/run.mjs --type=CURTAIN --reverse=false --direction=expand --variant=clean
+ *     （`--type` 默认 CIRCLE、`--reverse` 默认 true，即本实验台的原语义；clean 变体去掉文字卡片，
+ *      只留纯色平面 + 触发矩形，用来量几何伪影）
  */
 import { createServer } from 'node:http'
 import { spawn } from 'node:child_process'
@@ -277,7 +280,15 @@ async function main() {
         mobile: false,
       })
     }
-    await send('Page.navigate', { url: `http://127.0.0.1:${appPort}${args.page ?? HTML}${args.variant ? `?variant=${args.variant}` : ''}` })
+    const navUrl = `http://127.0.0.1:${appPort}${args.page ?? HTML}${args.variant ? `?variant=${args.variant}` : ''}`
+    const nav = await send('Page.navigate', { url: navUrl })
+    // 导航被拒时页面会停在原文档（about:blank），后续选择器全落空——先把 url 和原因打出来再失败
+    if (nav.error || nav?.result?.errorText) {
+      throw new Error(
+        `Page.navigate ${navUrl} 失败：${nav.error?.message ?? nav.result.errorText}；` +
+          'Git Bash 会把斜杠开头的参数值改写成 Windows 路径，跑站点模式加 MSYS2_ARG_CONV_EXCL=\'*\'',
+      )
+    }
     for (let i = 0; i < 60; i++) {
       if (await evaluate(send, `window.__ready === true || document.readyState === 'complete'`).catch(() => false)) break
       await sleep(250)
@@ -285,9 +296,15 @@ async function main() {
     // 站点模式：readyState 在 about:blank 上就已是 complete，不足以判断真实 app 就绪，
     // 轮询到触发按钮真正挂载为止（Vue / React playground 产物是运行时挂载的）
     if (args.click) {
+      let found = 0
       for (let i = 0; i < 40; i++) {
-        if (await evaluate(send, `document.querySelectorAll(${JSON.stringify(args.click)}).length > 0`).catch(() => false)) break
+        found = await evaluate(send, `document.querySelectorAll(${JSON.stringify(args.click)}).length`).catch(() => 0)
+        if (found > 0) break
         await sleep(250)
+      }
+      if (!found) {
+        const where = await evaluate(send, `JSON.stringify({ href: location.href, ready: document.readyState, bodyLen: document.body.innerHTML.length })`).catch(() => '{}')
+        throw new Error(`选择器 ${args.click} 在 10s 内没等到任何节点；当前页面 ${where}`)
       }
     }
 
@@ -295,7 +312,9 @@ async function main() {
       send,
       `(() => { const c = document.createElement('canvas'); const gl = c.getContext('webgl'); if (!gl) return 'no-webgl'; const d = gl.getExtension('WEBGL_debug_renderer_info'); return d ? gl.getParameter(d.UNMASKED_RENDERER_WEBGL) : 'unknown' })()`,
     )
-    console.log(`deviceScaleFactor=${dsf} 方向=${direction} 时长=${duration}ms 样本=${samples} GPU=${gpu ? 'on' : 'off'}`)
+    console.log(
+      `deviceScaleFactor=${dsf} 方向=${direction} 时长=${duration}ms 样本=${samples} GPU=${gpu ? 'on' : 'off'} 类型=${args.type ?? 'CIRCLE（默认）'} reverse=${args.reverse ?? 'true（默认）'}`,
+    )
     console.log(`WebGL renderer: ${glInfo}`)
     if (args.patch.length) console.log(`CSS 补丁: ${args.patch.join(' ; ')}`)
 
@@ -328,6 +347,15 @@ async function main() {
     )
 
     const patchJson = JSON.stringify(args.patch.map((p) => p.split('=>')))
+    // --type / --reverse 不传时保持本实验台的原语义（CIRCLE + reverse:true 洞式收起）
+    const startOpts = [`duration: ${duration}`, `patch: ${patchJson}`, `cssVariant: ${JSON.stringify(args.css ?? null)}`]
+    if (args.type) startOpts.push(`animationType: ${JSON.stringify(String(args.type))}`)
+    if (args.reverse !== undefined) {
+      const r = args.reverse
+      const lit = r === true || r === 'true' ? 'true' : r === 'false' ? 'false' : JSON.stringify(String(r))
+      startOpts.push(`reverse: ${lit}`) // 'auto' 要带引号，三态里它是字符串
+    }
+    const labStartExpr = `window.__lab.start({ ${startOpts.join(', ')} })`
     const mode = String(args.mode ?? 'seek')
     let flagged = 0
     let frames = 0
@@ -468,13 +496,24 @@ async function main() {
       if (useSite) {
         const info = await evaluate(
           send,
-          `({ scrollHeight: document.documentElement.scrollHeight, innerHeight: window.innerHeight, viewport: window.innerWidth + 'x' + window.innerHeight, buttons: document.querySelectorAll(${JSON.stringify(args.click)}).length })`,
+          `({ scrollHeight: document.documentElement.scrollHeight, innerHeight: window.innerHeight, viewport: window.innerWidth + 'x' + window.innerHeight, buttons: document.querySelectorAll(${JSON.stringify(args.click)}).length, title: document.title, ready: document.readyState, htmlLen: document.body.innerHTML.length, href: location.href })`,
         )
-        console.log(`目标页面：${info.viewport}，文档高 ${info.scrollHeight}，匹配按钮 ${info.buttons} 个${info.scrollHeight > info.innerHeight ? '（页面可滚动）' : ''}`)
+        console.log(
+          `目标页面：${info.viewport}，文档高 ${info.scrollHeight}，匹配按钮 ${info.buttons} 个${info.scrollHeight > info.innerHeight ? '（页面可滚动）' : ''}；${info.href} 标题 ${JSON.stringify(info.title)}，readyState ${info.ready}，body ${info.htmlLen} 字符`,
+        )
       }
       console.log(
         `\n连续切换 ${runs} 次，间隔 ${interval}${jitter ? `±${jitter}` : ''}ms，CPU 节流 ${cpu}x，起始亮色（第 2/4/6… 次为"收起"）`,
       )
+      // --preclick：站点模式下一次性预点（例如先把 reverse 选到 auto），在连点循环之前
+      if (args.preclick) {
+        const n = await evaluate(
+          send,
+          `((s) => { const el = document.querySelector(s); if (!el) throw new Error('预点选择器未命中 ' + s); el.click(); return document.querySelectorAll(s).length })(${JSON.stringify(String(args.preclick))})`,
+        )
+        await sleep(300)
+        console.log(`  预点 ${JSON.stringify(String(args.preclick))}（匹配 ${n} 个）`)
+      }
       const cycles = []
       for (let r = 0; r < runs; r++) {
         const before = await evaluate(send, themeExpr)
@@ -588,10 +627,7 @@ async function main() {
       await send('Page.startScreencast', { format: 'png', everyNthFrame: 1 })
       await sleep(300)
       const t0 = Date.now()
-      const started = await evaluate(
-        send,
-        `window.__lab.start({ duration: ${duration}, patch: ${patchJson}, cssVariant: ${JSON.stringify(args.css ?? null)} })`,
-      )
+      const started = await evaluate(send, labStartExpr)
       if (!started.animated) throw new Error('转场未启动（animated=false）')
       await sleep(duration + 400)
       await send('Page.stopScreencast')
@@ -623,10 +659,7 @@ async function main() {
       }
     } else {
       // 确定性取样：暂停蒙版动画后按毫秒 seek，排除实时抖动噪声
-      const started = await evaluate(
-        send,
-        `window.__lab.start({ duration: ${duration}, patch: ${patchJson}, cssVariant: ${JSON.stringify(args.css ?? null)} })`,
-      )
+      const started = await evaluate(send, labStartExpr)
       if (!started.animated) throw new Error('转场未启动（animated=false）')
       const animCount = await evaluate(send, 'window.__lab.waitForAnimation()', true)
       if (!animCount) throw new Error('未捕获到 theme-switch-* 动画（无法暂停取样）')

@@ -193,6 +193,18 @@ ${selector} {
           .replace(maskImage[1], HOLE_MASK_IMAGE)
       }
 
+      /**
+       * `--type` 可传枚举键（`CURTAIN`）或枚举值（`curtain`）。
+       * 未知值抛错而不是回落 CIRCLE——否则一份"CURTAIN 报告"其实测的是 CIRCLE。
+       */
+      function resolveAnimationType(name) {
+        if (name === undefined || name === null) return ThemeAnimationType.CIRCLE
+        const byKey = ThemeAnimationType[name]
+        const value = byKey ?? (Object.values(ThemeAnimationType).includes(name) ? name : undefined)
+        if (!value) throw new Error(`未知动画类型 "${name}"，可选：${Object.keys(ThemeAnimationType).join(' / ')}`)
+        return value
+      }
+
       const lab = {
         /** 无动画地把主题设为 light / dark */
         reset(theme) {
@@ -211,7 +223,7 @@ ${selector} {
               html.classList.toggle('dark')
             },
             options: {
-              animationType: opts.animationType ?? ThemeAnimationType.CIRCLE,
+              animationType: resolveAnimationType(opts.animationType),
               // 本实验台默认就是"洞式收起"这条路径（附录四/五查的抖动它）；要测正向扩散得显式传 reverse:false
               reverse: opts.reverse ?? true,
               duration: opts.duration ?? 750,
