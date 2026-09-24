@@ -126,7 +126,7 @@ export default defineNuxtConfig({
 
 | 选项 | 类型 | 说明 |
 | --- | --- | --- |
-| `animationType` | `ThemeAnimationType` | 五族之一（取值见上方「动画类型」表），默认 `CIRCLE` |
+| `animationType` | `ThemeAnimationType` | 取上方「🎬 动画类型」表之一，默认 `CIRCLE` |
 | `duration` | `number` | 动画时长 ms，默认 750 |
 | `easing` | `string` | 任意合法 CSS timing-function，默认 `ease-in-out` |
 | `blurAmount` | `number` | 模糊蒙版强度系数，默认 2。仅 `CIRCLE_BLUR` 生效 |

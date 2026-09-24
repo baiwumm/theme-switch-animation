@@ -352,7 +352,7 @@ iPhone 与 Mac 同一局域网访问 `http://<mac-ip>:5224/`（或直接把 `pla
       `完整示例见`、旧 hero 文案）均为 0。**发包未发生**：没推 `v*` tag，npm `latest` 仍是 `0.2.0`
       （dist-tags 接口核实）。注意 `Theme switching, cinematic` 在线上 HTML 里搜不到属正常——
       TextReveal 按词切成 span；`已复制` 与 Vue 样本代码不在 HTML 里也分别因为是 success 态、非激活 Tab。
-- [ ] 若你认为"文档站改版"也该进 CHANGELOG，再补一条 patch changeset（代价见本节开头）。
+- [x] 补了一条 patch changeset（`.changeset/beui-docs-homepage.md`）：文档站首页改版的叙事进 CHANGELOG，代价见本节开头——`files: ["dist"]` 下产物逐字节不变，只是版本号与变更记录多一条。
 
 ---
 
@@ -433,7 +433,7 @@ iPhone 与 Mac 同一局域网访问 `http://<mac-ip>:5224/`（或直接把 `pla
 - [x] README / 需求文档 v1.8 / 文档站 hero·features·SEO / 四个 playground / changeset / 门面截图
 - [ ] 真机视觉验收：`CLOCK_SWEEP` 的 12° 前缘软尾在 750ms 下看不看得见、`FAN` 三档扇叶末帧是否无缝
 - [ ] Safari / Firefox 真机确认 `conic-gradient` + `@property <angle>`：版本面理论上与 `<length>` 一致（Safari 16.4+ / Firefox 128+），但 conic 这层没在真机跑过，不支持时退化为直切、状态仍正确
-- [ ] 旋转方向（顺 / 逆）按上面"本轮判断"最后一条的三个方案留着，需要时再开
+- [x] ~~旋转方向（顺 / 逆）按三个方案留着，需要时再开~~ —— **作废（2026-09-24）**：动画类型扩展已冻结在 16 种，这条不再排期。真要重开先看 `docs/animation-roadmap.md` §1 的四条约束。
 
 ---
 
@@ -461,7 +461,7 @@ iPhone 与 Mac 同一局域网访问 `http://<mac-ip>:5224/`（或直接把 `pla
 - [x] core 实现 + 10 例单测 + 画廊第 16 张卡
 - [x] README 类型表与家族枚举 / 需求文档 v1.9 / 文档站文案 / 四个 playground / changeset / 门面截图
 - [ ] **分数缩放 dpr 一档仍未验**：125% / 150% 下中缝与软边会不会出现 1px 级亮暗线——这是 roadmap P0-1 唯一遗留的待验点
-- [ ] 下一批按 roadmap 顺序是 **P0-2 `SPIRAL`**（conic ∩ radial 求交）；开工前要先验"两个 `@property` 在同一 keyframes 里是否都逐帧插值"——单个已实测成立，两个未验
+- [x] ~~下一批按 roadmap 顺序是 P0-2 `SPIRAL`~~ —— **动画类型扩展到此冻结（2026-09-24 需求方决定）**。`SPIRAL` / `SEEDS` / `COMB` 三个都实现过又整体撤回，候选池剩下的 P2-1 通用 `revert` 与 P2-2 `LOGO_MASK` 都不做。停在 16 种，后续若要再加先看 `docs/animation-roadmap.md` 的 §1 四条约束（第 4 条是这三轮换来的判据）
 - [ ] 待排期的小重构：`qrCenterGradient` 与 `getCurtainRevealSpec` 合并成一个中性命名的对称渐变构造器
 
 ---
