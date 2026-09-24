@@ -556,25 +556,71 @@ function rippleStop(waveWidth: number, waves: number): string {
   return `calc(${v} ${offset > 0 ? '+' : '-'} ${Math.abs(offset)}px)`
 }
 
-export function getRippleRevealSpec(center: Point, viewport: Size, waveWidth: number): RevealMaskSpec {
+/**
+ * 环带 stop 序列。正向是"实心水面 + 主峰 + 两圈衰减余波"；`invert = true` 返回它的
+ * **补集**——同一批位置上把 alpha 换成 `1 - a`，供反向揭开用。正向与反向共用这一份
+ * 定义，避免两条波带结构各自演化后失配。
+ */
+function rippleStops(waveWidth: number, invert: boolean): string {
+  const at = (alpha: number): string => {
+    const a = invert ? 1 - alpha : alpha
+    return a === 0 ? 'transparent' : a === 1 ? '#000' : `rgba(0, 0, 0, ${roundTo(a, 3)})`
+  }
   const stops = [
-    `#000 0 ${rippleStop(waveWidth, -RIPPLE_SOLID_LAG_WAVES)}`,
-    `transparent ${rippleStop(waveWidth, -0.5)}`,
+    `${at(1)} 0 ${rippleStop(waveWidth, -RIPPLE_SOLID_LAG_WAVES)}`,
+    `${at(0)} ${rippleStop(waveWidth, -0.5)}`,
   ]
   for (let wave = 0; wave <= RIPPLE_TRAIL_COUNT; wave += 1) {
     const alpha = wave === 0
       ? RIPPLE_CREST_ALPHA
       : RIPPLE_CREST_ALPHA * RIPPLE_TRAIL_DECAY ** wave
-    stops.push(`rgba(0, 0, 0, ${roundTo(alpha, 3)}) ${rippleStop(waveWidth, wave)}`)
-    stops.push(`transparent ${rippleStop(waveWidth, wave + 0.5)}`)
+    stops.push(`${at(alpha)} ${rippleStop(waveWidth, wave)}`)
+    stops.push(`${at(0)} ${rippleStop(waveWidth, wave + 0.5)}`)
   }
+  return stops.join(', ')
+}
+
+export function getRippleRevealSpec(center: Point, viewport: Size, waveWidth: number): RevealMaskSpec {
   return {
     from: 0,
     to: getMaxRadiusToCorners(center, viewport) * CIRCLE_SIZE_FACTOR + getRippleFrontExtentPx(waveWidth),
-    maskImage: `radial-gradient(circle at ${roundTo(center.x, 2)}px ${roundTo(center.y, 2)}px, ${stops.join(', ')})`,
+    maskImage: `radial-gradient(circle at ${roundTo(center.x, 2)}px ${roundTo(center.y, 2)}px, ${rippleStops(waveWidth, false)})`,
     maskSize: '100% 100%',
     maskRepeat: 'no-repeat',
   }
+}
+
+/**
+ * RIPPLE 反向：水面从四周向内收拢，环带随之往中心走。串是正向的补集、区间反向，
+ * **但两端都不能照抄正向**（探针实测）：
+ *
+ * - 终点取 `-前缘宽度` 而非 0：主峰 α=0.5 取补后仍是 0.5，收到 0 会在中心留一个
+ *   约半透明的圆点（末帧扫描 18 个半透明采样点），过冲一整个前缘才收干净。
+ * - 起点取 `maxRadius + 前缘宽度` 而非正向的 `2.1 × maxRadius + 前缘`：那个 2.1 是
+ *   为**正向**覆盖留的余量，反向用不上——照抄会让透明核先空收掉视口最远角以外那一大段，
+ *   实测前 60% 的时间里屏幕毫无变化。
+ */
+export function getRippleReverseRevealSpec(center: Point, viewport: Size, waveWidth: number): RevealMaskSpec {
+  const front = getRippleFrontExtentPx(waveWidth)
+  return {
+    from: getMaxRadiusToCorners(center, viewport) + front,
+    to: -front,
+    maskImage: `radial-gradient(circle at ${roundTo(center.x, 2)}px ${roundTo(center.y, 2)}px, ${rippleStops(waveWidth, true)})`,
+    maskSize: '100% 100%',
+    maskRepeat: 'no-repeat',
+  }
+}
+
+/** RIPPLE 分发：与角度族同构，reverse 位决定出正向还是补集串 */
+export function getRippleMaskSpec(
+  center: Point,
+  viewport: Size,
+  waveWidth: number,
+  reverse = false,
+): RevealMaskSpec {
+  return reverse
+    ? getRippleReverseRevealSpec(center, viewport, waveWidth)
+    : getRippleRevealSpec(center, viewport, waveWidth)
 }
 
 export function isRippleAnimationType(type: ThemeAnimationType): boolean {
@@ -677,6 +723,30 @@ export function getFanReverseRevealSpec(center: Point, bladeCount: number): Reve
   }
 }
 
+/**
+ * CLOCK_SWEEP 反向：新主题从"尚未扫过"的一侧显出，边界**逆时针**回退。
+ * 观感上等于当初搁置的"顺 / 逆时针"参数——补集扇形 `[v, 360]` 的边界随 v 从
+ * 372 收到 0 就是逆时针转的，所以不必再单开一个方向选项。
+ *
+ * 12° 软尾跟着镜像到内缘（`transparent 0 calc(v - 12deg), #000 v`）。终点取 0 即可：
+ * 届时 `transparent` 段的两个端点都塌到 0deg、`#000` 同点接手，末帧零残留
+ * （反向的 `from` 用正向的 `to = 360 + 尾宽` 没有浪费——conic 覆盖的是角度不是面积）。
+ */
+export function getClockSweepReverseRevealSpec(center: Point): RevealMaskSpec {
+  const v = `var(${SWEEP_VAR})`
+  return {
+    from: FULL_CIRCLE_DEG + CLOCK_SWEEP_TAIL_DEG,
+    to: 0,
+    maskImage:
+      `conic-gradient(from 0deg at ${conicAt(center)}, ` +
+      `transparent 0 calc(${v} - ${CLOCK_SWEEP_TAIL_DEG}deg), #000 ${v})`,
+    maskSize: '100% 100%',
+    maskRepeat: 'no-repeat',
+    varName: SWEEP_VAR,
+    unit: 'deg',
+  }
+}
+
 /** 角度族分发；仅接受 isSweepAnimationType 命中的类型，其余按 CLOCK_SWEEP 处理 */
 export function getSweepMaskSpec(
   type: ThemeAnimationType,
@@ -687,7 +757,7 @@ export function getSweepMaskSpec(
   if (type === ThemeAnimationType.FAN) {
     return reverse ? getFanReverseRevealSpec(center, bladeCount) : getFanRevealSpec(center, bladeCount)
   }
-  return getClockSweepRevealSpec(center)
+  return reverse ? getClockSweepReverseRevealSpec(center) : getClockSweepRevealSpec(center)
 }
 
 /** 中心扩散形状的几何函数表（含 CIRCLE）；`type in` 即类型守卫 */

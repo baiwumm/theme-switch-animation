@@ -3,7 +3,7 @@ import {
   getMaskGeometry,
   getQrGridMaskSpec,
   getRevealMaskSpec,
-  getRippleRevealSpec,
+  getRippleMaskSpec,
   getSweepMaskSpec,
   getTriggerCenter,
   isQrGridAnimationType,
@@ -187,11 +187,13 @@ export function runThemeTransition(params: RunThemeTransitionParams): RunThemeTr
   // 本次转场是否走反向形态。两条来源：
   // - CIRCLE_REVERT（已废弃）：跟随切换方向，切亮才反向——行为与 0.3.0 逐字节一致；
   // - reverse 选项：`true` 恒反向，`'auto'` 切亮反向（即上面那条的替代写法）。
-  // 只有已接入的类型才算数：目前 CIRCLE 与 FAN。其余类型传 reverse 静默忽略——
+  // 只有已接入的类型才算数：CIRCLE / FAN / RIPPLE / CLOCK_SWEEP。其余传 reverse 静默忽略——
   // 形状族要走反向只能动 mask-size（附录四/五的抖动病根），CURTAIN 的软边在末帧会
   // 塌出一条居中半透明带，两者都做不到无副作用，故不接入（见 roadmap §4）。
   const reverseCapable = resolved.animationType === ThemeAnimationType.CIRCLE
     || resolved.animationType === ThemeAnimationType.FAN
+    || resolved.animationType === ThemeAnimationType.RIPPLE
+    || resolved.animationType === ThemeAnimationType.CLOCK_SWEEP
   const collapse = isRevert
     ? !toDark
     : reverseCapable && (resolved.reverse === true || (resolved.reverse === 'auto' && !toDark))
@@ -206,7 +208,7 @@ export function runThemeTransition(params: RunThemeTransitionParams): RunThemeTr
   const reveal = isRevealAnimationType(resolved.animationType)
     ? getRevealMaskSpec(resolved.animationType, resolved.direction, resolved.slatWidth, viewport)
     : isRippleAnimationType(resolved.animationType)
-      ? getRippleRevealSpec(center, viewport, resolved.waveWidth)
+      ? getRippleMaskSpec(center, viewport, resolved.waveWidth, collapse)
       : isSweepAnimationType(resolved.animationType)
         ? getSweepMaskSpec(resolved.animationType, center, resolved.bladeCount, collapse)
         : undefined

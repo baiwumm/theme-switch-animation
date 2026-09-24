@@ -239,15 +239,68 @@ describe('runThemeTransition 动画路径（jsdom + 模拟 startViewTransition�
     expect(reversed).not.toContain('@property --theme-switch-radius')
   })
 
-  it('reverse 只作用于已接入的类型：CLOCK_SWEEP / CURTAIN / SQUARE / RIPPLE 传 true 输出不变', () => {
+  it('reverse 已接入 RIPPLE：补集串 + 起点去掉正向半径余量、终点过冲一整个前缘', () => {
+    installFakeViewTransition()
+    vi.spyOn(window, 'innerWidth', 'get').mockReturnValue(800)
+    vi.spyOn(window, 'innerHeight', 'get').mockReturnValue(600)
+    const trigger = { getBoundingClientRect: () => ({ left: 100, top: 50, width: 40, height: 20 }) }
+
+    runThemeTransition({
+      domUpdate: () => {},
+      trigger,
+      options: { animationType: ThemeAnimationType.RIPPLE, waveWidth: 18, reverse: true },
+    })
+    const reversed = styleNode()!.textContent!
+    removeAnimationStyle(document)
+    runThemeTransition({
+      domUpdate: () => {},
+      trigger,
+      options: { animationType: ThemeAnimationType.RIPPLE, waveWidth: 18 },
+    })
+    const forward = styleNode()!.textContent!
+
+    // 补集：实心水面换成 transparent 起头，波谷换成 #000
+    expect(reversed).toContain('radial-gradient(circle at 120px 60px, transparent 0')
+    expect(forward).toContain('radial-gradient(circle at 120px 60px, #000 0')
+    // 起点 = 中心到视口最远角 + 一整个前缘（不是正向那个 2.1 倍余量）；终点 = -前缘。
+    // 值按源同式推导，别写死——半径是无理数，四舍五入方式一改断言就假红
+    const maxR = Math.hypot(800 - 120, 600 - 60)
+    const front = 2.5 * 18
+    expect(reversed).toContain(`--theme-switch-reveal: ${maxR + front}px;`)
+    expect(reversed).toContain(`--theme-switch-reveal: ${-front}px;`)
+    expect(reversed).not.toContain(`--theme-switch-reveal: ${2.1 * maxR + front}px;`)
+    // 主峰 α=0.5 的补仍是 0.5，但两道余波的 α 必须翻成 0.725 / 0.849
+    expect(reversed).toContain('rgba(0, 0, 0, 0.725)')
+    expect(reversed).toContain('rgba(0, 0, 0, 0.849)')
+    expect(reversed).not.toContain('rgba(0, 0, 0, 0.275)')
+  })
+
+  it('reverse 已接入 CLOCK_SWEEP：软尾镜像到内缘，观感即逆时针扫开', () => {
+    installFakeViewTransition()
+    vi.spyOn(window, 'innerWidth', 'get').mockReturnValue(800)
+    vi.spyOn(window, 'innerHeight', 'get').mockReturnValue(600)
+    const trigger = { getBoundingClientRect: () => ({ left: 100, top: 50, width: 40, height: 20 }) }
+
+    runThemeTransition({
+      domUpdate: () => {},
+      trigger,
+      options: { animationType: ThemeAnimationType.CLOCK_SWEEP, reverse: true },
+    })
+    const css = styleNode()!.textContent!
+    expect(css).toContain('conic-gradient(from 0deg at 120px 60px, transparent 0 calc(var(--theme-switch-sweep) - 12deg)')
+    expect(css).toContain('--theme-switch-sweep: 372deg;')
+    expect(css).toContain('--theme-switch-sweep: 0deg;')
+  })
+
+  it('reverse 未接入的类型传 true 也静默无效：QR_GRID / BLINDS / SCAN / CURTAIN 输出不变', () => {
     installFakeViewTransition()
     vi.spyOn(window, 'innerWidth', 'get').mockReturnValue(800)
     vi.spyOn(window, 'innerHeight', 'get').mockReturnValue(600)
     const trigger = { getBoundingClientRect: () => ({ left: 100, top: 50, width: 40, height: 20 }) }
 
     for (const animationType of [
-      ThemeAnimationType.CLOCK_SWEEP, ThemeAnimationType.CURTAIN,
-      ThemeAnimationType.SQUARE, ThemeAnimationType.RIPPLE,
+      ThemeAnimationType.QR_GRID, ThemeAnimationType.BLINDS,
+      ThemeAnimationType.SCAN, ThemeAnimationType.CURTAIN,
     ]) {
       runThemeTransition({ domUpdate: () => {}, trigger, options: { animationType } })
       const baseline = styleNode()!.textContent!

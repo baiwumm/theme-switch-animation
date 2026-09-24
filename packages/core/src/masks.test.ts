@@ -30,6 +30,7 @@ import {
   getCircleMaskGeometry,
   getCircleRevertMaskGeometry,
   getClockSweepRevealSpec,
+  getClockSweepReverseRevealSpec,
   getCurtainRevealSpec,
   getDiamondMaskGeometry,
   getHexagonMaskGeometry,
@@ -42,7 +43,9 @@ import {
   getRectangleMaskGeometry,
   getRevealMaskSpec,
   getRippleFrontExtentPx,
+  getRippleMaskSpec,
   getRippleRevealSpec,
+  getRippleReverseRevealSpec,
   getScanRevealSpec,
   getSquareMaskGeometry,
   getStarMaskGeometry,
@@ -491,6 +494,50 @@ describe('RIPPLE（水滴涟漪）', () => {
     )
   })
 
+  it('反向串是正向的补集：stop 位置一格不差，alpha 换成 1-a（主峰 0.5 的补仍是 0.5）', () => {
+    const spec = getRippleReverseRevealSpec(center, viewport, 18)
+    expect(spec.maskImage).toBe(
+      `radial-gradient(circle at 400px 300px, ` +
+      `transparent 0 ${at(-1)}, ` +
+      `#000 ${at(-0.5)}, ` +
+      `rgba(0, 0, 0, ${RIPPLE_CREST_ALPHA}) ${at(0)}, ` +
+      `#000 ${at(0.5)}, ` +
+      `rgba(0, 0, 0, 0.725) ${at(1)}, ` +
+      `#000 ${at(1.5)}, ` +
+      `rgba(0, 0, 0, 0.849) ${at(2)}, ` +
+      `#000 ${at(2.5)})`,
+    )
+    // 位置集合必须与正向完全一致——两串共用同一份 stop 生成器，不允许各自演化
+    const positions = (img: string) => [...img.matchAll(/(?:calc\(var\(--theme-switch-reveal\)[^)]*\)|var\(--theme-switch-reveal\))/g)].map((m) => m[0])
+    expect(positions(spec.maskImage)).toEqual(positions(getRippleRevealSpec(center, viewport, 18).maskImage))
+  })
+
+  it('反向两端都不照抄正向：终点过冲一整个前缘、起点去掉为正向覆盖留的 2.1 倍余量', () => {
+    const spec = getRippleReverseRevealSpec(center, viewport, 18)
+    const front = getRippleFrontExtentPx(18)
+    const maxR = getMaxRadiusToCorners(center, viewport)
+    // 主峰 α=0.5 取补仍是 0.5，收到 0 会在中心留半透明圆点 → 必须过冲到 -front
+    expect(spec.to).toBe(-front)
+    // 正向 to = 2.1×maxR + front 里的 2.1 是正向覆盖余量；照抄会让前 60% 时间屏幕毫无变化
+    expect(spec.from).toBe(maxR + front)
+    expect(spec.from).toBeLessThan(getRippleRevealSpec(center, viewport, 18).to)
+  })
+
+  it('反向 from 帧透明核刚好盖满视口、to 帧实心段反向盖满：两端都满足覆盖约束', () => {
+    const spec = getRippleReverseRevealSpec(center, viewport, 18)
+    const maxR = getMaxRadiusToCorners(center, viewport)
+    // 起始：透明核止于 from - 1 波长，须 ≥ 视口最远角，否则首帧就漏出新主题
+    expect(spec.from - 18).toBeGreaterThanOrEqual(maxR)
+    // 末帧：收拢后实心段从 0 起、透明带整体落到负半径之外，末帧完全覆盖
+    expect(spec.to + 18).toBeLessThan(0)
+  })
+
+  it('分发：getRippleMaskSpec 的 reverse 位在正/反之间切换，默认正向', () => {
+    expect(getRippleMaskSpec(center, viewport, 18, true)).toEqual(getRippleReverseRevealSpec(center, viewport, 18))
+    expect(getRippleMaskSpec(center, viewport, 18)).toEqual(getRippleRevealSpec(center, viewport, 18))
+    expect(getRippleMaskSpec(center, viewport, 18, false)).toEqual(getRippleRevealSpec(center, viewport, 18))
+  })
+
   it('余波圈数由 RIPPLE_TRAIL_COUNT 决定：主峰之外恰好再跟那么多圈', () => {
     const spec = getRippleRevealSpec(center, viewport, 18)
     expect(spec.maskImage.split('rgba(0, 0, 0, ').length - 1).toBe(RIPPLE_TRAIL_COUNT + 1)
@@ -583,6 +630,27 @@ describe('角度驱动族（CLOCK_SWEEP / FAN）', () => {
     expect(spec.maskImage).toContain(`#000 0 calc(${v} - 12deg)`)
   })
 
+  it('CLOCK_SWEEP 反向：软尾镜像到内缘，from 372 / to 0，观感即当初搁置的"逆时针扫开"', () => {
+    const spec = getClockSweepReverseRevealSpec(center)
+    expect(spec.maskImage).toBe(
+      `conic-gradient(from 0deg at 640px 400px, ` +
+      `transparent 0 calc(${v} - ${CLOCK_SWEEP_TAIL_DEG}deg), #000 ${v})`,
+    )
+    expect(spec.from).toBe(FULL_CIRCLE_DEG + CLOCK_SWEEP_TAIL_DEG)
+    expect(spec.to).toBe(0)
+    expect(spec.varName).toBe(SWEEP_VAR)
+    expect(spec.unit).toBe('deg')
+  })
+
+  it('CLOCK_SWEEP 反向的 from 可直接沿用正向 to：conic 覆盖角度不是面积，没有正向那份半径余量要挤掉时间', () => {
+    const fwd = getClockSweepRevealSpec(center)
+    const rev = getClockSweepReverseRevealSpec(center)
+    expect(rev.from).toBe(fwd.to)
+    // 末帧 v=0 时透明段两端与 #000 起点同落在 0deg，塌成零宽不留缝
+    expect(rev.to).toBe(0)
+    expect(rev.to - CLOCK_SWEEP_TAIL_DEG).toBeLessThan(0)
+  })
+
   it('FAN：扇叶周期 = 360 / bladeCount，末帧 open 到周期末即拼成整圆', () => {
     const spec = getFanRevealSpec(center, 8)
     expect(getFanBladeStepDeg(8)).toBe(45)
@@ -642,15 +710,18 @@ describe('角度驱动族（CLOCK_SWEEP / FAN）', () => {
     )
   })
 
-  it('分发：getSweepMaskSpec 的 reverse 位只对 FAN 生效，CLOCK_SWEEP 两态输出一致（未接入即忽略）', () => {
+  it('分发：getSweepMaskSpec 的 reverse 位对角度族两类型都生效，默认正向', () => {
     expect(getSweepMaskSpec(ThemeAnimationType.FAN, center, 8, true))
       .toEqual(getFanReverseRevealSpec(center, 8))
     expect(getSweepMaskSpec(ThemeAnimationType.FAN, center, 8, false))
       .toEqual(getFanRevealSpec(center, 8))
+    expect(getSweepMaskSpec(ThemeAnimationType.CLOCK_SWEEP, center, 8, true))
+      .toEqual(getClockSweepReverseRevealSpec(center))
+    expect(getSweepMaskSpec(ThemeAnimationType.CLOCK_SWEEP, center, 8, false))
+      .toEqual(getClockSweepRevealSpec(center))
     // 省略第三参即正向
     expect(getSweepMaskSpec(ThemeAnimationType.FAN, center, 8)).toEqual(getFanRevealSpec(center, 8))
-    const fwd = getClockSweepRevealSpec(center)
-    expect(getSweepMaskSpec(ThemeAnimationType.CLOCK_SWEEP, center, 8, true)).toEqual(fwd)
+    expect(getSweepMaskSpec(ThemeAnimationType.CLOCK_SWEEP, center, 8)).toEqual(getClockSweepRevealSpec(center))
   })
 
   it('分发与守卫：角度族两类型命中 isSweepAnimationType，且不落入 px 驱动的三个守卫', () => {
