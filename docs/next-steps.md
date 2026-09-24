@@ -14,6 +14,10 @@
 > 2026-09-23 追加：新增 `RIPPLE`（§7）与角度族 `CLOCK_SWEEP` / `FAN`（§8），13 → 15 种，
 > 六+七笔提交都在本地**未 push、未发版**。后续还想加类型请看 `docs/animation-roadmap.md`
 > ——候选池、优先级与排序理由、明确不做清单、以及"做完一个验证一个、不行就整个撤回"的撤回面。
+> 2026-09-24 追加：`CURTAIN` 落地（§9）后 **0.3.0 已发布**（tag 流水线第二次走通，npm `latest = 0.3.0`、
+> provenance 实测挂上）。同期间 `SPIRAL` / `SEEDS` / `COMB` 三个候选都实现过又整体撤回，动画类型冻结在 16 种。
+> 接着是 `reverse` 选项 PR1（§10）。**push 与打 tag 都会触发外部动作**（CI、文档站部署、npm 审批闸门），
+> 由需求方本人执行。
 
 - [x] 1. 跑正式验收 `pnpm test:acceptance`（2026-09-14 完成，7/7 PASS + §9-3 组二补跑 PASS）
 - [x] 2. Safari / 真机验证（2026-09-14 本机可自动化部分已全绿，见 §2；**macOS Safari + iOS 真机**
@@ -464,6 +468,47 @@ iPhone 与 Mac 同一局域网访问 `http://<mac-ip>:5224/`（或直接把 `pla
 - [x] ~~下一批按 roadmap 顺序是 P0-2 `SPIRAL`~~ —— **动画类型扩展到此冻结（2026-09-24 需求方决定）**。`SPIRAL` / `SEEDS` / `COMB` 三个都实现过又整体撤回，不再加新类型，停在 16 种；候选池剩下的 P2-2 `LOGO_MASK` 也不做。后续判据见 `docs/animation-roadmap.md` §1 四条约束（第 4 条是这三轮换来的）。
 - [ ] **`reverse` 选项已批准，排在 0.3.0 发包之后做**（作为 0.4.0）：三态 `boolean | 'auto'`、12 个类型开放、`BLINDS`/`SCAN`/`QR_GRID` 不开、`CIRCLE_REVERT` 先 deprecated 再删。设计定稿在 `docs/reverse-option-design.md`，含分期 PR1–PR4 与验收计划。**0.3.0 未发之前不动这块代码**——当前工作区是排查干净的待发包状态。
 - [ ] 待排期的小重构：`qrCenterGradient` 与 `getCurtainRevealSpec` 合并成一个中性命名的对称渐变构造器
+
+---
+
+## 10. 0.3.0 发布 + reverse PR1（2026-09-24 记录）
+
+两件：0.3.0 走完发布链路，然后 `reverse` 选项 PR1 落地。
+
+### 0.3.0 发布
+
+tag 流水线第二次走通：`changeset version` → commit → push → `v0.3.0` tag → `environment: npm` 人工审批 → OIDC 免密发布。**npm 侧已核实**：`latest = 0.3.0`、`npm audit signatures` 报 registry signature + attestation 双 verified、四个 exports 子路径从干净安装解析到正确 dist 文件、`dist/nuxt-runtime/composables/*` 随包落地。GitHub Release 正文取到 CHANGELOG 的 0.3.0 段（没走 generate-notes 兜底）。线上文档站同步到 16 种。
+
+- **闸门复现要用 `pnpm build` 而不是 `npx tsup`**：后者绕过 `postbuild`，`verify:package` 会报缺 `dist/nuxt-runtime/**`。是操作顺序问题，不是仓库缺陷，但报出来很像。
+- **验 ESM-only 包的子路径要用 `import.meta.resolve`**：本包 `exports` 只声明 `import` 条件，`require.resolve` 必然假报 `No "exports" main defined`。我在同一轮里踩了三次。scratch 目录里 `Cannot find package 'react'` 也是预期（peer 且 optional），不是缺陷。
+
+### reverse PR1 的判断
+
+- **设计文档里"逐字节等价"那句是错的，实现时被自己的测试纠正了**：keyframes 名由 `getAnimationName(type)` 按类型生成，`theme-switch-circle` 与 `theme-switch-circle-revert` 必然不同。等价性锁改成"归一化名字后比较"——锁还在，但不会把命名差异误判成回归。
+- **`reverse` 必须三态**（`boolean | 'auto'`）：`CIRCLE_REVERT` 的语义是"跟随切换方向"，不是"总是反向"。这条是整个设计的支点，写进需求 §7 与 changeset，免得日后有人"简化"成布尔。
+- **校验用逐字面量比对，不用 `typeof`**：`typeof value === 'boolean' || value === 'auto'` 会把 `'AUTO'` 当成真值。反向是用户看得见的行为，宁可回落不猜。
+- **Vue 模板的存在性判断有坑**：既有控件写 `v-if="initialXxx"`，而 `reverse` 合法值含 `false`，照抄会让控件永远不显示。四处都改成 `!== undefined`。
+
+### 实测结果
+
+| 检查 | 结果 |
+| --- | --- |
+| `CIRCLE + reverse:true` vs `CIRCLE_REVERT` 收起态 | 归一化 keyframes 名后 **CSS 完全相同**（且两份原文确实只差那个标识符） |
+| `reverse:'auto'` 两态 | 切亮 = 洞式收起（含 `@property --theme-switch-radius`）；切暗 = 与完全不传 reverse 的 `CIRCLE` **逐字节相同** |
+| 非消费类型传 `reverse:true` | `SQUARE` / `RIPPLE` / `CURTAIN` 三者输出与不传**完全一致** |
+| 废弃提示 | 开发环境两次切换只提示 1 次；`NODE_ENV=production` 零输出；走 `CIRCLE + reverse` 不提示 |
+| 根 test / lint / tsc / build | 253 例（新增 7）/ 0 / 0 / 产物含 `reverse` 与 `isValidReverse` |
+| 四个 playground | react / next / nuxt 裸 `tsc` 通过；vue 必须 `vue-tsc`（裸 `tsc` 不认 SFC） |
+
+### 待办
+
+- [x] core：`reverse` 三态 + 校验 + `CIRCLE` 接通 + `CIRCLE_REVERT` 标废弃 + 7 例单测
+- [x] 文档站 CIRCLE 卡与四个 playground 的 `Reverse` 控件；README / 需求文档 v1.10 / 设计文档状态 / changeset
+- [ ] **真机验证 PR1**：文档站 CIRCLE 卡切 `off` / `on` / `auto` 三档，`on` 与 `auto`（切回亮色）应看到"新主题从四周显出、向按钮中心收拢"；`auto` 的另一半（切到暗色）应与 `off` 完全一致。四个 playground 各验一遍
+- [ ] **PR2**：形状族 6 个 + `FAN` + `CURTAIN` 接入 `reverse`。注意 `polygonMaskImage` 只覆盖 4 个形状，`SQUARE` / `RECTANGLE` 走各自常量要单独加反色版；`STAR` 正向那套"内凹谷也要盖住最远角"的放大系数在反向落在起始帧，要重算不能照抄
+- [ ] **PR3**：`RIPPLE` + `CLOCK_SWEEP` 接入，环带与 12° 软尾要镜像。**先探针再落码**——求补之后边界漏光比正向更容易出现（`COMB` 那轮的 `max(...,0px)` 漏光是同类风险）
+- [ ] **PR4**：删 `CIRCLE_REVERT`（破坏性，按 0.2.0 先例走 minor + 条目标 breaking）。洞式机制保留并泛化，别连带删掉
+- [ ] 攒够后一起走 0.4.0 发布；`.changeset/` 当前一条待切
 
 ---
 

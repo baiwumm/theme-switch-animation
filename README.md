@@ -106,8 +106,8 @@ export default defineNuxtConfig({
 
 | 类型 | 观感 | 起收点 | 消费的选项 |
 | --- | --- | --- | --- |
-| `CIRCLE` | 圆形扩散 | 触发元素中心 | — |
-| `CIRCLE_REVERT` | 切暗扩散、切亮收起进触发点 | 触发元素中心 | — |
+| `CIRCLE` | 圆形扩散；`reverse` 可改为"新主题从四周显出、向触发点收拢" | 触发元素中心 | `reverse` |
+| `CIRCLE_REVERT` | ⚠️ **已废弃**：等价于 `CIRCLE` + `reverse: 'auto'`（切暗扩散、切亮收起进触发点），计划在 0.5.0 移除 | 触发元素中心 | — |
 | `CIRCLE_BLUR` | 边缘高斯模糊的圆形扩散 | 触发元素中心 | `blurAmount` |
 | `SQUARE` / `DIAMOND` / `RECTANGLE` / `HEXAGON` / `TRIANGLE` / `STAR` | 多边形从触发点扩散（朝向见文档站画廊） | 触发元素中心 | — |
 | `BLINDS` | 百叶窗：叶片逐条揭开 | 无触发点（全屏按叶宽平铺） | `direction` / `slatWidth` |
@@ -134,6 +134,7 @@ export default defineNuxtConfig({
 | `slatWidth` | `number` | 百叶窗叶片宽度 px，范围 `[16, 200]`，默认 72。仅 `BLINDS` 生效，越界静默回落默认 |
 | `waveWidth` | `number` | 涟漪波长 px（相邻两圈波峰间距），范围 `[8, 60]`，默认 18。仅 `RIPPLE` 生效，越界静默回落默认 |
 | `bladeCount` | `number` | 扇叶数，范围 `[4, 16]` 的**整数**，默认 8。仅 `FAN` 生效，非整数或越界静默回落默认（非整数会让 `360 / bladeCount` 不整除，末帧留一条永不闭合的缝） |
+| `reverse` | `boolean \| 'auto'` | 反向揭开，默认 `false`。`true` 恒反向；`'auto'` 切暗正向、切亮收起（即旧 `CIRCLE_REVERT` 的行为）。**与 `direction` 正交**：`direction` 决定推进轴，`reverse` 决定从内还是从外揭开。目前仅 `CIRCLE` 生效，其余类型静默忽略（规划见 `docs/reverse-option-design.md`），非法值静默回落 `false` |
 | `darkClassName` | `string` | 暗色类名，默认 `dark`（与 next-themes / color-mode 默认一致） |
 | `isDark` + `onChange` | — | 同时提供 → 受控模式；都缺省 → 非受控（localStorage key 为 `THEME_STORAGE_KEY` 常量 `theme-switch-animation`，`observeThemeClass` 可带自定义 key）；只提供其一 → 契约不完整（开发环境 console.warn，按非受控工作） |
 
