@@ -469,7 +469,7 @@ iPhone 与 Mac 同一局域网访问 `http://<mac-ip>:5224/`（或直接把 `pla
 - [ ] **分数缩放 dpr 一档仍未验**：125% / 150% 下中缝与软边会不会出现 1px 级亮暗线——这是 roadmap P0-1 唯一遗留的待验点
 - [x] ~~下一批按 roadmap 顺序是 P0-2 `SPIRAL`~~ —— **动画类型扩展到此冻结（2026-09-24 需求方决定）**。`SPIRAL` / `SEEDS` / `COMB` 三个都实现过又整体撤回，不再加新类型，停在 16 种；候选池剩下的 P2-2 `LOGO_MASK` 也不做。后续判据见 `docs/animation-roadmap.md` §1 四条约束（第 4 条是这三轮换来的）。
 - [x] **`reverse` 选项 PR1–PR4 全部落地**（v1.10 – v1.13，待发版）：三态 `boolean | 'auto'`，接入 `CIRCLE` / `FAN` / `RIPPLE` / `CLOCK_SWEEP` / `CURTAIN` 五个；`BLINDS`/`SCAN`/`QR_GRID` 有意不开（`direction` 已占那根轴），形状族 6 个经实测做不到无副作用。PR4 按需求方指令**没有**等跨一个 minor，直接删掉 `CIRCLE_REVERT`（类型 16 → 15），迁移写法 `CIRCLE + reverse:'auto'` 记在 README「从 0.3.x 升级」。设计定稿在 `docs/reverse-option-design.md`
-- [ ] **PR4 之后待发 0.4.0**：`.changeset/reverse-option.md` 一条（minor，正文首行标 **breaking**，与 0.2.0 的 `caefb1b` 同口径：新增 `reverse` 与移除 `CIRCLE_REVERT` 合在一条里，不拆两条）；顺带第一次真验 `350aa2f` 那批 action 升 v5 后的 CI 与 tag 流水线
+- [ ] **PR4 之后待发 0.4.0**：`.changeset/reverse-option.md` 一条（minor，正文首行标 **breaking**，与 0.2.0 的 `caefb1b` 同口径：新增 `reverse` 与移除 `CIRCLE_REVERT` 合在一条里，不拆两条）。**push 侧 CI 已验**（见下条 3），剩 tag 触发的发版流水线未验
 - [ ] **PR4 真机验证**：画廊与四个 playground 少一张 CIRCLE_REVERT 卡（16 → 15），CIRCLE 卡的 `Reverse = auto` 承担原类型全部观感；`pnpm build` 后跑 `scripts/verify-engine.mjs`（已改用 `CIRCLE + reverse:true` 走洞式路径）
 - [x] **PR4 收尾（2026-09-24）**：
   1. **门面截图已重拍**：`assets/screen.jpg` 换成 15 张卡的新图（1910×911、亮色、与旧图取景逐位对齐，
@@ -488,8 +488,10 @@ iPhone 与 Mac 同一局域网访问 `http://<mac-ip>:5224/`（或直接把 `pla
      `apps/docs` 的 `pnpm lint`（biome）报 39 个错，全是 CRLF 与 `noImgElement` / `noSvgWithoutTitle`
      的既有噪音，不在本次改动面上，CI 也不跑它。
   3. **本次推送一并带上了 PR1–PR3 与 CI 升 v5**：远端此前停在 `fdce013`（0.3.0 发版），
-     之后 15 个提交一直没推。所以推上去的内容 = 0.3.0 之后的全部待发面，CI 会第一次跑
-     `350aa2f` 那批 v5 action。
+     之后 15 个提交一直没推。所以推上去的内容 = 0.3.0 之后的全部待发面。
+     **`350aa2f` 那批 v5 action 就此真验通过**：run `35981440065` 全绿，node 22 / node 24 两个矩阵都过，
+     `Post Run actions/checkout@v5` 正常收尾，**Node 20 弃用告警不再出现**；唯一标注是
+     `ubuntu-latest` 将于 2026-10-19 迁到 Ubuntu 26 的预告，与本仓配置无关。
 - [ ] 待排期的小重构：`qrCenterGradient` 与 `getCurtainRevealSpec` 合并成一个中性命名的对称渐变构造器
 
 ---
