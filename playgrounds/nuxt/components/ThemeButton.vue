@@ -15,6 +15,11 @@ const props = defineProps<{
   initialWaveWidth?: number
   /** 仅 FAN：卡片下方的扇叶数按钮初始值 */
   initialBladeCount?: number
+  /**
+   * 仅 CIRCLE（reverse 已接通的类型）：卡片下方反向三档按钮的初始值。
+   * 注意合法值含 `false`，模板里判存在必须用 `!== undefined`，不能写 v-if="initialReverse"。
+   */
+  initialReverse?: boolean | 'auto'
 }>()
 
 const DIRECTION_OPTIONS = [
@@ -30,11 +35,19 @@ const WAVE_OPTIONS = [10, 18, 34] as const
 
 const BLADE_OPTIONS = [6, 8, 12] as const
 
+/** reverse 三档：off 恒正向 / on 恒反向 / auto 切暗正向、切亮收起（旧 CIRCLE_REVERT 的行为） */
+const REVERSE_OPTIONS = [
+  { value: false, label: 'off' },
+  { value: true, label: 'on' },
+  { value: 'auto', label: 'auto' },
+] as const
+
 /** 方向：每张卡片独立持有，互不影响 */
 const direction = ref<ThemeAnimationDirection>(props.initialDirection ?? ThemeAnimationDirection.LTR)
 const slatWidth = ref(props.initialSlatWidth ?? 72)
 const waveWidth = ref(props.initialWaveWidth ?? 18)
 const bladeCount = ref(props.initialBladeCount ?? 8)
+const reverse = ref<boolean | 'auto'>(props.initialReverse ?? false)
 
 const colorMode = useColorMode()
 
@@ -51,6 +64,7 @@ const options = reactive({
   slatWidth: slatWidth.value,
   waveWidth: waveWidth.value,
   bladeCount: bladeCount.value,
+  reverse: reverse.value,
   isDark: false,
   onChange: (next: boolean) => {
     colorMode.preference = next ? 'dark' : 'light'
@@ -66,6 +80,7 @@ watchEffect(() => {
   options.slatWidth = slatWidth.value
   options.waveWidth = waveWidth.value
   options.bladeCount = bladeCount.value
+  options.reverse = reverse.value
 })
 
 const { triggerRef, toggleTheme, isDark } = useThemeAnimation<HTMLButtonElement>(options)
@@ -129,6 +144,18 @@ const setTrigger = (el: unknown) => {
         @click="bladeCount = b"
       >
         {{ b }}
+      </button>
+    </div>
+    <div v-if="initialReverse !== undefined" class="slats" :aria-label="`${label} reverse`" role="group">
+      <span>reverse</span>
+      <button
+        v-for="r in REVERSE_OPTIONS"
+        :key="String(r.value)"
+        type="button"
+        :class="['chip', 'chip-sm', { active: reverse === r.value }]"
+        @click="reverse = r.value"
+      >
+        {{ r.label }}
       </button>
     </div>
   </div>

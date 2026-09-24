@@ -18,9 +18,11 @@ const ANIMATION_TYPES: Array<{
   initialWaveWidth?: number
   /** 仅 FAN：卡片下方渲染扇叶数选择按钮 */
   initialBladeCount?: number
+  /** 仅 CIRCLE（reverse 已接通的类型）：卡片下方渲染反向三档按钮 */
+  initialReverse?: boolean | 'auto'
 }> = [
-  { type: ThemeAnimationType.CIRCLE, label: 'CIRCLE', hint: '圆形扩散 · 圆心 = 点击位置' },
-  { type: ThemeAnimationType.CIRCLE_REVERT, label: 'CIRCLE_REVERT', hint: '圆形收起/扩散 · 切回亮色收起、切到暗色扩散' },
+  { type: ThemeAnimationType.CIRCLE, label: 'CIRCLE', hint: '圆形扩散 · 圆心 = 点击位置', initialReverse: false },
+  { type: ThemeAnimationType.CIRCLE_REVERT, label: 'CIRCLE_REVERT', hint: '已废弃 · 等价于 CIRCLE + reverse:auto' },
   { type: ThemeAnimationType.CIRCLE_BLUR, label: 'CIRCLE_BLUR', hint: '圆形模糊扩散 · 边缘高斯模糊' },
   { type: ThemeAnimationType.SQUARE, label: 'SQUARE', hint: '正方形扩散' },
   { type: ThemeAnimationType.DIAMOND, label: 'DIAMOND', hint: '菱形扩散' },
@@ -74,6 +76,16 @@ const BLADE_OPTIONS: ReadonlyArray<{ value: number; label: string }> = [
   { value: 12, label: '12' },
 ]
 
+/**
+ * reverse 三档：仅 CIRCLE 卡片展示。与 direction 正交——direction 定推进轴，
+ * reverse 定从内还是从外揭开；auto = 切暗正向、切亮收起（旧 CIRCLE_REVERT 的行为）。
+ */
+const REVERSE_OPTIONS: ReadonlyArray<{ value: boolean | 'auto'; label: string }> = [
+  { value: false, label: 'off' },
+  { value: true, label: 'on' },
+  { value: 'auto', label: 'auto' },
+]
+
 /** 全局指示器：复用库导出的 observeThemeClass——html class 事实源观察器（非受控多实例同步同款机制） */
 function useHtmlIsDark(className = 'dark') {
   const [isDark, setIsDark] = useState(() => document.documentElement.classList.contains(className))
@@ -91,6 +103,7 @@ function ThemeButton({
   initialSlatWidth,
   initialWaveWidth,
   initialBladeCount,
+  initialReverse,
   duration,
   easing,
 }: {
@@ -101,6 +114,7 @@ function ThemeButton({
   initialSlatWidth?: number
   initialWaveWidth?: number
   initialBladeCount?: number
+  initialReverse?: boolean | 'auto'
   duration: number
   easing: string
 }) {
@@ -108,12 +122,14 @@ function ThemeButton({
   const [slatWidth, setSlatWidth] = useState(initialSlatWidth ?? 72)
   const [waveWidth, setWaveWidth] = useState(initialWaveWidth ?? 18)
   const [bladeCount, setBladeCount] = useState(initialBladeCount ?? 8)
+  const [reverse, setReverse] = useState<boolean | 'auto'>(initialReverse ?? false)
   const { ref, toggleTheme, isDark } = useThemeAnimation<HTMLButtonElement>({
     animationType,
     direction,
     slatWidth,
     waveWidth,
     bladeCount,
+    reverse,
     duration,
     easing,
   })
@@ -184,6 +200,21 @@ function ThemeButton({
           ))}
         </div>
       )}
+      {initialReverse !== undefined && (
+        <div className="slats" role="group" aria-label={`${label} reverse`}>
+          <span>reverse</span>
+          {REVERSE_OPTIONS.map((r) => (
+            <button
+              key={String(r.value)}
+              type="button"
+              className={`chip chip-sm${reverse === r.value ? ' active' : ''}`}
+              onClick={() => setReverse(r.value)}
+            >
+              {r.label}
+            </button>
+          ))}
+        </div>
+      )}
     </div>
   )
 }
@@ -241,6 +272,7 @@ export default function App() {
             initialSlatWidth={t.initialSlatWidth}
             initialWaveWidth={t.initialWaveWidth}
             initialBladeCount={t.initialBladeCount}
+            initialReverse={t.initialReverse}
             duration={duration}
             easing={easing}
           />

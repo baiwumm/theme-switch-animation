@@ -17,9 +17,11 @@ const ANIMATION_TYPES: Array<{
   initialWaveWidth?: number
   /** 仅 FAN：卡片下方渲染扇叶数选择按钮 */
   initialBladeCount?: number
+  /** 仅 CIRCLE（reverse 已接通的类型）：卡片下方渲染反向三档按钮 */
+  initialReverse?: boolean | 'auto'
 }> = [
-  { type: ThemeAnimationType.CIRCLE, label: 'CIRCLE', hint: '圆形扩散 · 圆心 = 点击位置' },
-  { type: ThemeAnimationType.CIRCLE_REVERT, label: 'CIRCLE_REVERT', hint: '圆形收起/扩散 · 切回亮色收起、切到暗色扩散' },
+  { type: ThemeAnimationType.CIRCLE, label: 'CIRCLE', hint: '圆形扩散 · 圆心 = 点击位置', initialReverse: false },
+  { type: ThemeAnimationType.CIRCLE_REVERT, label: 'CIRCLE_REVERT', hint: '已废弃 · 等价于 CIRCLE + reverse:auto' },
   { type: ThemeAnimationType.CIRCLE_BLUR, label: 'CIRCLE_BLUR', hint: '圆形模糊扩散 · 边缘高斯模糊' },
   { type: ThemeAnimationType.SQUARE, label: 'SQUARE', hint: '正方形扩散' },
   { type: ThemeAnimationType.DIAMOND, label: 'DIAMOND', hint: '菱形扩散' },
@@ -109,6 +111,7 @@ onUnmounted(() => stopObserving?.())
         :initial-slat-width="t.initialSlatWidth"
         :initial-wave-width="t.initialWaveWidth"
         :initial-blade-count="t.initialBladeCount"
+        :initial-reverse="t.initialReverse"
         :duration="duration"
         :easing="easing"
       />
