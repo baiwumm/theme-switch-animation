@@ -14,6 +14,8 @@
 > 2026-09-23 追加：新增 `RIPPLE`（§7）与角度族 `CLOCK_SWEEP` / `FAN`（§8），13 → 15 种，
 > 六+七笔提交都在本地**未 push、未发版**。后续还想加类型请看 `docs/animation-roadmap.md`
 > ——候选池、优先级与排序理由、明确不做清单、以及"做完一个验证一个、不行就整个撤回"的撤回面。
+> 2026-09-23~24 追加：`CURTAIN`（§9）与 `COMB`（§10）落地，15 → 17 种；同期间 `SPIRAL` 与 `SEEDS`
+> 实现过又整体撤回。**全部仍在本地未 push、未发版**，`.changeset/` 已累积五条待切。
 
 - [x] 1. 跑正式验收 `pnpm test:acceptance`（2026-09-14 完成，7/7 PASS + §9-3 组二补跑 PASS）
 - [x] 2. Safari / 真机验证（2026-09-14 本机可自动化部分已全绿，见 §2；**macOS Safari + iOS 真机**
@@ -463,6 +465,39 @@ iPhone 与 Mac 同一局域网访问 `http://<mac-ip>:5224/`（或直接把 `pla
 - [ ] **分数缩放 dpr 一档仍未验**：125% / 150% 下中缝与软边会不会出现 1px 级亮暗线——这是 roadmap P0-1 唯一遗留的待验点
 - [ ] 下一批按 roadmap 顺序是 **P0-2 `SPIRAL`**（conic ∩ radial 求交）；开工前要先验"两个 `@property` 在同一 keyframes 里是否都逐帧插值"——单个已实测成立，两个未验
 - [ ] 待排期的小重构：`qrCenterGradient` 与 `getCurtainRevealSpec` 合并成一个中性命名的对称渐变构造器
+
+---
+
+## 10. 新增 COMB 梳齿交错（2026-09-24 记录）
+
+roadmap 的 P1-4 落地。**流程改了**：连续两轮（`SPIRAL` / `SEEDS`）都是实现完、真机才被否观感，这轮先探观感再写库代码。
+
+### 本轮判断
+
+- **流程改进值回票价**：第一支探针（纯静态、不碰库）截五帧就判定了观感成立与否，第二支探针验 `min()`/`max()` 在渐变 stop 里的逐帧解析——**两个 bug 都出现在写库代码之前**，源码一行没改过就被回炉。
+- **交错量取整宽是陷阱**：`stagger = slatWidth` 看起来"最分明"，实际奇数段 `0..W` 与偶数段 `W..r` 首尾相接拼成单条 `0..r`，等价于叶宽 2W 的 BLINDS——**探针里那五帧跟 BLINDS 一模一样，我当时以为是自己看走眼**。改 0.5 后才出现 BLINDS 到不了的中间态。
+- **`max(..., 0px)` 下界钳制是漏光源**：钳到 0 后 `#000 0 0px → transparent 20px` 在 stop 0 处仍不透明，起始帧每片叶片左沿一道实边。SEEDS 那轮为修"只有两个格"加的正是这套钳制，当时没暴露是因为 SEEDS 的 `from` 不是负值。**这条对以后所有多层 `min/max` 蒙版通用**。
+- **命名从 `BLINDS_ALT` 改成 `COMB`**：类型清单是用户挑动画时读的，`comb` 直接传达观感；家族关系写进卡片副标题而不是标识符。零新选项（复用 `direction` + `slatWidth`），没有踩"第 7 个局部参数"那条顾虑。
+
+### 实测结果
+
+| 探针 | 结果 |
+| --- | --- |
+| 观感预检（手写 CSS，未碰库） | 交错分批可见；`r = W` 那帧是"奇数全开 / 偶数未动"的高对比态，与 BLINDS 区分度成立 |
+| `min(max(v,0),W)` 版起始帧 | **失败**：每 72px 一道实边漏光 → 去掉 `max()` 下界 |
+| `stagger = W` 版 | **退化**：等价于叶宽 2W 的 BLINDS → 改 `W / 2` |
+| 修正版起始帧 / 末帧 | 起始全遮；末帧（`to = 1.5W`）整平面实心无接缝 |
+| 库真实产出的串回灌浏览器 | `getCombRevealSpec('ltr', 72)` 的 `from=-20 / to=108` 两层串，起始帧全遮、末帧全覆盖 |
+| 根 test / lint / tsc / build | 258 例通过（本轮新增 10）/ 0 / 0 / 产物含 `COMB` 与 `getCombRevealSpec` |
+
+### 待办
+
+- [x] core 实现 + 10 例单测 + 画廊第 17 张卡（带 direction 与 slatWidth 两组控件）
+- [x] README 类型表与属性驱动族清单 / options 表两处消费方 / 需求文档 v1.10 / 文档站 hero·features·site.ts 计数 / 四个 playground / roadmap / changeset / 门面截图
+- [ ] **真机验证 COMB**：文档站第 17 张卡 + 四个 playground；重点看 125% / 150% 缩放下叶片边界有没有 1px 亮暗线（与 §9 遗留的 dpr 一档合并验证）
+- [ ] Safari / Firefox 真机仍未跑。COMB 用的 `mask-image` / `mask-size` / `mask-repeat` 与 BLINDS / SCAN / CURTAIN 完全同一套无前缀写法（库刻意不输出 `-webkit-mask-*`，见 `styles.ts` 里 QR_GRID 那段注释），**没有引入新的引擎能力面**；要盯的是 Safari 对渐变 stop 里 `min(var(--x), Npx)` 的逐帧求值——这一点已在 CIRCLE/BLINDS 上验过，COMB 只是多一层
+- [ ] 下一批按 roadmap 是 **P2-1 通用 `revert`**——**开工前要先要一次决策**：`CIRCLE_REVERT` 同时存在"类型"和"选项"两种写法怎么处理
+- [ ] 待排期的小重构：`qrCenterGradient` 与 `getCurtainRevealSpec` 合并（同 §9）
 
 ---
 
