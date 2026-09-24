@@ -37,7 +37,7 @@ const WAVE_OPTIONS = [10, 18, 34] as const
 
 const BLADE_OPTIONS = [6, 8, 12] as const
 
-/** reverse 三档：off 恒正向 / on 恒反向 / auto 切暗正向、切亮收起（旧 CIRCLE_REVERT 的行为） */
+/** reverse 三档：off 恒正向 / on 恒反向 / auto 跟随切换方向（切暗正向、切亮收起） */
 const REVERSE_OPTIONS = [
   { value: false, label: 'off' },
   { value: true, label: 'on' },

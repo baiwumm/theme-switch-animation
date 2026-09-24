@@ -18,14 +18,6 @@ function IcoCircle(props: SVGProps<SVGSVGElement>) {
     </svg>
   )
 }
-function IcoRevert(props: SVGProps<SVGSVGElement>) {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.9} {...props}>
-      <circle cx="12" cy="12" r="9" strokeDasharray="3 3" />
-      <circle cx="12" cy="12" r="3.5" fill="currentColor" stroke="none" />
-    </svg>
-  )
-}
 function IcoBlur(props: SVGProps<SVGSVGElement>) {
   return (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.4} {...props}>
@@ -129,14 +121,13 @@ const ANIMATION_TYPES: Array<{
   initialWaveWidth?: number
   /** 仅 FAN：卡片内渲染扇叶数选择器（初始扇叶数） */
   initialBladeCount?: number
-  /** 仅 CIRCLE（reverse 已接通的类型）：卡片内渲染反向三档选择器（初始值） */
+  /** 仅 reverse 已接通的 5 个类型：卡片内渲染反向三档选择器（初始值） */
   initialReverse?: boolean | 'auto'
   Icon: (props: SVGProps<SVGSVGElement>) => JSX.Element
   /** 渐变图标砖：亮 / 暗两套底色 + 图标色（写全类名，避免动态拼接被 Tailwind 摇掉） */
   tile: string
 }> = [
   { type: ThemeAnimationType.CIRCLE, label: 'CIRCLE', hint: '圆形扩散 · 圆心 = 点击位置', initialReverse: false, Icon: IcoCircle, tile: 'from-rose-100 to-rose-200 text-rose-600 dark:from-rose-500/15 dark:to-rose-500/5 dark:text-rose-400' },
-  { type: ThemeAnimationType.CIRCLE_REVERT, label: 'CIRCLE_REVERT', hint: '已废弃 · 等价于 CIRCLE + reverse:auto', Icon: IcoRevert, tile: 'from-orange-100 to-orange-200 text-orange-600 dark:from-orange-500/15 dark:to-orange-500/5 dark:text-orange-400' },
   { type: ThemeAnimationType.CIRCLE_BLUR, label: 'CIRCLE_BLUR', hint: '圆形模糊扩散', Icon: IcoBlur, tile: 'from-amber-100 to-amber-200 text-amber-600 dark:from-amber-500/15 dark:to-amber-500/5 dark:text-amber-400' },
   { type: ThemeAnimationType.SQUARE, label: 'SQUARE', hint: '正方形扩散', Icon: IcoShape('5,5 19,5 19,19 5,19'), tile: 'from-emerald-100 to-emerald-200 text-emerald-600 dark:from-emerald-500/15 dark:to-emerald-500/5 dark:text-emerald-400' },
   { type: ThemeAnimationType.DIAMOND, label: 'DIAMOND', hint: '菱形扩散', Icon: IcoShape('12,3.5 20.5,12 12,20.5 3.5,12'), tile: 'from-teal-100 to-teal-200 text-teal-600 dark:from-teal-500/15 dark:to-teal-500/5 dark:text-teal-400' },
@@ -173,8 +164,9 @@ const DIRECTION_OPTIONS: ReadonlyArray<{ value: ThemeAnimationDirection; label: 
 ]
 
 /**
- * reverse 三档：仅 CIRCLE 卡片展示。与 Direction 正交——Direction 定推进轴，
- * Reverse 定从内还是从外揭开；`auto` 是"切暗正向、切亮收起"，即旧 CIRCLE_REVERT 的行为。
+ * reverse 三档：仅已接通的 5 个类型展示（CIRCLE / FAN / RIPPLE / CLOCK_SWEEP / CURTAIN）。
+ * 与 Direction 正交——Direction 定推进轴，Reverse 定从内还是从外揭开；
+ * `auto` 是"切暗正向、切亮收起"，即跟随本次切换方向。
  */
 const REVERSE_OPTIONS: ReadonlyArray<{ value: boolean | 'auto'; label: string }> = [
   { value: false, label: 'off' },
@@ -431,7 +423,7 @@ function PresetRow<T extends number | string>({
   )
 }
 
-/** 16 种动画的可交互画廊：卡片中央圆形按钮触发（受控模式 × next-themes，与站点主题联动） */
+/** 15 种动画的可交互画廊：卡片中央圆形按钮触发（受控模式 × next-themes，与站点主题联动） */
 export function GallerySection() {
   const [duration, setDuration] = useState(750)
   const [easing, setEasing] = useState('ease-in-out')

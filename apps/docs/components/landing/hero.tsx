@@ -90,7 +90,7 @@ export function HeroSection() {
             />
             <TextReveal
               as="p"
-              text="16 种形状揭开新主题，React / Vue / Next.js / Nuxt 通用。"
+              text="15 种形状揭开新主题，React / Vue / Next.js / Nuxt 通用。"
               split="char"
               stagger={0.022}
               yOffset={0}
@@ -112,7 +112,7 @@ export function HeroSection() {
           >
             <InstallCommand />
             <div className="flex flex-row items-center gap-3">
-              <ButtonLink href="#gallery">在下方试玩 16 种动画</ButtonLink>
+              <ButtonLink href="#gallery">在下方试玩 15 种动画</ButtonLink>
               <ButtonLink
                 href={REPO_URL}
                 target="_blank"

@@ -17,11 +17,10 @@ const ANIMATION_TYPES: Array<{
   initialWaveWidth?: number
   /** 仅 FAN：卡片下方渲染扇叶数选择按钮 */
   initialBladeCount?: number
-  /** 仅 CIRCLE（reverse 已接通的类型）：卡片下方渲染反向三档按钮 */
+  /** 仅 reverse 已接通的 5 个类型：卡片下方渲染反向三档按钮 */
   initialReverse?: boolean | 'auto'
 }> = [
   { type: ThemeAnimationType.CIRCLE, label: 'CIRCLE', hint: '圆形扩散 · 圆心 = 点击位置', initialReverse: false },
-  { type: ThemeAnimationType.CIRCLE_REVERT, label: 'CIRCLE_REVERT', hint: '已废弃 · 等价于 CIRCLE + reverse:auto' },
   { type: ThemeAnimationType.CIRCLE_BLUR, label: 'CIRCLE_BLUR', hint: '圆形模糊扩散 · 边缘高斯模糊' },
   { type: ThemeAnimationType.SQUARE, label: 'SQUARE', hint: '正方形扩散' },
   { type: ThemeAnimationType.DIAMOND, label: 'DIAMOND', hint: '菱形扩散' },
@@ -76,8 +75,9 @@ const BLADE_OPTIONS: ReadonlyArray<{ value: number; label: string }> = [
 ]
 
 /**
- * reverse 三档：仅 CIRCLE 卡片展示。与 direction 正交——direction 定推进轴，
- * reverse 定从内还是从外揭开；auto = 切暗正向、切亮收起（旧 CIRCLE_REVERT 的行为）。
+ * reverse 三档：仅已接通的 5 个类型展示（CIRCLE / FAN / RIPPLE / CLOCK_SWEEP / CURTAIN）。
+ * 与 direction 正交——direction 定推进轴，reverse 定从内还是从外揭开；
+ * auto = 切暗正向、切亮收起，即跟随本次切换方向。
  */
 const REVERSE_OPTIONS: ReadonlyArray<{ value: boolean | 'auto'; label: string }> = [
   { value: false, label: 'off' },
