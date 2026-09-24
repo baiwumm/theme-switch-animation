@@ -32,6 +32,7 @@ const ANIMATION_TYPES: Array<{
   { type: ThemeAnimationType.CLOCK_SWEEP, label: 'CLOCK_SWEEP', hint: '时钟扇形 · 自 12 点顺时针扫开' },
   { type: ThemeAnimationType.FAN, label: 'FAN', hint: '扇叶旋开 · bladeCount 控扇叶数', initialBladeCount: 8 },
   { type: ThemeAnimationType.CURTAIN, label: 'CURTAIN', hint: '双开门 · 中线向两侧推开' },
+  { type: ThemeAnimationType.COMB, label: 'COMB', hint: '梳齿交错 · 奇偶叶片错半拍展开，direction / slatWidth 可调', initialDirection: ThemeAnimationDirection.LTR, initialSlatWidth: 72 },
 ]
 
 /** duration / easing 全局预设：选中后所有按钮的下一次切换立即生效 */
@@ -70,10 +71,10 @@ onUnmounted(() => stopObserving?.())
       <b>{{ htmlIsDark ? darkClassName : 'light' }}</b>）
     </p>
     <p>
-      16 个按钮各持有一个受控 <code>useThemeAnimation</code> 实例（自动导入，无 import）；
+      17 个按钮各持有一个受控 <code>useThemeAnimation</code> 实例（自动导入，无 import）；
       库在转场回调内调用 <code>colorMode.preference = …</code> 并等待 color-mode 写入 class 后截图，
       300ms 未同步到位时自动跳过动画直切（不播放“旧→旧”空转）。
-      每个按钮使用自己声明的动画类型（中心扩散与角度扫开类动画含 RIPPLE / CLOCK_SWEEP / FAN 的起收点是按钮中心，可验证点击位置跟随；BLINDS / SCAN / QR_GRID / CURTAIN 不读触发元素几何）。前一组卡片下方各有独立的 direction 选择，RIPPLE 另有 waveWidth 档位、FAN 另有 bladeCount 档位，都只影响本卡片。
+      每个按钮使用自己声明的动画类型（中心扩散与角度扫开类动画含 RIPPLE / CLOCK_SWEEP / FAN 的起收点是按钮中心，可验证点击位置跟随；BLINDS / SCAN / QR_GRID / CURTAIN / COMB 不读触发元素几何）。前一组卡片下方各有独立的 direction 选择，RIPPLE 另有 waveWidth 档位、FAN 另有 bladeCount 档位，都只影响本卡片。
     </p>
     <div class="presets" role="group" aria-label="duration 预设">
       <span>duration</span>
