@@ -36,7 +36,7 @@ const ANIMATION_TYPES: Array<{
   { type: ThemeAnimationType.RIPPLE, label: 'RIPPLE', hint: '水滴涟漪 · 环带前缘向外推，waveWidth 控波长，reverse 向内收', initialWaveWidth: 18, initialReverse: false },
   { type: ThemeAnimationType.CLOCK_SWEEP, label: 'CLOCK_SWEEP', hint: '时钟扇形 · 自 12 点顺时针扫开，reverse 改逆时针', initialReverse: false },
   { type: ThemeAnimationType.FAN, label: 'FAN', hint: '扇叶旋开 · bladeCount 控扇叶数，reverse 改为合拢', initialBladeCount: 8, initialReverse: false },
-  { type: ThemeAnimationType.CURTAIN, label: 'CURTAIN', hint: '双开门 · 中线向两侧推开' },
+  { type: ThemeAnimationType.CURTAIN, label: 'CURTAIN', hint: '双开门 · 中线向两侧推开，reverse 改为两侧向中线合拢', initialReverse: false },
 ]
 
 /** duration / easing 全局预设：选中后所有按钮的下一次切换立即生效 */

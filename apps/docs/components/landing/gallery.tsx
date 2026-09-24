@@ -150,7 +150,7 @@ const ANIMATION_TYPES: Array<{
   { type: ThemeAnimationType.RIPPLE, label: 'RIPPLE', hint: '水滴涟漪 · 波源', initialWaveWidth: 18, initialReverse: false, Icon: IcoRipple, tile: 'from-sky-100 to-sky-200 text-sky-600 dark:from-sky-500/15 dark:to-sky-500/5 dark:text-sky-400' },
   { type: ThemeAnimationType.CLOCK_SWEEP, label: 'CLOCK_SWEEP', hint: '时钟扇形 · 轴心', initialReverse: false, Icon: IcoClockSweep, tile: 'from-violet-100 to-violet-200 text-violet-600 dark:from-violet-500/15 dark:to-violet-500/5 dark:text-violet-400' },
   { type: ThemeAnimationType.FAN, label: 'FAN', hint: '扇叶旋开 · 轴心', initialBladeCount: 8, initialReverse: false, Icon: IcoFan, tile: 'from-indigo-100 to-indigo-200 text-indigo-600 dark:from-indigo-500/15 dark:to-indigo-500/5 dark:text-indigo-400' },
-  { type: ThemeAnimationType.CURTAIN, label: 'CURTAIN', hint: '双开门 · 中线推开', Icon: IcoCurtain, tile: 'from-yellow-100 to-yellow-200 text-yellow-700 dark:from-yellow-500/15 dark:to-yellow-500/5 dark:text-yellow-400' },
+  { type: ThemeAnimationType.CURTAIN, label: 'CURTAIN', hint: '双开门 · 中线推开', initialReverse: false, Icon: IcoCurtain, tile: 'from-yellow-100 to-yellow-200 text-yellow-700 dark:from-yellow-500/15 dark:to-yellow-500/5 dark:text-yellow-400' },
 ]
 
 const DURATION_PRESETS = [
