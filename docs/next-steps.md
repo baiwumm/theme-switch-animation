@@ -149,7 +149,7 @@ chips 行在 dsf=1.25 下会压线误报——判读时看"是否每次同帧同
 | Playwright WebKit（Safari 26.6 内核） | 计算样式半径 1041.9→0.0px 逐帧单调插值，截图亮度 19→251 连续推进 | 13/13 推进 + 结算 ok | 0 |
 | 真实 Chrome 152（channel=chrome） | 同上全绿 | 13/13 | 0 |
 | 真实 Edge 153（channel=msedge） | 同上全绿 | 13/13 | 0 |
-| Playwright Firefox 155 | CSS 层全绿（见下）+ 视频取证全绿（见 E） | 13/13 | 0 |
+| Playwright Firefox 155 | CSS 层全绿（见下）+ 视频取证全绿（见 E） | ~~13/13~~ **该格当时是誊抄带过来的，不是实测**：截图判据在同一行里已写明"恒为终态、会误报"，两者不可能同时成立。2026-09-24 用逐类型视频取证补真（见 §9「引擎矩阵与迁移写法补验」）：15/15 | 0 |
 
 **Firefox 155 有个工具陷阱，单独说明**：Playwright 的 `page.screenshot()` 在 Firefox 上（无头/有头均）
 不合成 `::view-transition` 伪元素层——截图拍到的是已切换主题的实时 DOM，亮度恒为终态，verify-engine
@@ -468,7 +468,7 @@ iPhone 与 Mac 同一局域网访问 `http://<mac-ip>:5224/`（或直接把 `pla
 - [x] README 类型表与家族枚举 / 需求文档 v1.9 / 文档站文案 / 四个 playground / changeset / 门面截图
 - [x] **分数缩放 dpr 一档已验（2026-09-24 二次收尾）：通过**。jitter-lab seek 模式（`captureScreenshot`，真按 dsf 出设备像素：1280 / 1600 / 1920 宽）跑 CURTAIN 正向 expand + clean 纯色平面，25 帧 × dsf 1 / 1.25 / 1.5：
   - **中缝无接缝**：t>0 的每一个采样时刻"中心比内侧更亮"的露缝量 = **0.0 /255**（三档全 0）；唯一的局部极值是 t=0 起始帧那道设计上透光，且随 dpr **变弱**（偏差 14.6 → 12.0 → 10.5）。
-  - **无 1px 亮暗线**：全帧二阶差扫描（三条行剖面），除 t=0 中缝那 6 个点之外，dev≥5 的采样点**全是单调折点**（24px 羽化斜坡端点），非线。
+  - **无 1px 亮暗线（已进工装，不再依赖一次性分析脚本）**：`detect.mjs` 原先把两类成因混在同一个"线条候选"计数里——偏差 ≥ minDev 既可能来自**剖面反转**（v 落在 ±2 两侧邻居之外，这才是凭空多出的亮/暗线），也可能来自**单调折点**（v 落在两侧之间，即 24px 羽化带的起点/终点，不是缺陷；其偏差被 `contrastMax` 卡在 ≤5，恰好等于 `minDev`）。现已分开计数并按帧标注。三档 dsf 下 CURTAIN 正向 25 帧实测：**dsf=1 → 1 帧候选 / 1 帧真极值线；1.25 → 4 / 1；1.5 → 4 / 1**——唯一带真极值线的帧永远是 t=0（起始帧中缝那道设计上透光），中段 3 帧全部是"极值 0 条 / 折点 984–1968 px"。CIRCLE + `reverse:'auto'` 收起在 1.25 下 **0 / 0**。
   - **左右对称**：两条边的偏心 = **0.0 设备像素**（仅 1.5 的 t=188 出现一次 −1 设备像素 = −0.67 CSS 像素）；实心段半宽按 CSS 像素三档一致（11.5/11.6/11.7、32.5/32.4/32.3、97.5/98.0/98.0）；末帧 >MID 采样残留 0。
   - **一处诚实备注**：125% 末帧视口**最外圈 1 设备像素**部分未盖满（CURTAIN 5196 采样 / 峰值亮度 105）。同口径 **CIRCLE 与 SQUARE 在 1.25 同样存在且更亮**（2599 采样 / 峰值 195），1.0 与 1.5 均为 0 → 分数 dpr 下蒙版盒边界的通用量化，**不是 CURTAIN 引入、也不是 0.4.0 新增**；肉眼可见性留给你在真机 125% 下判。
   - 曾被自己的初判误导一次：先看 seek 汇总"1.25/1.5 各 4 帧候选 vs 1.0 只有 1 帧"就断定分数缩放引入了伪影，量完才发现 dpr=1 的折点偏差本来更大（8–10.5 vs 5.5–6.5），差异全部来自检测器 `contrastMax=10` 那道邻域过滤在斜率变小后放行了折点。**教训：候选帧数不是证据，折点/极值的区分才是**。
@@ -479,13 +479,20 @@ iPhone 与 Mac 同一局域网访问 `http://<mac-ip>:5224/`（或直接把 `pla
   - **npm 侧核实**：`latest = 0.4.0`、`time['0.4.0'] = 2026-09-24T14:03:45Z`；registry 直下 tarball 171398 B 与 CI 报的 171.4 kB 吻合；干净安装 `npm audit signatures` 报 registry signature + attestation **双 verified**；四个 exports 子路径从消费者视角解析到 `dist/{index,react,vue,nuxt}.mjs`；`dist/nuxt-runtime/composables/{index.mjs,index.d.ts}` 随包落地；已装包共 **18** 个文件与 `verify:package` 同口径；`ThemeAnimationType` 条目数 **15**、dist 内 `circle-revert` **0** 次、`getCircleRevertHoleGeometry` 按设计保留。GitHub Release 非 draft，正文直接取到 CHANGELOG 的 0.4.0 段（没走 generate-notes 兜底）；线上文档站同步到 15 张卡 / hero「15 种」。
   - **两条"看着红其实不是"的读表经验**：① publish 成功到 packument 可见有约 2.5 分钟处理延迟，且 `npm i` 会命中滞后的缓存版 packument 报 `ETARGET`——干净安装加 `--prefer-online`；② 轻量 tag 的 Release `createdAt` 报的是 tag 指向**提交的 author 时间**（13:55:07Z），会早于 run 启动时间，不是有人抢先发过。
   - 我自己的错误断言也记一条：拿"公开导出面里有没有 `isValidReverse`"去验，它是 `types.ts:178` 的**模块私有函数**（源码无 `export`），本来就不在导出面。§10 那句"产物含 reverse 与 isValidReverse"指的是标识符随 bundle 落地（实测 2 处 + `"auto"` 字面量判定在包内），不是 API 导出。
-  - **发包前仍未验、不随本次发布转为通过**：WebKit / Firefox 引擎档（本机 Playwright 临时装已丢失，只补装了包本体跑 `--engine=chromium --channel=chrome`）、系统缩放 125% / 150% 真机、Safari / iOS 真机、README「从 0.3.x 升级」迁移写法手抄。需求方本轮人工复核覆盖的是文档站画廊与四个 playground。
+  - **发包时刻有四处未验；事后（同日 22:30 之后）补齐其中两处**：WebKit / Firefox 引擎档已补跑且**逐类型全绿**（见下条「引擎矩阵与迁移写法补验」），README 迁移写法已按消费者视角逐条验过；**仍剩两处结构上需要需求方本人/设备**：系统缩放 125% / 150% 真机肉眼观感（forced dsf 只覆盖浏览器光栅路径，不含 OS 合成分面的整屏缩放），以及 Safari / iOS 真机（Playwright WebKit 是引擎级近似，不等于设备，需求 §278 已声明该差异）。
 - [x] **PR4 真机验证已做完（2026-09-24 二次收尾）**，四条证据：
   1. **`CIRCLE + reverse:'auto'` 两态正确**：暗→亮读到洞式 CSS（`--theme-switch-radius` + `@property`，`theme-switch-circle` 那套 keyframes），seek 13 帧 × dsf 1/1.25/1.5 **全部 0 线条候选**；亮→暗的注入 CSS 与 `reverse:false` **逐行相同** → auto 确实承担了旧 `CIRCLE_REVERT` 的全部行为。
   2. **真实 playground 产物 + 强制 dsf**：react @1/1.25/1.5、vue @1.25 各连点（先把该卡 reverse 选到 `auto` 再连点），第 2/4/… 次确认为"收起"；单帧亮度跳变 ≤1.7（阈值 25）。⚠ 的"横带 37–39px / 偏差 40–41"是检测器压线——同帧同值、跨 dpr 与跨框架一致，与本节 §2 已记录的那类误报同源。
   3. **`pnpm test:acceptance` 7/7 PASS**（自 13 类型以来第一次重跑）：含 vue-rapid 挂载 **.switch-button × 15**、**cdp-nuxt-animtypes 15 个按钮各自播放声明的那套 @keyframes**、measure 四档各 25 样本 0 超时 p95 ≤32ms。
   4. **`scripts/verify-engine.mjs --engine=chromium --channel=chrome`：15/15 类型推进 + 结算 ok、0 报错**；文档站 `next build` 干净重出后 `out/index.html` 与实机 DOM 都是 15 张卡、0 处 circle-revert；四个 playground typecheck 全 0（vue 走 `vue-tsc`、nuxt 先 `nuxt prepare`）。
-  **仍未验**：WebKit / Firefox 引擎档（`%TEMP%/pw-webkit` 的 Playwright 临时装与 webkit/firefox 浏览器构建都已不在，本机 `ms-playwright` 缓存只剩 chromium-1243；本轮只装了 playwright@1.63.0 包本体跑通 chrome 通道）。0.3.0 当时同样没重跑，所以不算 0.4.0 的回退，但 CURTAIN 的 `mask-composite: add` 与 FAN 的 `repeating-conic-gradient` 目前只有 Chrome 系证据。**系统缩放 125%/150% 真机、Safari/iOS 真机、README 迁移写法手抄验证**三条也不在本次人工复核范围内（需求方本轮只过了文档站与 playgrounds）。
+  5. **`detect.mjs` 的极值/折点分离**（同日三次收尾）：上面那句"⚠ 横带是检测器压线"背后是同一个更根本的口径缺陷——`detectLines` 只按"偏差 ≥ minDev 且两侧邻居接近"计数，而这**同时**吃进"剖面反转（真亮暗线）"与"单调折点（24px 羽化带端点）"。折点的偏差被 `contrastMax=10` 天然卡在 ≤5，恰好压在 `minDev=5` 这条线上，所以斜率一变小就冒假候选。现分开计数（`极值 N 条 / 折点 M px`）并按帧标 `← 真极值线` / `← 仅折点`。重跑三档 dsf 的 CURTAIN 正向：**1 → 1 帧候选 / 1 帧极值线；1.25 → 4 / 1；1.5 → 4 / 1**，即"1.25/1.5 多出候选"根本不是伪影，多出来的全是折点；`CIRCLE + reverse:'auto'` 收起 @1.25 为 **0 / 0**。
+  6. Playwright 装体位置：`%TEMP%/pw-webkit` **会在任务跑动中被清扫**（实测 `na-040` 干净安装目录、`ff-types.log`、以及 ffmpeg 刚写出的抽帧 PNG 下一句就 ENOENT；磁盘还有 54G，不是空间问题），已把包本体改装到仓库外的稳定路径并用 `PW_DIR` 指过去，`verify-firefox-video.mjs` 的抽帧工作目录同样加了 `FF_WORK_DIR` 覆盖口子。**下次跑引擎矩阵前先看这两处是否还在**，浏览器构建本身在 `AppData/Local/ms-playwright`（不在 TEMP，没被扫）。
+- [x] **引擎矩阵与迁移写法补验（2026-09-24 三次收尾，0.4.0 发布之后）**——把发布时留的"未验"清掉能清的部分：
+  - **WebKit 15/15**：`node scripts/verify-engine.mjs --engine=webkit`（Playwright WebKit = `webkit-2359`，与 §2 那次同一构建，UA 对得上）→ 15 种类型 7 点轨迹全部单调推进、结算 ok、0 报错；`CIRCLE + reverse` 收起的 `@property` 洞半径 **1041.9 → 0.0px 逐帧插值（14 点单调）**，与 Chrome 数值一致。`mask-composite: add`（CURTAIN）与 `repeating-conic-gradient`（FAN）在 Safari 内核上确实画出来了。
+  - **Firefox 逐类型 15/15**：先跑 `--engine=firefox`，15 个类型 + 收起方向**全报未推进**——但这是 §2 早就记过的工具陷阱（Playwright 的 `page.screenshot()` 在 Firefox 上不合成 `::view-transition` 伪元素层，截图恒为终态：类型循环一律 15、收起方向一律 255）。**这里要认一笔账**：§2 那张表给 Firefox 写了"13/13 推进"，用的却是同一套截图判据 + 同一条 `L.start > 200 && L.end < 60`，两者不可能同时成立——那一格是誊抄时带过来的，不是实测。本次改为逐类型视频取证：给 `verify-firefox-video.mjs` 加 C 阶段（每种动画各录一次、暂停后按 13 档确定性 seek、RLE 分平台段），判据用"**整段录制极差 ≥200 + 严格中间档 ≥3 + 单调**"替代原先按类型盲打的"档位 ≥6 且首末段差 >150"。结果 **15/15 全绿**：中间档 3–11 个（`CURTAIN` 10、`FAN` 11、`SCAN` 11，最少的 `RIPPLE` 3 个——它前段就盖满，与 verify-engine 那次 RIPPLE 误判同源），A 阶段中间态 16/20 帧、B 阶段圆拟合半径 696.1→195.3 / 266→696 逐点复现 §2-E 的原数值。放宽的两处各自有理由：短平台（每档 ~11 帧时的 1–2 帧段）是 webm 帧乱序/丢帧，按长度剔除且只在"中位段长 ≥5"时启用；跨度必须按整段量，因为切割点后的首档是类型相关的（软边类型首档已被压暗）。**离散翻转在新判据下中间档为 0，仍然拦得住**。
+  - **README「从 0.3.x 升级」迁移写法已按消费者视角验过**：对**已发布的 0.4.0**（干净安装）逐条抄——旧写法两处都编译期断：`TS2339 Property 'CIRCLE_REVERT' does not exist`、`TS2724 no exported member 'getCircleRevertMaskGeometry'`（还带 `Did you mean 'getCircleMaskGeometry'`）；新写法 `{ animationType: ThemeAnimationType.CIRCLE, reverse: 'auto' }` **0 错**。四个 exports 子路径按包名解析到位、`npm audit signatures` 双 verified、包内 18 文件与 `verify:package` 同口径。**并且补测了发布包与本地构建的等价性**：`dist/**/*.mjs` 与全部 `.d.ts` **逐字节一致**，只有 4 个 `.map` 因构建机路径不同——所以本轮所有本地浏览器证据都适用于已发布产物。
+  - **量出一条 README 没说的事实**：未迁移代码在 0.4.0 的运行时表现是**静默降级**。`ThemeAnimationType.CIRCLE_REVERT` 已是 `undefined` → `resolveAnimationOptions`（`types.ts:159`）只做 `??` 空值合并、不校验枚举 → 解析成 `circle`；而直接写字符串 `'circle-revert'`（JS 项目、或配置/CMS 驱动的 `animationType`）会**原样透传**，再由 `masks.ts` 的"未知类型按 CIRCLE 处理"（`masks.test.ts:325` 锁着）兜成 CIRCLE 正向。即：**TS 用户编译期就断，纯 JS 用户不崩、不报、只是动画换了**。建议在该节补一句这个差异，等需求方定夺措辞再动 README。
+  - **仍剩两项，结构上做不了自动化**：系统缩放 125% / 150% 真机肉眼观感（forced dsf 只覆盖浏览器光栅路径，不含 OS 整屏分面缩放），以及 Safari / iOS 真机（Playwright WebKit 是引擎级近似，需求 §278 已声明差异）。
 - [x] **PR4 收尾（2026-09-24）**：
   1. **门面截图已重拍**：`assets/screen.jpg` 换成 15 张卡的新图（1910×911、亮色、与旧图取景逐位对齐，
      只有 hero 数字 16 → 15）。一次性断言脚本在仓库外（`%TEMP%/screen-shot.mjs`：起 3311 静态服务指向

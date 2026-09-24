@@ -65,7 +65,15 @@ export function detectLines(frame, opts = {}) {
   const { width, height, lum } = frame
   const vertical = new Uint8Array(width * height) // 竖向孤立偏差 → 水平细线
   const horizontal = new Uint8Array(width * height) // 横向孤立偏差 → 竖直细线
+  // 「偏差 ≥ minDev」有两类成因，混在一起会误判（实测把 CURTAIN 的分数缩放判错过一次）：
+  //   极值 = v 落在两侧邻居之外 → 剖面反转，这才是"凭空多出的亮/暗线"；
+  //   折点 = v 落在两侧邻居之间 → 单调斜坡的端点（24px 羽化带的起点/终点），不是缺陷。
+  // 折点的偏差上限被 contrastMax 卡住（≤ contrastMax/2），所以只看条数会把两者一起数进来。
+  const vExt = new Uint8Array(width * height)
+  const hExt = new Uint8Array(width * height)
   let hairlinePixels = 0
+  let extremumPixels = 0
+  let kinkPixels = 0
   let maxIsolatedDev = 0
 
   for (let y = border; y < height - border; y++) {
@@ -79,11 +87,21 @@ export function detectLines(frame, opts = {}) {
         vertical[i] = 1
         hairlinePixels++
         if (abs > maxIsolatedDev) maxIsolatedDev = abs
+        if (v > Math.max(up, dn) || v < Math.min(up, dn)) {
+          vExt[i] = 1
+          extremumPixels++
+        } else kinkPixels++
       }
       const lf = lum[i - 2]
       const rt = lum[i + 2]
       const absH = Math.abs(v - (lf + rt) / 2)
-      if (absH >= minDev && Math.abs(lf - rt) <= contrastMax) horizontal[i] = 1
+      if (absH >= minDev && Math.abs(lf - rt) <= contrastMax) {
+        horizontal[i] = 1
+        if (v > Math.max(lf, rt) || v < Math.min(lf, rt)) {
+          hExt[i] = 1
+          extremumPixels++
+        } else kinkPixels++
+      }
     }
   }
 
@@ -113,6 +131,11 @@ export function detectLines(frame, opts = {}) {
     cols: strength(cols, 'col').sort((a, b) => b.len * b.meanDev - a.len * a.meanDev),
     hairlinePixels,
     maxIsolatedDev,
+    // 真 hairline（剖面反转）与羽化折点的分离计数；rows/cols 是旧口径（两者混计），保留不动
+    extremumPixels,
+    kinkPixels,
+    extremumRows: runsOf(vExt, width, height, minRun).map((r) => ({ y: r.pos, from: r.from, to: r.to, len: r.to - r.from + 1 })),
+    extremumCols: runsOfColumns(hExt, width, height, minRun).map((r) => ({ x: r.pos, from: r.from, to: r.to, len: r.to - r.from + 1 })),
   }
 }
 
@@ -121,7 +144,9 @@ export function summarize(detection) {
   const parts = []
   for (const l of detection.rows.slice(0, 3)) parts.push(`row y=${l.y} x${l.from}-${l.to} dev=${l.meanDev.toFixed(1)}`)
   for (const l of detection.cols.slice(0, 3)) parts.push(`col x=${l.x} y${l.from}-${l.to} dev=${l.meanDev.toFixed(1)}`)
-  return parts.length ? parts.join(' | ') : '—'
+  const ext = (detection.extremumRows?.length ?? 0) + (detection.extremumCols?.length ?? 0)
+  const tail = parts.length ? `〔极值 ${ext} 条 / 折点 ${detection.kinkPixels ?? 0} px〕` : detection.kinkPixels ? `〔折点 ${detection.kinkPixels} px〕` : ''
+  return (parts.length ? parts.join(' | ') : '—') + tail
 }
 
 /** 面积型指标：孤立像素占比（ppm），用于跨帧比较"抖动量" */

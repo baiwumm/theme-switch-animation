@@ -16,8 +16,14 @@
  *    扩散方向起始为亮色，先 reset('dark') 制造一个暗色帧作分割标记，把录制开头的页面加载
  *    加载突发帧与取样序列切开。
  *
- * 运行：node scripts/verify-firefox-video.mjs
- * 前置：pnpm build；Playwright + firefox 装在 %TEMP%/pw-webkit（npx playwright install firefox）。
+ * 运行：node scripts/verify-firefox-video.mjs [--all-types]
+ *       --all-types 追加 C 阶段：对每一种动画类型各录一次确定性 seek（约 +5 分钟）
+ * 前置：pnpm build；Playwright + firefox 已装（`npx playwright install firefox`），
+ *       包位置默认 %TEMP%/pw-webkit，用 PW_DIR 覆盖；抽帧工作目录默认 %TEMP%，用 FF_WORK_DIR 覆盖。
+ *       注意：本机 %TEMP% 会在长时间任务跑动中被清扫（实测 ffmpeg 刚写出的帧文件下一句就 ENOENT），
+ *       跑 `--all-types` 建议两者都指到仓库内的 gitignored 目录，例如：
+ *         PW_DIR=C:/Users/<you>/tools/pw FF_WORK_DIR=F:/projects/theme-switch-animation/scripts/.verify-engine-out \
+ *         node scripts/verify-firefox-video.mjs --all-types
  */
 import { createServer } from 'node:http'
 import { execFileSync } from 'node:child_process'
@@ -32,6 +38,7 @@ import { fitFrame } from './jitter-lab/circle.mjs'
 const ROOT = resolve(fileURLToPath(new URL('.', import.meta.url)), '..')
 const PW_DIR = process.env.PW_DIR ?? join(tmpdir(), 'pw-webkit')
 const PORT = 3212
+const ALL_TYPES = process.argv.includes('--all-types')
 const MIME = { '.html': 'text/html; charset=utf-8', '.mjs': 'text/javascript; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8' }
 // 时间表按 ease-in-out 曲线加密动作区间（收起的可见变化集中在后半段、扩散在前半段），
 // 保证两个方向都能取到 ≥6 个互异亮度
@@ -56,7 +63,7 @@ await new Promise((ok) => server.listen(PORT, '127.0.0.1', ok))
 const { firefox } = await import(pathToFileURL(join(PW_DIR, 'node_modules', 'playwright', 'index.mjs')).href)
 const ffmpegDir = (await readdir(join(process.env.LOCALAPPDATA, 'ms-playwright'))).find((d) => d.startsWith('ffmpeg'))
 const ffmpeg = join(process.env.LOCALAPPDATA, 'ms-playwright', ffmpegDir, 'ffmpeg-win64.exe')
-const work = await mkdtemp(join(tmpdir(), 'ff-video-'))
+const work = await mkdtemp(join(process.env.FF_WORK_DIR ?? tmpdir(), 'ff-video-'))
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms))
 const meanLum = (f) => {
   let s = 0
@@ -144,7 +151,7 @@ function judgeLive(name, lums) {
   if (!ok) failures.push(`${name}：自由播放中间态不足（${inter.length} 帧 / ${distinct} 取值）`)
 }
 
-function judgeStepped(name, rows, dir) {
+function judgeStepped(name, rows, dir, { skipFit = false, noiseLen = 0, minDistinct = 6, minInter = 0, monoTol = 3, spanFromFull = false } = {}) {
   // RLE 分段：暂停动画 + 静止页面下，screencast 对每档 seek 输出一段恒定亮度的帧块；
   // 单帧段（len=1）是档间过渡/编码噪声，过滤掉。低帧率录制（每档 2 帧）也仍能保留档位段。
   const segs = []
@@ -157,7 +164,15 @@ function judgeStepped(name, rows, dir) {
       segs.push({ lum: x.lum, len: 1, r: x.r ?? null, rN: x.r == null ? 0 : 1 })
     }
   }
-  const major = segs.filter((s) => s.len >= 2)
+  // 每档 dwell 足够长时（中位段长 ≥5 帧），1–2 帧的短段就是 webm 帧乱序/丢帧产生的假档
+  // （实测 15×2 夹在 87 与 70 之间、终态附近 15→21→16 的回摆），按长度剔除；
+  // 低帧率录制（每档 2 帧）不启用，避免误伤真档位。
+  let major = segs.filter((s) => s.len >= 2)
+  if (noiseLen > 0) {
+    const lens = segs.map((s) => s.len).sort((a, b) => a - b)
+    const median = lens[Math.floor(lens.length / 2)] ?? 0
+    if (median >= 5) major = segs.filter((s) => s.len > noiseLen)
+  }
   // 起点 = 最后一个「起始平台」主段（收起：暗；扩散：亮）之后 —— 平台吸收页面加载与起始静止帧
   const isPlatform = dir === 'up' ? (s) => s.lum < 45 : (s) => s.lum > 235
   let cut = 0
@@ -168,12 +183,22 @@ function judgeStepped(name, rows, dir) {
   const lums = seq.map((s) => s.lum)
   let nonMono = 0
   for (let i = 1; i < lums.length; i++) {
-    if (dir === 'up' && lums[i] < lums[i - 1] - 3) nonMono++
-    if (dir === 'down' && lums[i] > lums[i - 1] + 3) nonMono++
+    if (dir === 'up' && lums[i] < lums[i - 1] - monoTol) nonMono++
+    if (dir === 'down' && lums[i] > lums[i - 1] + monoTol) nonMono++
   }
   const distinct = new Set(lums).size
-  const spanOk = Math.abs(lums.at(-1) - lums[0]) > 150
-  const fits = seq.map((s) => s.r).filter((v) => v !== null)
+  const allLums = rows.map((r) => r.lum)
+  // 判别力真正所在：整段录制的两端极值之间，seek 序列取到了几个「严格中间档」。
+  // 离散翻转（Firefox 不画 VT 伪元素时的表现）只有旧态与新态两档 → 中间档 0 个。
+  const lo = Math.min(...allLums)
+  const hi = Math.max(...allLums)
+  const interCount = lums.filter((v) => v > lo + 8 && v < hi - 8).length
+  // 跨度：默认沿用 B 阶段"切割后首末段之差"；C 阶段改用整段录制的极差——
+  // 因为切割点之后的首档本身是类型相关的（软边类型首档已被压暗），拿它当起点会误判
+  const spanOk = spanFromFull
+    ? hi - lo >= 200
+    : Math.abs(lums.at(-1) - lums[0]) > 150
+  const fits = skipFit ? [] : seq.map((s) => s.r).filter((v) => v !== null)
   const fitDir = dir === 'up' ? 'down' : 'up' // 收起：暗圆收缩；扩散：暗圆扩张
   let fitBad = 0
   for (let i = 1; i < fits.length; i++) {
@@ -184,9 +209,19 @@ function judgeStepped(name, rows, dir) {
   const fitNote = fits.length >= 3
     ? `拟合半径 ${fits[0]}→${fits.at(-1)}px，${fits.length} 点${fitBad === 0 ? '单调' : `异常 ${fitBad} 次`}`
     : `可拟合 ${fits.length} 点（<3，跳过几何判据）`
-  const ok = distinct >= 6 && nonMono === 0 && spanOk && (fits.length < 3 || fitBad === 0)
-  console.log(`${name}: 平台后 ${seq.length} 段 / ${distinct} 个取值，${nonMono === 0 ? '单调推进' : `非单调 ${nonMono} 次`}，${lums[0]}→${lums.at(-1)}，${fitNote} ${ok ? '✓' : '✗'}`)
-  if (!ok) failures.push(`${name}：seek 取样未单调推进（非单调 ${nonMono} / 取值 ${distinct} / 半径异常 ${fitBad}）`)
+  const ok =
+    distinct >= minDistinct && interCount >= minInter && nonMono === 0 && spanOk && (fits.length < 3 || fitBad === 0)
+  const why = !ok
+    ? `非单调 ${nonMono} / 取值 ${distinct}（需 ≥${minDistinct}）/ 中间档 ${interCount}（需 ≥${minInter}）/ 跨度 ${
+        spanFromFull ? hi - lo : Math.abs(lums.at(-1) - lums[0])
+      }（需 ${spanFromFull ? '≥200（整段极差）' : '>150（首末段）'}）/ 半径异常 ${fitBad}`
+    : ''
+  console.log(
+    `${name}: 平台后 ${seq.length} 段 / ${distinct} 个取值${minInter ? ` / 中间档 ${interCount}` : ''}，${
+      nonMono === 0 ? '单调推进' : `非单调 ${nonMono} 次`
+    }，${lums[0]}→${lums.at(-1)}，${hi - lo >= 200 ? `覆盖 ${lo}~${hi}` : `覆盖 ${lo}~${hi}（不足 200）`}，${fitNote} ${ok ? '✓' : '✗'}`,
+  )
+  if (!ok) failures.push(`${name}：seek 取样未推进（${why}）`)
 }
 
 try {
@@ -203,6 +238,25 @@ try {
   judgeStepped('收起（@property 洞）', collapseSteps, 'up')
   const expandSteps = await steppedRun('expand-steps', 'light', { reverse: false }, { markerBlip: true })
   judgeStepped('扩散（mask-size/position）', expandSteps, 'down')
+
+  // C（`--all-types`）：把 B 的确定性 seek 取证摊到每一个动画类型上。
+  // 动机：verify-engine 的截图判据在 Firefox 上整体失效（不合成 VT 伪元素层），
+  // 于是"15 种类型里除 CIRCLE 外的 14 种真的被画出来了吗"在 Firefox 上没有任何证据。
+  // 非径向类型跳过圆拟合，只判"平台后 ≥6 个互异档位 + 单调 + 跨度 >150"。
+  if (ALL_TYPES) {
+    const entries = Object.entries(await import(pathToFileURL(join(ROOT, 'dist', 'index.mjs')).href).then((m) => m.ThemeAnimationType))
+    console.log(`\n=== C. 逐类型确定性 seek（${entries.length} 种，跳过圆拟合） ===`)
+    for (const [key, value] of entries) {
+      const rows = await steppedRun(`t-${key}`, 'light', { animationType: value, reverse: false }, { markerBlip: true })
+      judgeStepped(`  ${key}`, rows, 'down', {
+        skipFit: true, // 圆拟合只对径向洞有意义，形状族的拟合值无解释力
+        noiseLen: 2, // 每档 ~11 帧，故 1–2 帧短段 = webm 乱序/丢帧假档（实测 87 → 17×2 → 70）
+        minDistinct: 4, // RIPPLE 类"前段就盖满"的类型稳态档位天然少（实测 5）
+        minInter: 3, // 真正的判别力在这里：必须取到 ≥3 个"严格中间档"，离散翻转只有 0 个
+        spanFromFull: true, // 跨度按整段录制量，不按被切割后的残段
+      })
+    }
+  }
 } catch (e) {
   failures.push(String(e?.message ?? e))
 } finally {

@@ -358,6 +358,7 @@ async function main() {
     const labStartExpr = `window.__lab.start({ ${startOpts.join(', ')} })`
     const mode = String(args.mode ?? 'seek')
     let flagged = 0
+    let flaggedExt = 0 // 其中含「剖面反转」真极值线的帧数——只有这一类才是亮暗线
     let frames = 0
     let worst = null
     const flaggedRuns = []
@@ -644,8 +645,10 @@ async function main() {
         const detection = detectLines(frame)
         frames++
         const lines = detection.rows.length + detection.cols.length
+        const ext = detection.extremumRows.length + detection.extremumCols.length
         if (lines) {
           flagged++
+          if (ext) flaggedExt++
           if (!worst || lines > worst.lines) worst = { i, lines, detection }
         }
         let meanLum = 0
@@ -654,7 +657,7 @@ async function main() {
         const dt = prevTs === null ? 0 : shots[i].ts - prevTs
         prevTs = shots[i].ts
         console.log(
-          `  ${String(i).padStart(3)}  ${dt.toFixed(1).padStart(6)}  ${meanLum.toFixed(2).padStart(7)}   ${summarize(detection).padEnd(62)} ${hairlineRate(detection, frame).toFixed(2)}${lines ? '  ← 命中' : ''}`,
+          `  ${String(i).padStart(3)}  ${dt.toFixed(1).padStart(6)}  ${meanLum.toFixed(2).padStart(7)}   ${summarize(detection).padEnd(62)} ${hairlineRate(detection, frame).toFixed(2)}${ext ? '  ← 真极值线' : lines ? '  ← 仅折点' : ''}`,
         )
       }
     } else {
@@ -687,13 +690,15 @@ async function main() {
           const detection = detectLines(frame)
           frames++
           const lines = detection.rows.length + detection.cols.length
+          const ext = detection.extremumRows.length + detection.extremumCols.length
           if (lines) {
             flagged++
+            if (ext) flaggedExt++
             if (!worst || lines > worst.lines) worst = { i: t, lines, detection }
           }
           if (k === 0) {
             console.log(
-              `  ${String(t).padStart(5)}  ${summarize(detection).padEnd(62)} ${hairlineRate(detection, frame).toFixed(2)}${lines ? '  ← 命中' : ''}`,
+              `  ${String(t).padStart(5)}  ${summarize(detection).padEnd(62)} ${hairlineRate(detection, frame).toFixed(2)}${ext ? '  ← 真极值线' : lines ? '  ← 仅折点' : ''}`,
             )
           }
         }
@@ -703,7 +708,7 @@ async function main() {
 
     const base = baseline.rows.length + baseline.cols.length
     console.log(
-      `\n汇总[${mode}/${direction}/dsf=${dsf}/${width}x${height}]：${frames} 帧中 ${flagged} 帧检出线条候选；基线 ${base} 条（${hairlineRate(baseline, baseFrame).toFixed(2)} ppm）`,
+      `\n汇总[${mode}/${direction}/dsf=${dsf}/${width}x${height}]：${frames} 帧中 ${flagged} 帧检出线条候选、其中 ${flaggedExt} 帧含真极值线；基线 ${base} 条（${hairlineRate(baseline, baseFrame).toFixed(2)} ppm）`,
     )
     if (worst) console.log(`最差帧 #${worst.i}：${summarize(worst.detection)}`)
   } finally {
