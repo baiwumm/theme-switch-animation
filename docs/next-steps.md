@@ -466,7 +466,7 @@ iPhone 与 Mac 同一局域网访问 `http://<mac-ip>:5224/`（或直接把 `pla
 - [x] README 类型表与家族枚举 / 需求文档 v1.9 / 文档站文案 / 四个 playground / changeset / 门面截图
 - [ ] **分数缩放 dpr 一档仍未验**：125% / 150% 下中缝与软边会不会出现 1px 级亮暗线——这是 roadmap P0-1 唯一遗留的待验点
 - [x] ~~下一批按 roadmap 顺序是 P0-2 `SPIRAL`~~ —— **动画类型扩展到此冻结（2026-09-24 需求方决定）**。`SPIRAL` / `SEEDS` / `COMB` 三个都实现过又整体撤回，不再加新类型，停在 16 种；候选池剩下的 P2-2 `LOGO_MASK` 也不做。后续判据见 `docs/animation-roadmap.md` §1 四条约束（第 4 条是这三轮换来的）。
-- [ ] **`reverse` 选项 PR1–PR3 已落地**（v1.10 / v1.11，待发版）：三态 `boolean | 'auto'`，接入 `CIRCLE` / `FAN` / `RIPPLE` / `CLOCK_SWEEP`；`BLINDS`/`SCAN`/`QR_GRID` 有意不开（`direction` 已占那根轴），形状族与 `CURTAIN` 经实测做不到无副作用而撤出。`CIRCLE_REVERT` 已标 deprecated，PR4 才删。设计定稿在 `docs/reverse-option-design.md`
+- [ ] **`reverse` 选项 PR1–PR3 已落地**（v1.10 / v1.11 / v1.12，待发版）：三态 `boolean | 'auto'`，接入 `CIRCLE` / `FAN` / `RIPPLE` / `CLOCK_SWEEP` / `CURTAIN` 五个；`BLINDS`/`SCAN`/`QR_GRID` 有意不开（`direction` 已占那根轴），形状族 6 个经实测做不到无副作用。`CIRCLE_REVERT` 已标 deprecated，PR4 才删。设计定稿在 `docs/reverse-option-design.md`
 - [ ] 待排期的小重构：`qrCenterGradient` 与 `getCurtainRevealSpec` 合并成一个中性命名的对称渐变构造器
 
 ---
@@ -495,7 +495,7 @@ tag 流水线第二次走通：`changeset version` → commit → push → `v0.3
 | --- | --- |
 | `CIRCLE + reverse:true` vs `CIRCLE_REVERT` 收起态 | 归一化 keyframes 名后 **CSS 完全相同**（且两份原文确实只差那个标识符） |
 | `reverse:'auto'` 两态 | 切亮 = 洞式收起（含 `@property --theme-switch-radius`）；切暗 = 与完全不传 reverse 的 `CIRCLE` **逐字节相同** |
-| 非消费类型传 `reverse:true` | `SQUARE` / `RIPPLE` / `CURTAIN` 三者输出与不传**完全一致** |
+| 未接入类型传 `reverse:true` | `QR_GRID` / `BLINDS` / `SCAN` 三者输出与不传**完全一致** |
 | 废弃提示 | 开发环境两次切换只提示 1 次；`NODE_ENV=production` 零输出；走 `CIRCLE + reverse` 不提示 |
 | 根 test / lint / tsc / build | 253 例（新增 7）/ 0 / 0 / 产物含 `reverse` 与 `isValidReverse` |
 | 四个 playground | react / next / nuxt 裸 `tsc` 通过；vue 必须 `vue-tsc`（裸 `tsc` 不认 SFC） |
@@ -505,7 +505,8 @@ tag 流水线第二次走通：`changeset version` → commit → push → `v0.3
 - [x] core：`reverse` 三态 + 校验 + `CIRCLE` 接通 + `CIRCLE_REVERT` 标废弃 + 7 例单测
 - [x] 文档站 CIRCLE 卡与四个 playground 的 `Reverse` 控件；README / 需求文档 v1.10 / 设计文档状态 / changeset
 - [ ] **真机验证 PR1**：文档站 CIRCLE 卡切 `off` / `on` / `auto` 三档，`on` 与 `auto`（切回亮色）应看到"新主题从四周显出、向按钮中心收拢"；`auto` 的另一半（切到暗色）应与 `off` 完全一致。四个 playground 各验一遍
-- [x] ~~**PR2**：形状族 6 个 + `FAN` + `CURTAIN` 接入 `reverse`~~ —— **落地时缩到只剩 `FAN`**：形状族与 `CURTAIN` 经反证/实测**做不到无副作用**，撤出并进 roadmap §4。形状族反向必须动 `mask-size`，那是 phase-6 附录四/五查过的像素对齐抖动病根；`CURTAIN` 的 24px 羽化带塌零时两斜坡交叉出凹陷，末帧实测约 38px 居中半透明带（"终值过冲"与"两侧板向中心重叠生长"两种补救都只减小不消除）。`FAN` 能做的唯一理由是硬边无羽化：末帧扫描 0 残留，并用 start/mid 两点对照排除了"mask 解析失败也报 0"的假阳性
+- [x] ~~**PR2**：形状族 6 个 + `FAN` + `CURTAIN` 接入 `reverse`~~ —— **落地时缩到只剩 `FAN`**：形状族与 `CURTAIN` 经反证/实测**做不到无副作用**，撤出并进 roadmap §4。形状族反向必须动 `mask-size`，那是 phase-6 附录四/五查过的像素对齐抖动病根；`CURTAIN` 的 24px 羽化带塌零时两斜坡交叉出凹陷，末帧实测约 38px 居中半透明带（"终值过冲"与"两侧板向中心重叠生长"两种补救都只减小不消除）。`FAN` 能做的唯一理由是硬边无羽化：末帧扫描 0 残留，并用 start/mid 两点对照排除了"mask 解析失败也报 0"的假阳性。
+  **但 `CURTAIN` 那半句判错了，PR3 后翻案**：当时只试了单渐变的三种写法（取补、过冲、单渐变两侧板）就下"结构性、非调参可解"的结论。换**两层 + `add`（取最大 alpha）**——左右板各自从边缘向中线长、软边朝内、重叠时取 max 而非抵消——末帧就干净了（首帧 6400/6400 全隐、末帧 0 残留）。**教训：证伪前先穷举构造空间**，已写进 roadmap §1 附近与需求 v1.12
 - [x] **PR3 已完成**：`RIPPLE` + `CLOCK_SWEEP` 接入，先探针后落码，两者末帧 6400 采样点零残留。`RIPPLE` 撞出两个"照抄正向"的坑——主峰 α=0.5 的补仍是 0.5 所以终点必须过冲整个前缘；正向 `to` 里那个 `2.1 × maxRadius` 是为正向覆盖留的余量，反向照抄会让**前 60% 时间屏幕毫无变化**，起点改成 `maxRadius + 前缘` 才铺满时间轴（与 SPIRAL 那轮照抄 2.1 是同一类错误的镜像）。`CLOCK_SWEEP` 反向的观感就是当初搁置的**逆时针扫开**，顺/逆方向不必再单开选项
 - [ ] **PR4**：删 `CIRCLE_REVERT`（破坏性，按 0.2.0 先例走 minor + 条目标 breaking）。洞式机制保留并泛化，别连带删掉
 - [ ] 攒够后一起走 0.4.0 发布；`.changeset/` 当前一条待切
