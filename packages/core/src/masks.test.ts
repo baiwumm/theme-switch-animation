@@ -6,6 +6,7 @@ import {
   CIRCLE_MASK_IMAGE,
   CIRCLE_SIZE_FACTOR,
   CLOCK_SWEEP_TAIL_DEG,
+  CURTAIN_FEATHER_PX,
   DIAMOND_COVERAGE_FACTOR,
   FULL_CIRCLE_DEG,
   HEXAGON_COVERAGE_FACTOR,
@@ -29,6 +30,7 @@ import {
   getCircleMaskGeometry,
   getCircleRevertMaskGeometry,
   getClockSweepRevealSpec,
+  getCurtainRevealSpec,
   getDiamondMaskGeometry,
   getHexagonMaskGeometry,
   getFanBladeStepDeg,
@@ -623,5 +625,68 @@ describe('角度驱动族（CLOCK_SWEEP / FAN）', () => {
   it('轴心写进 conic 串：换触发点即换轴心（与 RIPPLE 同族，消费 ref 几何）', () => {
     const spec = getFanRevealSpec({ x: 12.5, y: 700.25 }, 8)
     expect(spec.maskImage).toContain('from 0deg at 12.5px 700.25px')
+  })
+})
+
+describe('CURTAIN（双开门）', () => {
+  const v = `var(${REVEAL_VAR})`
+  const f = CURTAIN_FEATHER_PX
+
+  it('中线向两侧对称生长：90deg 三段，实心段以 50% 为轴对称展开', () => {
+    const spec = getCurtainRevealSpec(viewport)
+    expect(spec.maskImage).toBe(
+      `linear-gradient(90deg, transparent calc(50% - ${v} / 2 - ${f}px),` +
+      ` #000 calc(50% - ${v} / 2) calc(50% + ${v} / 2),` +
+      ` transparent calc(50% + ${v} / 2 + ${f}px))`,
+    )
+    expect(spec.maskSize).toBe('100% 100%')
+    expect(spec.maskRepeat).toBe('no-repeat')
+  })
+
+  it('from = 0：起始帧实心段零宽、两侧各留一条软边，即中缝先透出一道光', () => {
+    const spec = getCurtainRevealSpec(viewport)
+    expect(spec.from).toBe(0)
+  })
+
+  it('to = 视口宽 + 2 × 软边，末帧两条软边都被推出画面', () => {
+    const spec = getCurtainRevealSpec(viewport)
+    expect(spec.to).toBe(viewport.width + 2 * f)
+    // 实心段左右边界各自超出视口沿 f 像素 → 软边落在画面外，末帧完全覆盖
+    expect(spec.to / 2 - viewport.width / 2).toBe(f)
+  })
+
+  it('与 BLINDS / SCAN 同族：命中 isRevealAnimationType 并由 getRevealMaskSpec 分发', () => {
+    expect(isRevealAnimationType(ThemeAnimationType.CURTAIN)).toBe(true)
+    expect(getRevealMaskSpec(ThemeAnimationType.CURTAIN, ThemeAnimationDirection.LTR, 72, viewport))
+      .toEqual(getCurtainRevealSpec(viewport))
+  })
+
+  it('不消费 direction：四个取值结果完全一致（中线对称推开没有方向语义）', () => {
+    const base = getCurtainRevealSpec(viewport)
+    for (const direction of [
+      ThemeAnimationDirection.LTR,
+      ThemeAnimationDirection.RTL,
+      ThemeAnimationDirection.TTB,
+      ThemeAnimationDirection.BTT,
+    ] as const) {
+      expect(getRevealMaskSpec(ThemeAnimationType.CURTAIN, direction, 72, viewport)).toEqual(base)
+    }
+  })
+
+  it('不消费触发点：既不是形状类也不是模糊类，getMaskGeometry 按既有语义回落 CIRCLE', () => {
+    const center = { x: 400, y: 300 }
+    expect(isShapeAnimationType(ThemeAnimationType.CURTAIN)).toBe(false)
+    expect(isBlurAnimationType(ThemeAnimationType.CURTAIN)).toBe(false)
+    expect(isRippleAnimationType(ThemeAnimationType.CURTAIN)).toBe(false)
+    expect(isSweepAnimationType(ThemeAnimationType.CURTAIN)).toBe(false)
+    expect(getMaskGeometry(ThemeAnimationType.CURTAIN, center, viewport)).toEqual(
+      getCircleMaskGeometry(center, viewport),
+    )
+  })
+
+  it('视口宽度决定终值：窄屏与宽屏的 to 差等于视口宽之差', () => {
+    const wide = getCurtainRevealSpec({ width: 1920, height: 1080 })
+    const narrow = getCurtainRevealSpec({ width: 375, height: 667 })
+    expect(wide.to - narrow.to).toBe(1920 - 375)
   })
 })

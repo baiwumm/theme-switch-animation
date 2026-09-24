@@ -33,6 +33,8 @@ export const ThemeAnimationType = {
   CLOCK_SWEEP: 'clock-sweep',
   /** 扇叶：bladeCount 片楔形扇叶从轴心同时旋开拼成整屏（repeating-conic-gradient） */
   FAN: 'fan',
+  /** 双开门：新主题自屏幕中线向两侧对称揭开（属性驱动蒙版，无触发点） */
+  CURTAIN: 'curtain',
 } as const
 
 export type ThemeAnimationType = (typeof ThemeAnimationType)[keyof typeof ThemeAnimationType]

@@ -314,8 +314,9 @@ export function getBlurCircleMaskGeometry(center: Point, viewport: Size, blurAmo
  * 属性驱动揭开（BLINDS / SCAN）：蒙版盒子完全静止（不动画 mask-size / mask-position），
  * 只有注册属性 `REVEAL_VAR` 在动——渐变蒙版引用该属性，属性每帧变化时渐变重新解析。
  * 与 CIRCLE_REVERT 收起方向的"洞"（buildHoleAnimationCSS）同一机制，CSS 生成见 styles.ts。
- * 旧截图层完整垫底、新层挂蒙版。BLINDS / SCAN 没有触发点（不消费 center），
- * 唯一消费 center 的成员是 RIPPLE——它的圆心得写进 radial-gradient 串（见 getRippleRevealSpec）。
+ * 旧截图层完整垫底、新层挂蒙版。消费 center 的成员是 RIPPLE 与角度族——它们的圆心得
+ * 写进渐变串（见 getRippleRevealSpec / getClockSweepRevealSpec）；BLINDS / SCAN / CURTAIN
+ * 无触发点、不消费 center。
  */
 export interface RevealMaskSpec {
   /** 注册属性的起始值 / 终止值（px），写进 keyframes 的 from / to */
@@ -399,11 +400,37 @@ export function getScanRevealSpec(direction: ThemeAnimationDirection, viewport: 
   }
 }
 
-export function isRevealAnimationType(type: ThemeAnimationType): boolean {
-  return type === ThemeAnimationType.BLINDS || type === ThemeAnimationType.SCAN
+/**
+ * CURTAIN 双开门：新主题自屏幕中线向两侧对称揭开。与 QR_GRID 的垂直轴层同构
+ * （`qrCenterGradient` 的写法），区别是只有一层、推进轴固定为水平、且不消费 direction。
+ *
+ * 起始帧（reveal = 0）实心段宽度为 0，但两侧各留一条 `CURTAIN_FEATHER_PX` 的软边——表现为
+ * 中缝先透出一道光、再向两边推开，这是幕布观感的一部分（同 RIPPLE 起始帧的中心淡纹）。
+ * 末帧要把两条软边都推出画面，故 `to = 视口宽 + 2 × 软边`。
+ */
+export const CURTAIN_FEATHER_PX = 24
+
+export function getCurtainRevealSpec(viewport: Size): RevealMaskSpec {
+  const v = `var(${REVEAL_VAR})`
+  const f = CURTAIN_FEATHER_PX
+  return {
+    from: 0,
+    to: viewport.width + 2 * f,
+    maskImage:
+      `linear-gradient(90deg, transparent calc(50% - ${v} / 2 - ${f}px),` +
+      ` #000 calc(50% - ${v} / 2) calc(50% + ${v} / 2),` +
+      ` transparent calc(50% + ${v} / 2 + ${f}px))`,
+    maskSize: '100% 100%',
+    maskRepeat: 'no-repeat',
+  }
 }
 
-/** 按动画类型分发属性驱动规格；仅接受 BLINDS / SCAN（QR_GRID 走独立的双层蒙版规格） */
+export function isRevealAnimationType(type: ThemeAnimationType): boolean {
+  return type === ThemeAnimationType.BLINDS || type === ThemeAnimationType.SCAN
+    || type === ThemeAnimationType.CURTAIN
+}
+
+/** 按动画类型分发属性驱动规格；仅接受 BLINDS / SCAN / CURTAIN（QR_GRID 走独立的双层蒙版规格） */
 export function getRevealMaskSpec(
   type: ThemeAnimationType,
   direction: ThemeAnimationDirection,
@@ -411,6 +438,7 @@ export function getRevealMaskSpec(
   viewport: Size,
 ): RevealMaskSpec {
   if (type === ThemeAnimationType.BLINDS) return getBlindsRevealSpec(direction, slatWidth)
+  if (type === ThemeAnimationType.CURTAIN) return getCurtainRevealSpec(viewport)
   return getScanRevealSpec(direction, viewport)
 }
 

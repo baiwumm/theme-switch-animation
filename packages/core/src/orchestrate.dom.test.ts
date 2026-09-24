@@ -185,6 +185,29 @@ describe('runThemeTransition 动画路径（jsdom + 模拟 startViewTransition�
     expect(css).toContain('--theme-switch-reveal: 616px;')
   })
 
+  it('CURTAIN：走 px 族同一生成器，中线对称三段渐变、终值 = 视口宽 + 2×软边', () => {
+    installFakeViewTransition()
+    vi.spyOn(window, 'innerWidth', 'get').mockReturnValue(800)
+    vi.spyOn(window, 'innerHeight', 'get').mockReturnValue(600)
+
+    runThemeTransition({
+      domUpdate: () => {},
+      options: { animationType: ThemeAnimationType.CURTAIN, direction: 'ttb' },
+    })
+
+    const css = styleNode()!.textContent!
+    expect(css).toContain('@property --theme-switch-reveal')
+    expect(css).toContain('syntax: "<length>"')
+    expect(css).toContain('linear-gradient(90deg, transparent calc(50% - var(--theme-switch-reveal) / 2 - 24px)')
+    expect(css).toContain('#000 calc(50% - var(--theme-switch-reveal) / 2) calc(50% + var(--theme-switch-reveal) / 2)')
+    expect(css).toContain('mask-size: 100% 100%;')
+    expect(css).toContain('mask-repeat: no-repeat;')
+    // 800 + 2 × 24：两条软边都推出画面才算盖满
+    expect(css).toContain('--theme-switch-reveal: 848px;')
+    // direction 被忽略：渐变角恒为 90deg（水平轴）
+    expect(css).not.toContain('linear-gradient(180deg')
+  })
+
   it('CLOCK_SWEEP：注册属性改用 <angle> 的 SWEEP_VAR，keyframes 值带 deg 后缀', () => {
     installFakeViewTransition()
     vi.spyOn(window, 'innerWidth', 'get').mockReturnValue(800)
