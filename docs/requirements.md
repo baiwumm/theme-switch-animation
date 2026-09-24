@@ -359,7 +359,7 @@ export type { ThemeAnimationOptions, ... } from '@theme-switch-animation/core'
 2. **比候选池预估的还便宜**：它属于"px 驱动 + 无触发点"，正好落进现成的 `isRevealAnimationType` / `getRevealMaskSpec` 分发器，`orchestrate.ts` 与 `styles.ts` 一行未改——只加了守卫里一个 `||` 与分发里一个 `if`。roadmap 把它排在 P0-1 的判断成立。
 3. **探针先行验掉了 roadmap 列的待验点**：中缝无可见接缝、两侧软边对称、末帧整平面实心；起始帧中缝透出一道约 ±24px 的光，判定为加分观感而非缺陷。**分数缩放 dpr 一档仍未验**，留真机。
 4. **README 的计数方式改了（需求方批准）**：特性清单与 options 表不再写死类型数量，改成"动画类型分族 + 指向下方类型表"，首段枚举加"等"字。目的是让"每加一个类型要改五处数字"的固定成本塌缩——现在 README 侧只剩表格追加行。文档站 hero 仍保留数字（那是门面卖点），因此 hero 一改门面截图就得重出，本轮照做。
-5. **登记一处未合并的重复（本轮未动）**：`masks.ts` 的私有函数 `qrCenterGradient(90, feather)` 返回的渐变串与 `getCurtainRevealSpec` 逐字符相同（QR_GRID 的垂直轴层在用）。干净做法是把它重命名成中性名后两处共用，QR_GRID 的输出有单测锁死不会变；属本轮范围外的重构，等排期。
+5. **登记一处未合并的重复（本轮未动）**：`masks.ts` 的私有函数 `qrCenterGradient(90, feather)` 返回的渐变串与 `getCurtainRevealSpec` 逐字符相同（QR_GRID 的垂直轴层在用）。干净做法是把它重命名成中性名后两处共用，QR_GRID 的输出有单测锁死不会变；属本轮范围外的重构，等排期。（2026-09-25 已完成：重命名为 `centerBandGradient`，CURTAIN 主层与 QR_GRID 垂直轴层共用，输出串逐字符不变。）
 6. **文档同步**：README 类型表与家族枚举、文档站 hero / features / `site.ts`、画廊第 16 张卡（无参数控件）、四个 playground 类型清单与"N 个按钮"文案、changeset、门面截图按既有规格重出；roadmap 的 P0-1 状态改「已落地」。
 
 ### v1.8（2026-09-23）

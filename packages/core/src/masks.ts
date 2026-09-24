@@ -382,8 +382,8 @@ export function getScanRevealSpec(direction: ThemeAnimationDirection, viewport: 
 }
 
 /**
- * CURTAIN 双开门：新主题自屏幕中线向两侧对称揭开。与 QR_GRID 的垂直轴层同构
- * （`qrCenterGradient` 的写法），区别是只有一层、推进轴固定为水平、且不消费 direction。
+ * CURTAIN 双开门：新主题自屏幕中线向两侧对称揭开。主层与 QR_GRID 的垂直轴层共用
+ * `centerBandGradient` 对称带构造器（轴固定为水平），只有一层、且不消费 direction。
  *
  * 起始帧（reveal = 0）实心段宽度为 0，但两侧各留一条 `CURTAIN_FEATHER_PX` 的软边——表现为
  * 中缝先透出一道光、再向两边推开，这是幕布观感的一部分（同 RIPPLE 起始帧的中心淡纹）。
@@ -392,15 +392,11 @@ export function getScanRevealSpec(direction: ThemeAnimationDirection, viewport: 
 export const CURTAIN_FEATHER_PX = 24
 
 export function getCurtainRevealSpec(viewport: Size): RevealMaskSpec {
-  const v = `var(${REVEAL_VAR})`
   const f = CURTAIN_FEATHER_PX
   return {
     from: 0,
     to: viewport.width + 2 * f,
-    maskImage:
-      `linear-gradient(90deg, transparent calc(50% - ${v} / 2 - ${f}px),` +
-      ` #000 calc(50% - ${v} / 2) calc(50% + ${v} / 2),` +
-      ` transparent calc(50% + ${v} / 2 + ${f}px))`,
+    maskImage: centerBandGradient(90, f),
     maskSize: '100% 100%',
     maskRepeat: 'no-repeat',
   }
@@ -506,8 +502,8 @@ function qrEdgeGradient(angle: number, feather: number): string {
   return `linear-gradient(${angle}deg, #000 0 ${v}, transparent calc(${v} + ${feather}px))`
 }
 
-/** 从格子中心向两侧对称生长的条带渐变：不透明段 50%±r/2，两侧各带软边 f */
-function qrCenterGradient(axisAngle: 90 | 180, feather: number): string {
+/** 从中心向两侧对称生长的条带渐变：不透明段 50%±r/2，两侧各带软边 f（CURTAIN 主层与 QR_GRID 垂直轴层共用） */
+function centerBandGradient(axisAngle: 90 | 180, feather: number): string {
   const v = `var(${REVEAL_VAR})`
   return (
     `linear-gradient(${axisAngle}deg, transparent calc(50% - ${v} / 2 - ${feather}px),` +
@@ -523,7 +519,7 @@ export function getQrGridMaskSpec(direction: ThemeAnimationDirection): QrGridMas
   const from = -2 * feather
   // 推进轴层：LTR/RTL = 列层（竖条），TTB/BTT = 行层（横条）；垂直轴层恒为对称中心生长
   const leadGradient = qrEdgeGradient(spec.leadAngle, feather)
-  const crossGradient = qrCenterGradient(spec.crossAngle, feather)
+  const crossGradient = centerBandGradient(spec.crossAngle, feather)
   const leadSize = spec.leadIsX ? `${QR_GRID_CELL_PX}px 100%` : `100% ${QR_GRID_CELL_PX}px`
   const crossSize = spec.leadIsX ? `100% ${QR_GRID_CELL_PX}px` : `${QR_GRID_CELL_PX}px 100%`
   return {
