@@ -73,6 +73,11 @@
     "nuxt"
   ],
   "license": "MIT",
+  "author": {
+    "name": "baiwumm",
+    "email": "me@baiwumm.com",
+    "url": "https://www.baiwumm.com"
+  },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/baiwumm/theme-switch-animation.git"
