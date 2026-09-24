@@ -13,7 +13,7 @@ import {
 } from './masks'
 import type { RectProvider, Size } from './masks'
 import { buildAnimationCSS, injectAnimationStyle, removeAnimationStyle } from './styles'
-import { ThemeAnimationType, resolveAnimationOptions } from './types'
+import { ThemeAnimationType, isDevEnvironment, resolveAnimationOptions } from './types'
 import type { ThemeAnimationOptions } from './types'
 import { hasThemeClass } from './uncontrolled'
 
@@ -144,6 +144,22 @@ function isSkippedTransitionError(error: unknown): boolean {
 }
 
 /**
+ * `CIRCLE_REVERT` 的废弃提示：每次转场都会走到这里，但只提示一次——
+ * 它是用户主动选择的类型而非误配，逐次刷日志会把控制台淹掉。
+ * 只在开发环境输出，生产构建静默。
+ */
+let deprecatedRevertWarned = false
+function warnDeprecatedRevert(): void {
+  if (deprecatedRevertWarned || !isDevEnvironment()) return
+  deprecatedRevertWarned = true
+  console.warn(
+    '[theme-switch-animation] `ThemeAnimationType.CIRCLE_REVERT` 已废弃，'
+    + "改用 { animationType: ThemeAnimationType.CIRCLE, reverse: 'auto' }——两者动画效果相同，"
+    + '只差 keyframes 名。计划在 0.5.0 移除。',
+  )
+}
+
+/**
  * 编排一次主题切换：
  * - 可以动画：注入样式 → `startViewTransition(wrapped)` → 结束后清理样式；
  * - 需要降级：直接调用 `domUpdate`，状态照常更新，只是没有动画。
@@ -167,10 +183,20 @@ export function runThemeTransition(params: RunThemeTransitionParams): RunThemeTr
   // 切到暗色 = 暗色圆扩散（新截图层），切回亮色 = 暗色圆收起（旧截图层）。
   const toDark = nextIsDark ?? !hasThemeClass(doc, resolved.darkClassName)
   const isRevert = resolved.animationType === ThemeAnimationType.CIRCLE_REVERT
+  if (isRevert) warnDeprecatedRevert()
+  // 是否走"收起"形态（洞式蒙版挂新层、洞从全屏收缩到 0）。两条来源：
+  // - CIRCLE_REVERT（已废弃）：跟随切换方向，切亮才收起——行为与 0.3.0 逐字节一致；
+  // - CIRCLE + reverse：`true` 恒收起，`'auto'` 切亮收起（即上面那条的替代写法）。
+  // 其余类型一律不收起：reverse 目前只接通了 CIRCLE（docs/reverse-option-design.md §4）。
+  const collapse = isRevert
+    ? !toDark
+    : resolved.animationType === ThemeAnimationType.CIRCLE
+      ? resolved.reverse === true || (resolved.reverse === 'auto' && !toDark)
+      : false
   const revertDirection = isRevert ? (toDark ? 'expand' : 'collapse') : undefined
   // 收起方向：蒙版挂新截图层、掏一个收缩的"洞"（层序与 CIRCLE 一致，不需要给旧层 z-index），
   // 蒙版盒子静止、只有注册半径在动（详见 §附录六）。
-  const holeGeometry = isRevert && revertDirection === 'collapse' ? getCircleRevertHoleGeometry(center, viewport) : undefined
+  const holeGeometry = collapse ? getCircleRevertHoleGeometry(center, viewport) : undefined
   // 属性驱动揭开（BLINDS / SCAN / RIPPLE / CLOCK_SWEEP / FAN）：蒙版盒子静止、注册属性在动，
   // 共用同一 CSS 生成器。BLINDS / SCAN 无触发点；RIPPLE 与角度族以触发点为波源 / 轴心。
   const reveal = isRevealAnimationType(resolved.animationType)

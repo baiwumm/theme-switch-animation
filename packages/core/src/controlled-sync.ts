@@ -1,4 +1,5 @@
 import { hasThemeClass } from './uncontrolled'
+import { isDevEnvironment } from './types'
 
 /**
  * 受控模式同步协议的兜底超时（§5.4 v1.1 修订 #1）。
@@ -16,12 +17,6 @@ export interface WaitForThemeSyncOptions {
   nextIsDark: boolean
   /** 兜底超时 ms，默认 300 */
   timeoutMs?: number
-}
-
-function isDevEnvironment(): boolean {
-  // 不直接引用 process：core 面向浏览器，不引入 Node 类型
-  const proc = (globalThis as { process?: { env?: { NODE_ENV?: string } } }).process
-  return proc?.env?.NODE_ENV === 'development'
 }
 
 /**

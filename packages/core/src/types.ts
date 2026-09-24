@@ -5,7 +5,13 @@
 export const ThemeAnimationType = {
   /** 以触发元素为中心的圆形扩散 */
   CIRCLE: 'circle',
-  /** 圆形收起：旧主题以圆形收缩进触发点，新主题从四周显现（动画作用于旧截图层） */
+  /**
+   * 圆形收起：旧主题以圆形收缩进触发点，新主题从四周显现（动画作用于旧截图层）。
+   *
+   * @deprecated 改用 `animationType: CIRCLE` + `reverse: 'auto'`。二者产出的蒙版与关键帧
+   * 完全相同，只差 keyframes 名（它按类型生成：`theme-switch-circle` vs `theme-switch-circle-revert`），
+   * 单测归一化名字后锁这条等价性。本类型仍可用，但会在开发环境警告一次，计划在 0.5.0 移除。
+   */
   CIRCLE_REVERT: 'circle-revert',
   /** 圆形模糊扩散：边缘高斯模糊的圆形蒙版（只挂新截图层，旧层完整垫底） */
   CIRCLE_BLUR: 'circle-blur',
@@ -81,6 +87,12 @@ export interface ThemeAnimationOptions {
   waveWidth?: number
   /** 扇叶数，合法范围 `[4, 16]` 的整数，默认 `8`。仅 `FAN` 生效，非法值静默回落默认 */
   bladeCount?: number
+  /**
+   * 反向揭开：`false` 总是正向（默认）、`true` 总是反向、`'auto'` 切暗正向 / 切亮反向。
+   * 与 `direction` 正交——`direction` 决定推进轴，`reverse` 决定从内还是从外揭开。
+   * 非法值静默回落 `false`。当前仅 `CIRCLE` 生效，其余类型忽略（见 docs/reverse-option-design.md §4）。
+   */
+  reverse?: boolean | 'auto'
   /** 受控模式：外部暗色状态。与 `onChange` 同时提供才进入受控模式 */
   isDark?: boolean
   /** 受控模式：状态变更回调。与 `isDark` 同时提供才进入受控模式 */
@@ -98,6 +110,7 @@ export interface ResolvedAnimationOptions {
   slatWidth: number
   waveWidth: number
   bladeCount: number
+  reverse: boolean | 'auto'
 }
 
 /** 百叶窗叶片宽度的默认值与合法区间（超出区间静默回落默认，与 blurAmount 同策略） */
@@ -125,6 +138,7 @@ export const THEME_ANIMATION_DEFAULTS: Readonly<ResolvedAnimationOptions> = Obje
   slatWidth: SLAT_WIDTH_DEFAULT,
   waveWidth: WAVE_WIDTH_DEFAULT,
   bladeCount: BLADE_COUNT_DEFAULT,
+  reverse: false,
 })
 
 /** 非受控模式持久化到 localStorage 的 key（v1.2：避免与 next-themes 等库的 `'theme'` 冲突） */
@@ -159,7 +173,24 @@ export function resolveAnimationOptions(options: ThemeAnimationOptions = {}): Re
     slatWidth: isValidSlatWidth(options.slatWidth) ? options.slatWidth : THEME_ANIMATION_DEFAULTS.slatWidth,
     waveWidth: isValidWaveWidth(options.waveWidth) ? options.waveWidth : THEME_ANIMATION_DEFAULTS.waveWidth,
     bladeCount: isValidBladeCount(options.bladeCount) ? options.bladeCount : THEME_ANIMATION_DEFAULTS.bladeCount,
+    reverse: isValidReverse(options.reverse) ? options.reverse : THEME_ANIMATION_DEFAULTS.reverse,
   }
+}
+
+/**
+ * `reverse` 的三态校验：只接受 `true` / `false` / `'auto'` 三个字面量，
+ * 其余（`'yes'` / `1` / `null` / `undefined`）静默回落 `false`——与 `direction` 同策略。
+ * 逐字面量比对而非 `typeof value === 'boolean' || value === 'auto'`：后者会把 `'AUTO'`
+ * 这类近义串收进来当假值以外的东西处理，而反向是用户看得见的行为，宁可回落不要猜。
+ */
+function isValidReverse(value: boolean | 'auto' | undefined): value is boolean | 'auto' {
+  return value === true || value === false || value === 'auto'
+}
+
+/** 开发环境判定（不直接引用 `process`：core 面向浏览器，不引入 Node 类型） */
+export function isDevEnvironment(): boolean {
+  const proc = (globalThis as { process?: { env?: { NODE_ENV?: string } } }).process
+  return proc?.env?.NODE_ENV === 'development'
 }
 
 /** blurAmount 仅在 CIRCLE_BLUR 下有意义，非法值（非正 / NaN / 无穷）静默回落默认 */

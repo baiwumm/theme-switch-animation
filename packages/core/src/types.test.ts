@@ -57,6 +57,19 @@ describe('ThemeAnimationDirection', () => {
 })
 
 describe('resolveAnimationOptions', () => {
+  it('reverse 只认 true / false / "auto" 三个字面量，其余静默回落 false', () => {
+    expect(resolveAnimationOptions({ reverse: true }).reverse).toBe(true)
+    expect(resolveAnimationOptions({ reverse: false }).reverse).toBe(false)
+    expect(resolveAnimationOptions({ reverse: 'auto' }).reverse).toBe('auto')
+    expect(resolveAnimationOptions({}).reverse).toBe(false)
+    // 大小写与近义值不能被当成 true——否则 'AUTO' 会静默变成"总是反向"
+    expect(resolveAnimationOptions({ reverse: 'AUTO' as 'auto' }).reverse).toBe(false)
+    expect(resolveAnimationOptions({ reverse: 'yes' as 'auto' }).reverse).toBe(false)
+    expect(resolveAnimationOptions({ reverse: 1 as unknown as true }).reverse).toBe(false)
+    expect(resolveAnimationOptions({ reverse: null as unknown as true }).reverse).toBe(false)
+    expect(resolveAnimationOptions({ reverse: undefined }).reverse).toBe(false)
+  })
+
   it('缺省时全部回落到默认值', () => {
     expect(resolveAnimationOptions()).toEqual({
       animationType: 'circle',
@@ -68,6 +81,7 @@ describe('resolveAnimationOptions', () => {
       slatWidth: 72,
       waveWidth: 18,
       bladeCount: 8,
+      reverse: false,
     })
     expect(resolveAnimationOptions()).toEqual(THEME_ANIMATION_DEFAULTS)
   })
@@ -84,6 +98,7 @@ describe('resolveAnimationOptions', () => {
         slatWidth: 100,
         waveWidth: 40,
         bladeCount: 12,
+        reverse: 'auto',
       }),
     ).toEqual({
       animationType: 'blinds',
@@ -95,6 +110,7 @@ describe('resolveAnimationOptions', () => {
       slatWidth: 100,
       waveWidth: 40,
       bladeCount: 12,
+      reverse: 'auto',
     })
   })
 
@@ -135,7 +151,7 @@ describe('resolveAnimationOptions', () => {
     expect(resolveAnimationOptions({ bladeCount: MAX_BLADE_COUNT }).bladeCount).toBe(MAX_BLADE_COUNT)
   })
 
-  it('忽略受控模式字段，只返回九个动画参数', () => {
+  it('忽略受控模式字段，只返回十个动画参数', () => {
     const resolved = resolveAnimationOptions({ isDark: true, onChange: () => {} })
     expect(Object.keys(resolved).sort()).toEqual([
       'animationType',
@@ -145,6 +161,7 @@ describe('resolveAnimationOptions', () => {
       'direction',
       'duration',
       'easing',
+      'reverse',
       'slatWidth',
       'waveWidth',
     ])

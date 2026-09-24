@@ -144,6 +144,86 @@ describe('runThemeTransition 动画路径（jsdom + 模拟 startViewTransition�
     document.documentElement.classList.remove('dark')
   })
 
+  /**
+   * keyframes 名由 `getAnimationName(type)` 按类型生成，所以 `CIRCLE` 与 `CIRCLE_REVERT`
+   * 产出的 CSS 不可能逐字节相同——差的就是那一个标识符。比较时把名字归一化掉，
+   * 这样"两种写法等价"这条锁仍然成立，且不会误把名字差异当成回归。
+   */
+  const normalizeName = (css: string) => css.replace(/theme-switch-(circle-revert|circle)/g, '<name>')
+
+  it('CIRCLE + reverse:true 与 CIRCLE_REVERT 收起态产出同一份 CSS（仅 keyframes 名不同）', () => {
+    installFakeViewTransition()
+    vi.spyOn(window, 'innerWidth', 'get').mockReturnValue(800)
+    vi.spyOn(window, 'innerHeight', 'get').mockReturnValue(600)
+    const trigger = { getBoundingClientRect: () => ({ left: 100, top: 50, width: 40, height: 20 }) }
+    document.documentElement.classList.add('dark')
+
+    runThemeTransition({ domUpdate: () => {}, trigger, options: { animationType: ThemeAnimationType.CIRCLE_REVERT } })
+    const viaRevert = styleNode()!.textContent!
+    removeAnimationStyle(document)
+
+    runThemeTransition({
+      domUpdate: () => {},
+      trigger,
+      options: { animationType: ThemeAnimationType.CIRCLE, reverse: true },
+    })
+    const viaReverse = styleNode()!.textContent!
+
+    expect(viaReverse).not.toBe(viaRevert)
+    expect(normalizeName(viaReverse)).toBe(normalizeName(viaRevert))
+    expect(viaReverse).toContain('@property --theme-switch-radius')
+    expect(viaReverse).toContain('circle at 120px 60px')
+    document.documentElement.classList.remove('dark')
+    removeAnimationStyle(document)
+  })
+
+  it("CIRCLE + reverse:'auto' 跟随切换方向：切亮收起、切暗正向", () => {
+    installFakeViewTransition()
+    vi.spyOn(window, 'innerWidth', 'get').mockReturnValue(800)
+    vi.spyOn(window, 'innerHeight', 'get').mockReturnValue(600)
+    const trigger = { getBoundingClientRect: () => ({ left: 100, top: 50, width: 40, height: 20 }) }
+
+    // 切亮（<html> 处于暗色 → toDark = false）：走洞式收起
+    document.documentElement.classList.add('dark')
+    runThemeTransition({
+      domUpdate: () => {},
+      trigger,
+      options: { animationType: ThemeAnimationType.CIRCLE, reverse: 'auto' },
+    })
+    const collapsing = styleNode()!.textContent!
+    expect(collapsing).toContain('@property --theme-switch-radius')
+    removeAnimationStyle(document)
+
+    // 切暗（<html> 无暗色类 → toDark = true）：与完全不传 reverse 的 CIRCLE 一致
+    document.documentElement.classList.remove('dark')
+    runThemeTransition({
+      domUpdate: () => {},
+      trigger,
+      options: { animationType: ThemeAnimationType.CIRCLE, reverse: 'auto' },
+    })
+    const expanding = styleNode()!.textContent!
+    removeAnimationStyle(document)
+
+    runThemeTransition({ domUpdate: () => {}, trigger, options: { animationType: ThemeAnimationType.CIRCLE } })
+    expect(expanding).toBe(styleNode()!.textContent!)
+  })
+
+  it('reverse 只作用于 CIRCLE：其余类型传 true 也静默无效（CSS 与不传完全一致）', () => {
+    installFakeViewTransition()
+    vi.spyOn(window, 'innerWidth', 'get').mockReturnValue(800)
+    vi.spyOn(window, 'innerHeight', 'get').mockReturnValue(600)
+    const trigger = { getBoundingClientRect: () => ({ left: 100, top: 50, width: 40, height: 20 }) }
+
+    for (const animationType of [ThemeAnimationType.SQUARE, ThemeAnimationType.RIPPLE, ThemeAnimationType.CURTAIN]) {
+      runThemeTransition({ domUpdate: () => {}, trigger, options: { animationType } })
+      const baseline = styleNode()!.textContent!
+      removeAnimationStyle(document)
+      runThemeTransition({ domUpdate: () => {}, trigger, options: { animationType, reverse: true } })
+      expect(styleNode()!.textContent!).toBe(baseline)
+      removeAnimationStyle(document)
+    }
+  })
+
   it('BLINDS：注入"注册属性 + 叶片平铺蒙版"CSS，direction / slatWidth 选项生效', () => {
     installFakeViewTransition()
     vi.spyOn(window, 'innerWidth', 'get').mockReturnValue(800)
@@ -565,6 +645,82 @@ describe('runThemeTransition 新增行为（哨兵 / 跨文档清理 / 显式方
       expect(impostor.isConnected).toBe(true)
     } finally {
       impostor.remove()
+    }
+  })
+})
+
+describe('CIRCLE_REVERT 废弃提示', () => {
+  /**
+   * 提示位是 orchestrate 的模块级变量，同文件里前面的用例已经把 CIRCLE_REVERT 跑过一遍，
+   * 直接断言会被"已经提示过了"污染。所以这里 resetModules + 动态 import 拿一份全新实例，
+   * 让"只提示一次"这条能被干净地验证。
+   */
+  async function freshOrchestrate() {
+    vi.resetModules()
+    return await import('./orchestrate')
+  }
+
+  beforeEach(() => {
+    // 与其它用例一致：样式清理走 setTimeout，冻结住不让它在断言前触发
+    vi.useFakeTimers()
+  })
+
+  afterEach(() => {
+    vi.unstubAllEnvs()
+    vi.useRealTimers()
+    removeAnimationStyle(document)
+  })
+
+  it('开发环境下提示一次；同一页反复切换不重复刷日志', async () => {
+    vi.stubEnv('NODE_ENV', 'development')
+    installFakeViewTransition()
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    const { runThemeTransition: run } = await freshOrchestrate()
+
+    document.documentElement.classList.add('dark')
+    try {
+      run({ domUpdate: () => {}, options: { animationType: ThemeAnimationType.CIRCLE_REVERT } })
+      removeAnimationStyle(document)
+      run({ domUpdate: () => {}, options: { animationType: ThemeAnimationType.CIRCLE_REVERT } })
+
+      expect(warn).toHaveBeenCalledTimes(1)
+      expect(warn.mock.calls[0][0]).toContain('CIRCLE_REVERT')
+      expect(warn.mock.calls[0][0]).toContain("reverse: 'auto'")
+    } finally {
+      document.documentElement.classList.remove('dark')
+      warn.mockRestore()
+    }
+  })
+
+  it('非开发环境完全静默', async () => {
+    vi.stubEnv('NODE_ENV', 'production')
+    installFakeViewTransition()
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    const { runThemeTransition: run } = await freshOrchestrate()
+
+    document.documentElement.classList.add('dark')
+    try {
+      run({ domUpdate: () => {}, options: { animationType: ThemeAnimationType.CIRCLE_REVERT } })
+      expect(warn).not.toHaveBeenCalled()
+    } finally {
+      document.documentElement.classList.remove('dark')
+      warn.mockRestore()
+    }
+  })
+
+  it('改用 CIRCLE + reverse 不触发任何提示', async () => {
+    vi.stubEnv('NODE_ENV', 'development')
+    installFakeViewTransition()
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    const { runThemeTransition: run } = await freshOrchestrate()
+
+    document.documentElement.classList.add('dark')
+    try {
+      run({ domUpdate: () => {}, options: { animationType: ThemeAnimationType.CIRCLE, reverse: 'auto' } })
+      expect(warn).not.toHaveBeenCalled()
+    } finally {
+      document.documentElement.classList.remove('dark')
+      warn.mockRestore()
     }
   })
 })
