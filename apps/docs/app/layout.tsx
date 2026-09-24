@@ -8,7 +8,16 @@ export const metadata: Metadata = {
   metadataBase: new URL(SITE_INFO.url),
   title: SITE_INFO.title,
   description: SITE_INFO.description,
-  keywords: ['theme', 'dark-mode', 'view-transitions', 'animation', 'react', 'vue', 'nextjs', 'nuxt'],
+  keywords: [
+    'theme',
+    'dark-mode',
+    'view-transitions',
+    'animation',
+    'react',
+    'vue',
+    'nextjs',
+    'nuxt',
+  ],
   openGraph: {
     title: SITE_INFO.title,
     description: SITE_INFO.description,
@@ -40,7 +49,12 @@ export default function RootLayout({
           页面渲染的一部分，会被 View Transitions 快照捕获、跟随蒙版动画；原生滚动条是浏览器
           UI 层绘制的，不在快照内，主题切换时会瞬间变色（ogimg 同款做法） */}
       <body className="font-sans custom_scrollbar antialiased">
-        <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="system"
+          enableSystem
+          disableTransitionOnChange
+        >
           {children}
         </ThemeProvider>
       </body>

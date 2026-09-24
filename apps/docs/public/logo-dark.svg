@@ -1,4 +1,5 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <title>theme-switch-animation</title>
   <!-- theme-switch-animation · 方案B 圆形扩散 · 深色底 -->
   <!-- 容器：仅承载背景，不参与 logo 语义 -->
   <rect width="512" height="512" rx="116" fill="#0F0F10"/>

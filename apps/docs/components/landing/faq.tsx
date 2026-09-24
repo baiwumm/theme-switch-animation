@@ -41,7 +41,10 @@ const ITEMS = FAQS.map((item, index) => ({
 
 export function FaqSection() {
   return (
-    <section id="faq" className="relative z-10 scroll-mt-24 border-b border-dashed border-black/10 py-20 dark:border-white/10">
+    <section
+      id="faq"
+      className="relative z-10 scroll-mt-24 border-b border-dashed border-black/10 py-20 dark:border-white/10"
+    >
       <div className="container mx-auto px-4 sm:px-6 lg:px-8">
         <div className="mx-auto mb-10 max-w-2xl text-center">
           <h2 className="text-3xl font-bold tracking-tight md:text-4xl">FAQ</h2>

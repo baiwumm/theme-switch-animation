@@ -150,7 +150,8 @@ function CopyButton({ text }: { text: string }) {
 export function QuickStartSection() {
   const [active, setActive] =
     useState<(typeof FRAMEWORKS)[number]['id']>('react')
-  const current = FRAMEWORKS.find((f) => f.id === active)!
+  // active 的类型就是 FRAMEWORKS 的 id 联合，find 必然命中；?? 只为喂类型（无 noUncheckedIndexedAccess，[0] 即元素）
+  const current = FRAMEWORKS.find((f) => f.id === active) ?? FRAMEWORKS[0]
 
   return (
     <section

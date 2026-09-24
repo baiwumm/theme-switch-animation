@@ -25,7 +25,8 @@ export function Navbar() {
     ).filter((el): el is HTMLElement => el !== null)
     const observer = new IntersectionObserver(
       (entries) => {
-        for (const entry of entries) if (entry.isIntersecting) setActive(entry.target.id)
+        for (const entry of entries)
+          if (entry.isIntersecting) setActive(entry.target.id)
       },
       { rootMargin: '-40% 0px -55% 0px' },
     )
@@ -49,13 +50,13 @@ export function Navbar() {
               window.scrollTo({ top: 0, behavior: 'smooth' })
             }}
           >
-            {/* eslint-disable-next-line @next/next/no-img-element */}
+            {/* biome-ignore lint/performance/noImgElement: 装饰性 logo（alt=""），明暗双图靠 CSS 切换，不值得上 next/image */}
             <img
               src="/logo-light.svg"
               alt=""
               className="size-8 rounded-lg dark:hidden"
             />
-            {/* eslint-disable-next-line @next/next/no-img-element */}
+            {/* biome-ignore lint/performance/noImgElement: 装饰性 logo（alt=""），明暗双图靠 CSS 切换，不值得上 next/image */}
             <img
               src="/logo-dark.svg"
               alt=""

@@ -1,6 +1,11 @@
 'use client'
 
-import { Highlight, Prism, type PrismGrammar, type PrismTheme } from 'prism-react-renderer'
+import {
+  Highlight,
+  Prism,
+  type PrismGrammar,
+  type PrismTheme,
+} from 'prism-react-renderer'
 
 /**
  * 高亮色全部走 CSS 变量（globals.css 的 --tok-*）：

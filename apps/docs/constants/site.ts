@@ -1,6 +1,8 @@
 export const SITE_URL = 'https://theme-switch-animation.baiwumm.com' as const
-export const REPO_URL = 'https://github.com/baiwumm/theme-switch-animation' as const
-export const NPM_URL = 'https://www.npmjs.com/package/theme-switch-animation' as const
+export const REPO_URL =
+  'https://github.com/baiwumm/theme-switch-animation' as const
+export const NPM_URL =
+  'https://www.npmjs.com/package/theme-switch-animation' as const
 export const AUTHOR_URL = 'https://baiwumm.com' as const
 
 export const SITE_INFO = {
