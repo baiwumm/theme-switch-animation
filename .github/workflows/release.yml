@@ -6,16 +6,14 @@ name: Release
 #   1. npmjs.com → 包页 → Settings → Trusted Publisher → 登记仓库 baiwumm/theme-switch-animation
 #      + workflow 文件名 release.yml（OIDC 免密发布，仓库不需要任何 secret；
 #      npm 已宣布 2027-01 起 granular token 不能再直接发包，迟早要迁）
-#   2. GitHub Settings → Environments → npm → Required reviewers 加上自己，
-#      否则下面 `environment: npm` 这道人工闸门形同虚设
-#   3. 本文件必须先合进 main 再打 tag——workflow 取自 tag 指向的那个 commit，
+#   2. 本文件必须先合进 main 再打 tag——workflow 取自 tag 指向的那个 commit，
 #      在旧提交上打 v* tag 不会触发任何东西（且没有报错）
 #
 # 日常发布（全部本地，之后交给 CI）：
 #   pnpm changeset version          # 消费 .changeset/*.md，写 package.json version 与 CHANGELOG
 #   git add -A && git commit -m "chore(release): version 0.x.x"
 #   git push
-#   git tag v0.x.x && git push origin v0.x.x   # tag 一推即触发；npm 审批通过才真的发包
+#   git tag v0.x.x && git push origin v0.x.x   # tag 一推即触发，全自动发包
 #
 # 为什么不用 `changeset publish`：装在仓库里的 @changesets/cli@3.0.2 全树没有 provenance 支持
 # （publish 参数只有 --otp / --tag / --from-pack-dir / --git-tag），走不了 OIDC，
@@ -38,8 +36,8 @@ jobs:
   publish:
     name: Verify & Publish
     runs-on: ubuntu-latest
-    # npm 版本不可撤回（只能 deprecate），发包前留一道人工审批
-    environment: npm
+    # 不绑 GitHub Environment（与 vue3-okr-tree 对齐）：Trusted Publishing 走 OIDC、
+    # 本文件没有任何 secret，tag 推上去全自动发包，不经人工审批
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v5
