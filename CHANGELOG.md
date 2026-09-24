@@ -1,5 +1,47 @@
 # theme-switch-animation
 
+## 0.3.0
+
+### Minor Changes
+
+- 5997b7c: 新增第 16 种动画类型 `ThemeAnimationType.CURTAIN`（双开门）：
+  
+  - **观感**：新主题自屏幕中线向两侧对称推开，像拉开幕布。起始帧中缝先透出一道约 24px 的光，随后向两边展开。
+  - **零新机制、零新参数**：属于"px 驱动 + 无触发点"一族，直接落进现成的 `isRevealAnimationType` / `getRevealMaskSpec` 分发器——`orchestrate.ts` 与 `styles.ts` 一行未改。不消费 `direction`（中线对称没有方向语义），也不消费触发元素几何。
+  - **新增导出**：`getCurtainRevealSpec` 与常量 `CURTAIN_FEATHER_PX`（软边宽度 24px；末帧要 `to = 视口宽 + 2 × 软边` 才能把两条软边都推出画面）。
+  - 非破坏性：其余 15 种类型的行为不变。
+  - 顺带：README 不再写死动画类型数量（特性清单与 options 表改成"分族 + 指向下方类型表"，首段枚举加"等"字），文档站 hero 仍保留数字作为门面卖点。
+  - 文档同步：README 类型表、需求文档 §10 v1.9、文档站 hero / features / SEO、画廊第 16 张卡、四个 playground 类型清单与文案、门面截图按既有规格重出。
+- 60a3377: 新增第 13 种动画类型 `ThemeAnimationType.RIPPLE`（水滴涟漪）与配套选项 `waveWidth`：
+  
+  - **观感**：新主题仍以触发点为圆心向外揭开，但揭开前缘不是一条干净的边，而是主波峰 + 两圈衰减余波构成的环带（α 依次 0.5 / 0.275 / 0.151），呈水滴落入水面的涟漪感。`waveWidth`（默认 18，合法区间 `[8, 60]`，越界静默回落）控制相邻两圈波峰的间距。
+  - **零新机制**：复用 BLINDS / SCAN 那套属性驱动揭开（`@property --theme-switch-reveal` + 完全静止的蒙版盒子），只是渐变换成 `radial-gradient` 并把波源中心写进串里——浏览器支持面与 BLINDS / SCAN 完全一致；`@property` 不可用时同样退化为直切，状态仍然正确。
+  - **新增导出**：`getRippleRevealSpec` / `isRippleAnimationType` / `getRippleFrontExtentPx`，常量 `RIPPLE_TRAIL_COUNT` / `RIPPLE_CREST_ALPHA` / `WAVE_WIDTH_DEFAULT` / `MIN_WAVE_WIDTH` / `MAX_WAVE_WIDTH`。余波圈数与衰减系数固化为常量、未开放为选项（沿 `SCAN_BAND_*` / `QR_GRID_CELL_PX` 的先例）。
+  - 非破坏性：其余 12 种类型的行为与选项语义不变，`direction` 对 `RIPPLE` 静默无效；`ResolvedAnimationOptions` 多一个 `waveWidth` 字段。
+  - 文档同步：README 类型表与 options 表、需求文档 §10 v1.7、文档站画廊第 13 张卡（卡内波长档位 10 / 18 / 34px）与 hero / features / SEO 文案、四个 playground 的类型清单与 `waveWidth` 控件。
+- c322383: 新增角度驱动族两个类型 `ThemeAnimationType.CLOCK_SWEEP`（时钟扇形）与 `ThemeAnimationType.FAN`（扇叶旋开），以及配套选项 `bladeCount`：
+  
+  - **`CLOCK_SWEEP`**：新主题以触发点为轴心，从 12 点方向顺时针扫出扇形，前缘带 12° 软尾（`CLOCK_SWEEP_TAIL_DEG`）。
+  - **`FAN`**：`bladeCount` 片楔形扇叶（默认 8，合法区间 `[4, 16]` 的**整数**，非法静默回落）同时从各自周期的起始边旋开，末帧拼成整屏。观感是"扇叶旋开"而不是相机光圈的"中央孔径收缩"——后者需要半径维度，conic 表达不了，故定名 FAN。
+  - **注册属性分名**：角度族用新的 `--theme-switch-sweep`（`@property` 的 syntax 一经注册不可改，`<angle>` 不能与 `<length>` 的 `--theme-switch-reveal` 同名）。为此 `buildRevealAnimationCSS` 不再把单位写死，改由蒙版规格的 `varName` / `unit` 决定——px 族（BLINDS / SCAN / RIPPLE）的输出逐字节不变。
+  - **角度族免掉覆盖半径计算**：conic 覆盖的是角度而不是面积，扫满一周即盖住整平面，不存在 CIRCLE 家族那套"终半径要够到视口最远角"的系数。
+  - **新增导出**：`getClockSweepRevealSpec` / `getFanRevealSpec` / `getFanBladeStepDeg` / `getSweepMaskSpec` / `isSweepAnimationType`，常量 `SWEEP_VAR` / `FULL_CIRCLE_DEG` / `CLOCK_SWEEP_TAIL_DEG` / `BLADE_COUNT_DEFAULT` / `MIN_BLADE_COUNT` / `MAX_BLADE_COUNT`。
+  - 非破坏性：其余 13 种类型的行为不变，`direction` / `waveWidth` 对这两个新类型静默无效。旋转方向（顺 / 逆）暂未开放，也没新增参数。
+  - 文档同步：README 类型表与 options 表、需求文档 §10 v1.8、文档站画廊第 14–15 张卡（FAN 卡带扇叶数 6 / 8 / 12 档位）与 hero / features / SEO 文案、四个 playground 的类型清单与 `bladeCount` 控件；门面截图按既有规格重出。
+
+### Patch Changes
+
+- eaa2e3d: 文档站首页 UI 层迁到 [beUI](https://beui.dev)（shadcn registry `@beui`，copy-paste 源码落在 `apps/docs/components/motion/**`）。**npm 包产物不变**，本条只记录门面与文档站的变更：
+  
+  - FAQ 换 `BouncyAccordion`（弹簧高度 + 分组圆角），框架切换换 `Tabs`（共享布局滑块），复制按钮换 `StatefulButton`（复制 → 已复制），Hero 标题/副标题换 `TextReveal`（逐词 / 逐字级联），眉标与卡片标签换 `AnimatedBadge`
+  - 顶栏改胶囊圆角、锚点全部改用 beUI `Button`、新增 npm 入口，并支持滚动到哪一节高亮跟随；窄屏只保留 GitHub 图标以免 logo 折行
+  - Quick Start 代码块加语法高亮（`prism-react-renderer`，配色挂 CSS 变量，暗色切换不重渲染、不闪未着色代码；内置包缺 `vue` 语法，用 `markup` + `typescript` 注册了一个）
+  - 品牌图标自建（simple-icons 的 GitHub / npm 路径），替换已废弃的 lucide 品牌图标
+  - 滚动条改细（10px 轨道 / 6px 圆角滑块）、颜色跟随主题、hover 加深，代码块一并纳入自绘
+  - Hero 与 Quick Start / Playground 文案精简；`ThemeToggle` 的 ref 改为无条件挂载——motion 组件只转发一次 ref，原先延迟传法会让库拿不到触发元素、动画回落到视口中心
+  
+  依赖面：移除 `@radix-ui/react-accordion`、`@radix-ui/react-slot`、`class-variance-authority`（beUI 只用到已有的 `clsx` / `tailwind-merge` / `motion` / `lucide-react`），新增 `prism-react-renderer`。
+
 ## 0.2.0
 
 ### Minor Changes
