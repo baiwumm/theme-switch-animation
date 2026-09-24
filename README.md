@@ -7,7 +7,7 @@
 [![CI](https://github.com/baiwumm/theme-switch-animation/actions/workflows/ci.yml/badge.svg)](https://github.com/baiwumm/theme-switch-animation/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](./LICENSE)
 
-✨ 基于浏览器 View Transitions API 的主题切换动画库：切换 light / dark 主题时，新主题以指定形状（圆形扩散 / 多边形 / 百叶窗 / 方块格子 / 水滴涟漪 / 扇形扫开）"揭开"覆盖旧主题，而不是生硬跳变。
+✨ 基于浏览器 View Transitions API 的主题切换动画库：切换 light / dark 主题时，新主题以指定形状（圆形扩散 / 多边形 / 百叶窗 / 方块格子 / 水滴涟漪 / 扇形扫开 等）"揭开"覆盖旧主题，而不是生硬跳变。
 
 ## 📸 预览
 
@@ -16,7 +16,7 @@
 ## ✨ 特性
 
 - 🔀 **跨框架**：React 18+、Vue 3+、Next.js（App Router）、Nuxt 3+
-- 🎨 **15 种动画类型**：圆形扩散 / 收起 / 模糊（`CIRCLE` / `CIRCLE_REVERT` / `CIRCLE_BLUR`）、形状扩散（`SQUARE` / `DIAMOND` / `RECTANGLE` / `HEXAGON` / `TRIANGLE` / `STAR`）、条带与格子（`BLINDS` / `SCAN` / `QR_GRID`，由 `direction` 控制四方向）、环带前缘（`RIPPLE`，由 `waveWidth` 控制波长）、角度扫开（`CLOCK_SWEEP` / `FAN`，由 `bladeCount` 控制扇叶数）
+- 🎨 **动画类型分族**：圆形扩散（含收起 / 模糊变体）、几何形状扩散、条带与格子（由 `direction` 控制四方向）、中线对开、环带前缘（由 `waveWidth` 控制波长）、角度扫开（由 `bladeCount` 控制扇叶数）。完整清单与逐个的观感说明见下方「🎬 动画类型」表
 - 🔌 **受控模式**：不独占主题状态管理，`next-themes`、`@nuxtjs/color-mode` 用户可直接接入
 - 🔄 **非受控多实例同步**：同页多个实例的 `isDark` 以 `<html>` 暗色类名为事实源镜像，其它标签页经 storage 事件同步
 - 🛟 **自动降级**：不支持 View Transitions 或 `prefers-reduced-motion: reduce` 时自动降级为直接切换（状态永远正确）
@@ -116,8 +116,9 @@ export default defineNuxtConfig({
 | `RIPPLE` | 水滴涟漪：实心水面外推，前缘是主波峰 + 两圈衰减余波的环带 | 触发元素中心（波源） | `waveWidth` |
 | `CLOCK_SWEEP` | 时钟扇形：扇形自 12 点顺时针扫开，前缘带 12° 软尾 | 触发元素中心（轴心） | — |
 | `FAN` | 扇叶旋开：`bladeCount` 片楔形扇叶同时从轴心旋开，末帧拼成整屏 | 触发元素中心（轴心） | `bladeCount` |
+| `CURTAIN` | 双开门：新主题自屏幕中线向两侧对称推开，起始帧中缝先透一道光 | 无触发点（全屏按中线对称） | — |
 
-`BLINDS` / `SCAN` / `QR_GRID` 是属性驱动蒙版（`@property --theme-switch-reveal` + 静止蒙版盒子），不读触发元素几何——`ref` 只用于点击与状态。`RIPPLE` / `CLOCK_SWEEP` / `FAN` 用同一机制但把轴心写进渐变串，因此消费 `ref` 几何；角度族另用 `--theme-switch-sweep`（`@property` 的 syntax 一经注册不可改，`<angle>` 不能与 `<length>` 同名）。`QR_GRID` 的"列 ∩ 行"双层蒙版交集经 `@supports (mask-composite: intersect)` 门控，不支持的引擎自动降级为推进轴单层条带（观感同百叶窗），状态始终正确。
+`BLINDS` / `SCAN` / `QR_GRID` / `CURTAIN` 是属性驱动蒙版（`@property --theme-switch-reveal` + 静止蒙版盒子），不读触发元素几何——`ref` 只用于点击与状态。`RIPPLE` / `CLOCK_SWEEP` / `FAN` 用同一机制但把轴心写进渐变串，因此消费 `ref` 几何；角度族另用 `--theme-switch-sweep`（`@property` 的 syntax 一经注册不可改，`<angle>` 不能与 `<length>` 同名）。`QR_GRID` 的"列 ∩ 行"双层蒙版交集经 `@supports (mask-composite: intersect)` 门控，不支持的引擎自动降级为推进轴单层条带（观感同百叶窗），状态始终正确。
 
 ## 🧩 API
 
@@ -125,7 +126,7 @@ export default defineNuxtConfig({
 
 | 选项 | 类型 | 说明 |
 | --- | --- | --- |
-| `animationType` | `ThemeAnimationType` | 15 种动画类型之一，默认 `CIRCLE` |
+| `animationType` | `ThemeAnimationType` | 五族之一（取值见上方「动画类型」表），默认 `CIRCLE` |
 | `duration` | `number` | 动画时长 ms，默认 750 |
 | `easing` | `string` | 任意合法 CSS timing-function，默认 `ease-in-out` |
 | `blurAmount` | `number` | 模糊蒙版强度系数，默认 2。仅 `CIRCLE_BLUR` 生效 |
