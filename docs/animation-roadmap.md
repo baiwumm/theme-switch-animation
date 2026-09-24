@@ -102,10 +102,10 @@
 | 项 | 内容 |
 | --- | --- |
 | 观感 | 让中心扩散与属性驱动类都能"反向揭开"（新主题从四周显出、向触发点收拢），收益 = 观感近乎翻倍 |
-| 机制增量 | 小——`reverse` 在现有三条蒙版路线上各是一个**确定变换**（蒙版求补 + 动画反向），不是新写一套动画。形状族只是 SVG 生成器加一个反色开关 |
+| 机制增量 | 分路线看：属性驱动族（`FAN` / `RIPPLE` / `CLOCK_SWEEP`）是**蒙版求补 + 动画反向**，盒子仍静止；`CIRCLE` 复用已有的洞式生成器。~~形状族只是 SVG 加一个反色开关~~ —— **这句是错的**，形状的洞只能靠动 `mask-size` 来收，会踩回抖动病根（见 §4） |
 | 卡点 | ~~`CIRCLE_REVERT` 会同时存在"类型"和"选项"两种写法~~ —— **已解**：选项取 `boolean \| 'auto'` 三态，`'auto'` 就是现 `CIRCLE_REVERT` 的"跟随切换方向"语义。纯布尔删不掉那个类型，因为布尔的两个值都不等于它（`orchestrate.ts:170` 的 `toDark ? 'expand' : 'collapse'`） |
-| 参数面 | 一个三态选项，作用于 12 个类型。`BLINDS` / `SCAN` / `QR_GRID` **明确不开**——`direction` 已占那根轴，两轴表达同一件事会留下重复组合 |
-| 状态 | **PR1 + PR2 已落地（v1.10）**：`CIRCLE` 与 `FAN` 接入。PR2 原计划还含形状族 6 个与 `CURTAIN`，实现前反证**做不到无副作用**，已撤出并移进 §4（理由见那两行）。PR3（`RIPPLE` / `CLOCK_SWEEP`）未做，PR4（删 `CIRCLE_REVERT`）未做。进度与判据见 `docs/reverse-option-design.md` |
+| 参数面 | 一个三态选项，实际接入 **4 个类型**。`BLINDS` / `SCAN` / `QR_GRID` 不开是`direction` 已占那根轴；形状族与 `CURTAIN` 不开是做不到无副作用（§4） |
+| 状态 | **PR1 + PR2 + PR3 已落地（v1.10 / v1.11）**：`CIRCLE` / `FAN` / `RIPPLE` / `CLOCK_SWEEP` 四个接入。PR2 原计划还含形状族 6 个与 `CURTAIN`，实现前反证**做不到无副作用**，已撤出并移进 §4。剩 PR4（删 `CIRCLE_REVERT`，破坏性）未做。进度与判据见 `docs/reverse-option-design.md` |
 
 ### P2-2 `LOGO_MASK` 自定义轮廓
 

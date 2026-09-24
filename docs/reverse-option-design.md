@@ -1,10 +1,10 @@
 # `reverse` 选项设计（PR1 已落地）
 
 > 批准于 2026-09-24。0.3.0 已发布（npm `latest = 0.3.0`），本特性作为 0.4.0 落地。
-> **当前进度**：PR1 + PR2 完成 —— `CIRCLE`（洞式）与 `FAN`（取补串）接入，文档站与四个
-> playground 的 `Reverse` 控件、共 12 例单测。**PR2 缩了水**：原计划的形状族 6 个与 `CURTAIN`
+> **当前进度**：PR1 + PR2 + PR3 完成 —— `CIRCLE`（洞式）、`FAN`、`RIPPLE`、`CLOCK_SWEEP` 四个接入，
+> 文档站与四个 playground 的 `Reverse` 控件齐了。**PR2 缩了水**：原计划的形状族 6 个与 `CURTAIN`
 > 在实现前被反证为**做不到无副作用**，已撤出（见 §4 表末两行与 roadmap §4）。
-> PR3（`RIPPLE` / `CLOCK_SWEEP`）、PR4（删类型）未开始。
+> PR4（删类型）未开始。
 > 两处与设计原文的偏差已修正：① CSS 不可能逐字节相同（keyframes 名按类型生成），等价性锁走归一化比较；
 > ② §4 原先给形状族写的"反色一处开关、成本≈0"是错的。
 > 实现时以下文为准。
@@ -91,8 +91,8 @@ const revertDirection = isRevert ? (toDark ? 'expand' : 'collapse') : undefined
 | `SQUARE` `DIAMOND` `RECTANGLE` `HEXAGON` `TRIANGLE` `STAR` | ❌ **撤出（PR2 反证）** | 同上，形状换成各自轮廓 | **原判断"反色一处开关、成本≈0"是错的。** 形状蒙版是 SVG data-URI，反向必须动 `mask-size` / `mask-position`，而那正是 phase-6 附录四/五排查过的**设备像素对齐抖动**病根（约 1 设备像素、与 dpr 无关、取整只缓解不根除）——当初正是为此才另造静止盒子的洞式方案。多边形硬直线比圆弧更显 hairline。做不到无副作用，不接入 |
 | `CURTAIN` | ❌ **撤出（PR2 实测）** | 两侧向中线合拢 | 带 24px 羽化的对称透明带塌到零宽时，两侧斜坡必然交叉出凹陷。末帧扫描实测 40 全透 + 150 半透 / 6400（约 38px 居中半透明带），违反约束 2；终值过冲到 `-2×软边` 只剩 20/75，改"两侧不透明板向中心重叠生长"仍剩 20/75 —— 结构性，非调参可解 |
 | `FAN` | ✅ **PR2 已落地** | 扇叶合拢 | `getFanReverseRevealSpec`：正向串取补 + `--sweep` 从 step 收到 0。**它能干净的唯一理由是硬边无羽化**——`transparent 0 var` 与 `#000 var step` 共用同一个 var，var→0 时两组 stop 同归 0deg，带子塌零而不留缝。三位置探针：start 6400/6400 全透、mid 3272 半揭、end 0/0 |
-| `RIPPLE` | ⏳ PR3 未做 | 环带向内收 | 环带必须镜像：主峰 α 落在内缘、余波衰减方向翻转。**要先探针**——`CURTAIN` 的教训是软边在塌零时会交叉出凹陷，RIPPLE 的余波软边很可能同病 |
-| `CLOCK_SWEEP` | ⏳ PR3 未做 | 逆时针扫开（见 §3） | 12° 软尾要镜像到内缘，否则起始帧会在 12 点留一道反向亮线 |
+| `RIPPLE` | ✅ **PR3 已落地** | 水面从四周向内收拢，环带随之往中心走 | 补集用 `alpha → 1-a` 落在同一批 stop 位置上，与正向共用 `rippleStops(waveWidth, invert)`。**两端都不能照抄正向**：终点要过冲整个前缘（α=0.5 的补仍是 0.5，收到 0 中心留半透明点，只过冲 `-1W` 仍剩 4 个半透点）；起点要去掉正向 `2.1×` 那个覆盖余量（照抄则前 60% 时间屏幕毫无变化）。末帧 6400 采样点零残留 |
+| `CLOCK_SWEEP` | ✅ **PR3 已落地** | **逆时针扫开**（见 §3） | 12° 软尾镜像到内缘。`from` 可直接沿用正向 `to`——conic 覆盖角度不是面积，没有 RIPPLE 那种半径余量要浪费。推进分布线性（0→7→20→39→49→59→71→91→100%），末帧零残留 |
 | `BLINDS` `SCAN` `QR_GRID` | ❌ | — | **不是做不到，是 `direction` 已占这根轴**：`SCAN` 的 reverse ≈ `direction:'rtl'`。两轴表达同一件事 → 四种组合必有两组重复，README 得写一堆仲裁规则 |
 | `CIRCLE_BLUR` | ⏸ 暂缓 | — | 决策 4 |
 
@@ -106,7 +106,7 @@ const revertDirection = isRevert ? (toDark ? 'expand' : 'collapse') : undefined
 | --- | --- | --- |
 | **PR1** | 加 `reverse?: boolean \| 'auto'` + `resolveAnimationOptions` 校验 + `CIRCLE` 全量（含 `'auto'` 复刻）+ `CIRCLE_REVERT` 标 deprecated（开发环境 warn 一次）+ README / options 表 / 需求文档 | 非破坏 |
 | **PR2** | ~~形状族 6 个 + `FAN` + `CURTAIN` —— 纯机械~~ → **实际只落 `FAN`**：形状族与 `CURTAIN` 反证/实测做不到无副作用，撤出进 §4 | 非破坏 |
-| **PR3** | `RIPPLE` + `CLOCK_SWEEP` —— 环带 / 软尾镜像，**先探针再落码** | 非破坏 |
+| **PR3** | ✅ **已完成**：`RIPPLE` + `CLOCK_SWEEP`，先探针后落码，两者末帧均零残留 | 非破坏 |
 | **PR4** | 删 `ThemeAnimationType.CIRCLE_REVERT` 枚举项 + `getCircleRevertMaskGeometry`（mask-size 的旧收起路径，已被洞式取代、仅留作降级）+ 画廊那张独立卡片 + 各处文案 | **破坏**，按 0.2.0 先例走 minor + 条目标 **breaking** |
 
 **PR4 不要误删的东西**：`CircleHoleGeometry` / `getCircleRevertHoleGeometry` / `buildHoleAnimationCSS` /
