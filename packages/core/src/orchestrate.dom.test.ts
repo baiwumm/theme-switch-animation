@@ -208,6 +208,30 @@ describe('runThemeTransition 动画路径（jsdom + 模拟 startViewTransition�
     expect(css).not.toContain('linear-gradient(180deg')
   })
 
+  it('COMB：两层渐变共用一个注册属性，每层用 min() 各自封顶到叶片宽', () => {
+    installFakeViewTransition()
+    vi.spyOn(window, 'innerWidth', 'get').mockReturnValue(800)
+    vi.spyOn(window, 'innerHeight', 'get').mockReturnValue(600)
+
+    runThemeTransition({
+      domUpdate: () => {},
+      options: { animationType: ThemeAnimationType.COMB, direction: 'ltr', slatWidth: 72 },
+    })
+
+    const css = styleNode()!.textContent!
+    expect(css).toContain('@property --theme-switch-reveal')
+    expect(css).toContain('syntax: "<length>"')
+    expect(css).toContain('min(var(--theme-switch-reveal), 72px)')
+    expect(css).toContain('min(var(--theme-switch-reveal) - 36px, 72px)')
+    // tile = 2W，两层各一份
+    expect(css).toContain('mask-size: 144px 100%, 144px 100%;')
+    expect(css).toContain('mask-repeat: repeat, repeat;')
+    // from = -软边（不是 0）：钳到 0 会在每片叶片左沿留一条实边漏光
+    expect(css).toContain('--theme-switch-reveal: -20px;')
+    // to = 交错量 + 叶片宽 = 36 + 72
+    expect(css).toContain('--theme-switch-reveal: 108px;')
+  })
+
   it('CLOCK_SWEEP：注册属性改用 <angle> 的 SWEEP_VAR，keyframes 值带 deg 后缀', () => {
     installFakeViewTransition()
     vi.spyOn(window, 'innerWidth', 'get').mockReturnValue(800)

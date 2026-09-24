@@ -6,6 +6,7 @@ import {
   CIRCLE_MASK_IMAGE,
   CIRCLE_SIZE_FACTOR,
   CLOCK_SWEEP_TAIL_DEG,
+  COMB_STAGGER_RATIO,
   CURTAIN_FEATHER_PX,
   DIAMOND_COVERAGE_FACTOR,
   FULL_CIRCLE_DEG,
@@ -30,6 +31,7 @@ import {
   getCircleMaskGeometry,
   getCircleRevertMaskGeometry,
   getClockSweepRevealSpec,
+  getCombRevealSpec,
   getCurtainRevealSpec,
   getDiamondMaskGeometry,
   getHexagonMaskGeometry,
@@ -688,5 +690,92 @@ describe('CURTAIN（双开门）', () => {
     const wide = getCurtainRevealSpec({ width: 1920, height: 1080 })
     const narrow = getCurtainRevealSpec({ width: 375, height: 667 })
     expect(wide.to - narrow.to).toBe(1920 - 375)
+  })
+})
+
+describe('COMB（梳齿交错）', () => {
+  const W = 72
+  const v = `var(${REVEAL_VAR})`
+  const f = getBlindsFeatherPx(W)
+  const stagger = Math.round(W * COMB_STAGGER_RATIO)
+  const capA = `min(${v}, ${W}px)`
+  const capB = `min(${v} - ${stagger}px, ${W}px)`
+
+  it('两层静止渐变：层 B 管偶数叶片（W..2W），层 A 管奇数叶片（0..W）', () => {
+    const spec = getCombRevealSpec(ThemeAnimationDirection.LTR, W)
+    expect(spec.maskImage).toBe(
+      `linear-gradient(90deg, transparent 0 ${W}px, #000 ${W}px calc(${W}px + ${capB}),` +
+      ` transparent calc(${W}px + ${capB} + ${f}px)), ` +
+      `linear-gradient(90deg, #000 0 ${capA}, transparent calc(${capA} + ${f}px))`,
+    )
+    // 层数与 mask-size / mask-repeat 的逗号列表长度必须一致
+    expect(spec.maskImage.match(/linear-gradient\(/g)).toHaveLength(2)
+    expect(spec.maskSize.split(',').length).toBe(2)
+    expect(spec.maskRepeat.split(',').length).toBe(2)
+  })
+
+  it('平铺周期 = 2W，一个 tile 内正好装下奇偶两片', () => {
+    const spec = getCombRevealSpec(ThemeAnimationDirection.LTR, W)
+    expect(spec.maskSize).toBe(`${W * 2}px 100%, ${W * 2}px 100%`)
+    expect(spec.maskRepeat).toBe('repeat, repeat')
+  })
+
+  it('交错量必须严格落在 (0, W) 内：取 0 就是 BLINDS，取 W 会退化成叶片宽 2W 的 BLINDS', () => {
+    expect(COMB_STAGGER_RATIO).toBeGreaterThan(0)
+    expect(COMB_STAGGER_RATIO).toBeLessThan(1)
+    // stagger = W 时奇数段 0..W 与偶数段 W..r 首尾相接，拼成单条 0..r，与双层无关
+    const degenerate = Math.round(W * 1)
+    expect(degenerate + W).toBe(W * 2)
+  })
+
+  it('from = -软边：cap 允许取负，整段 #000 滑出 tile 边界被裁掉，起始帧全遮', () => {
+    const spec = getCombRevealSpec(ThemeAnimationDirection.LTR, W)
+    expect(spec.from).toBe(-f)
+    // 层 A 的透明落点 = cap + feather，在 from 帧正好是 0 → tile 内无一点不透明
+    expect(Math.min(spec.from, W) + f).toBe(0)
+    // 层 B 在 from 帧的实心段终点落在偶数叶片起点之内
+    expect(W + Math.min(spec.from - stagger, W)).toBeLessThan(W)
+  })
+
+  it('to = 交错量 + 叶片宽，末帧两层的 cap 都封顶到 W → 完全覆盖', () => {
+    const spec = getCombRevealSpec(ThemeAnimationDirection.LTR, W)
+    expect(spec.to).toBe(stagger + W)
+    expect(Math.min(spec.to, W)).toBe(W)
+    expect(Math.min(spec.to - stagger, W)).toBe(W)
+  })
+
+  it('消费 direction：横轴用 `2W × 100%` 平铺，纵轴换成 `100% × 2W` 且渐变角跟随', () => {
+    const x = getCombRevealSpec(ThemeAnimationDirection.LTR, W)
+    const y = getCombRevealSpec(ThemeAnimationDirection.TTB, W)
+    expect(x.maskImage.startsWith('linear-gradient(90deg')).toBe(true)
+    expect(x.maskSize.startsWith(`${W * 2}px 100%`)).toBe(true)
+    expect(y.maskImage.startsWith('linear-gradient(180deg')).toBe(true)
+    expect(y.maskSize).toBe(`100% ${W * 2}px, 100% ${W * 2}px`)
+  })
+
+  it('叶片宽决定一切：slatWidth 变化时周期、交错量、终值同步缩放', () => {
+    const wide = getCombRevealSpec(ThemeAnimationDirection.LTR, 200)
+    const narrow = getCombRevealSpec(ThemeAnimationDirection.LTR, 16)
+    expect(wide.to / narrow.to).toBeCloseTo(200 / 16, 1)
+    expect(wide.maskSize.startsWith('400px 100%')).toBe(true)
+  })
+
+  it('与 BLINDS / SCAN / CURTAIN 同族：命中 isRevealAnimationType 并由 getRevealMaskSpec 分发', () => {
+    expect(isRevealAnimationType(ThemeAnimationType.COMB)).toBe(true)
+    expect(getRevealMaskSpec(ThemeAnimationType.COMB, ThemeAnimationDirection.LTR, W, viewport))
+      .toEqual(getCombRevealSpec(ThemeAnimationDirection.LTR, W))
+  })
+
+  it('不消费触发点，也不与 BLINDS 共用规格', () => {
+    const center = { x: 400, y: 300 }
+    expect(isShapeAnimationType(ThemeAnimationType.COMB)).toBe(false)
+    expect(isBlurAnimationType(ThemeAnimationType.COMB)).toBe(false)
+    expect(isRippleAnimationType(ThemeAnimationType.COMB)).toBe(false)
+    expect(isSweepAnimationType(ThemeAnimationType.COMB)).toBe(false)
+    expect(getCombRevealSpec(ThemeAnimationDirection.LTR, W))
+      .not.toEqual(getBlindsRevealSpec(ThemeAnimationDirection.LTR, W))
+    expect(getMaskGeometry(ThemeAnimationType.COMB, center, viewport)).toEqual(
+      getCircleMaskGeometry(center, viewport),
+    )
   })
 })

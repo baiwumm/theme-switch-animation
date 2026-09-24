@@ -35,6 +35,8 @@ export const ThemeAnimationType = {
   FAN: 'fan',
   /** 双开门：新主题自屏幕中线向两侧对称揭开（属性驱动蒙版，无触发点） */
   CURTAIN: 'curtain',
+  /** 梳齿交错：奇数叶片先展开、偶数叶片错半拍跟上（属性驱动蒙版，无触发点），复用 BLINDS 的 direction / slatWidth */
+  COMB: 'comb',
 } as const
 
 export type ThemeAnimationType = (typeof ThemeAnimationType)[keyof typeof ThemeAnimationType]
@@ -50,7 +52,7 @@ export type ShapeAnimationType =
   | typeof ThemeAnimationType.STAR
 
 /**
- * 扫描方向，供 `direction` 选项使用（当前由 BLINDS / SCAN / QR_GRID 消费，后续类型可扩展）。
+ * 扫描方向，供 `direction` 选项使用（当前由 BLINDS / SCAN / QR_GRID / COMB 消费，后续类型可扩展）。
  * 四向擦除类型已并入此选项（v0.2 起不再有 LTR/RTL/TTB/BTT 类型）。
  */
 export const ThemeAnimationDirection = {
@@ -73,9 +75,9 @@ export interface ThemeAnimationOptions {
   easing?: string
   /** 模糊蒙版的模糊强度（`feGaussianBlur` 的视觉强度系数），默认 `2`。仅 `CIRCLE_BLUR` 生效 */
   blurAmount?: number
-  /** 扫描方向，默认 `'ltr'`。仅 BLINDS / SCAN / QR_GRID 生效，其余类型忽略 */
+  /** 扫描方向，默认 `'ltr'`。仅 BLINDS / SCAN / QR_GRID / COMB 生效，其余类型忽略 */
   direction?: ThemeAnimationDirection
-  /** 百叶窗叶片宽度（px），合法范围 `[16, 200]`，默认 `72`。仅 `BLINDS` 生效，非法值静默回落默认 */
+  /** 百叶窗叶片宽度（px），合法范围 `[16, 200]`，默认 `72`。仅 BLINDS / COMB 生效，非法值静默回落默认 */
   slatWidth?: number
   /** 涟漪波长（px，相邻两圈波峰间距），合法范围 `[8, 60]`，默认 `18`。仅 `RIPPLE` 生效，非法值静默回落默认 */
   waveWidth?: number
