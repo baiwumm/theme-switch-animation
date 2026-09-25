@@ -2,12 +2,7 @@
 
 > 本文件只装**还开着的待办**，做完一项删一项。2026-09-14 ~ 09-24 的十轮已完结记录（原 §1–§10
 > 台账）已随 docs 精简移出工作树，随时可查 git 历史：`git log --all -- docs/next-steps.md`。
-
-- [ ] **Playwright e2e 矩阵未正式建立**：需求 §9-8 只跑 Chromium + WebKit，引擎覆盖靠
-      `scripts/verify-engine.mjs` 手动跑。**跑引擎矩阵前先确认两处仓库外路径还在**：
-      Playwright 包本体已改装到仓库外稳定路径（`PW_DIR` 指过去）、`verify-firefox-video.mjs`
-      的抽帧工作目录走 `FF_WORK_DIR`——`%TEMP%` 下的安装会在任务跑动中被系统清扫
-      （实测磁盘有 54G 也照扫，刚写出的文件下一句就 ENOENT）。
+> 引擎矩阵环境（PW_DIR / FF_WORK_DIR）的固定路径见 AGENTS.md「引擎矩阵」行。
 
 - [ ] **（等使用者反馈再排查，≠ 已验）系统缩放 125% / 150% 真机肉眼观感**：已覆盖的是 forced
       `deviceScaleFactor`（浏览器光栅路径，seek 模式出真设备像素）；未覆盖的是 OS 整屏分面缩放。

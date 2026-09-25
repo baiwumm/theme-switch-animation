@@ -31,7 +31,7 @@
 | 门禁四件套 | `pnpm lint` / `pnpm typecheck` / `pnpm test` / `pnpm build` |
 | 产物校验 | `pnpm verify:package`（build 之后跑；**要用 `pnpm build`，别用 `npx tsup` 绕过 postbuild**） |
 | 实机验收 | `pnpm test:acceptance`（7 个 CDP 脚本，需本机 Chrome） |
-| 引擎矩阵 | `node scripts/verify-engine.mjs --engine=webkit\|firefox`（**跑前先确认 `PW_DIR` / `FF_WORK_DIR` 指向的仓库外路径还在**，见 `docs/next-steps.md`；Git Bash 下传参要 `MSYS2_ARG_CONV_EXCL='*'`） |
+| 引擎矩阵 | WebKit/Blink：`PW_DIR=<pw> node scripts/verify-engine.mjs --engine=webkit`（`--engine=chromium` 配 `--channel=chrome\|msedge` 驱动本机浏览器）；Firefox：`PW_DIR=<pw> FF_WORK_DIR=<out> node scripts/verify-firefox-video.mjs --all-types`（截图判据在 Firefox 失效，走录像取证）。`<pw>` = playwright@1.63 装在**仓库外稳定路径**（如 `C:/Users/<you>/tools/pw`；浏览器本体在 `%LOCALAPPDATA%/ms-playwright`，别装 `%TEMP%`，会被系统清扫）；`<out>` = 仓库内 gitignored 的 `scripts/.verify-engine-out`（**跑前先 `mkdir -p`，`mkdtemp` 不自建父目录**）。Git Bash 下传参要 `MSYS2_ARG_CONV_EXCL='*'` |
 | 发版 | `pnpm changeset` → `pnpm changeset version` → commit → 推 `v*` tag |
 
 ## 发布链路
