@@ -54,7 +54,7 @@ theme-switch-animation/                  # 仓库名 = 包名
 │           └── runtime/composables/
 │               └── index.ts            # 从 core/vue 重新导出，供自动导入扫描
 ├── playgrounds/                        # react / vue / next（next-themes）/ nuxt（color-mode）
-├── apps/docs/                          # 文档站（Next.js，每种动画 live demo，push main 自动部署）
+├── apps/docs/                          # 文档站（Next.js，每种动画 live demo，push main 由腾讯云 EdgeOne 自动构建发布）
 ├── docs/                               # 项目活文档（requirements / next-steps / roadmap / reverse 设计）
 ├── package.json                        # 根包 = 发布包 theme-switch-animation
 └── tsup.config.ts / vitest / changesets / CI

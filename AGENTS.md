@@ -11,7 +11,8 @@ SQUARE / RECTANGLE / CIRCLE_BLUR / DIAMOND，逐类观感见 README「🎬 动�
 - **发布包就是仓库根**的 `package.json`（exports `.` / `./react` / `./vue` / `./nuxt` 四个子路径，ESM-only）。
 - `packages/{core,react,vue,nuxt}` 是**私有内部包**（`@theme-switch-animation/*`）：core 框架无关实现
   （types / masks / styles / orchestrate），react / vue 薄适配，nuxt 模块壳。
-- `apps/docs` 文档站（Next.js，push main 自动部署到 theme-switch-animation.baiwumm.com）。
+- `apps/docs` 文档站（Next.js 静态导出；push main 由腾讯云 EdgeOne 自动构建发布到
+  theme-switch-animation.baiwumm.com）。
 - `playgrounds/{react,vue,next,nuxt}` 四个框架的实机试验场。
 - 环境：pnpm（`packageManager` 字段为准）。**本地开发要 Node ≥22.13**（开发工具链的硬要求，
   CI 跑 22 / 24 双矩阵）；`engines.node >= 18` 描述的是发布产物消费者的环境，不是开发环境。
@@ -35,6 +36,12 @@ SQUARE / RECTANGLE / CIRCLE_BLUR / DIAMOND，逐类观感见 README「🎬 动�
 | 产物校验 | `pnpm verify:package`（build 之后跑；**必须用 `pnpm build`**——postbuild 要拷 nuxt runtime，`npx tsup` 会绕过它） |
 | 实机验收 | `pnpm test:acceptance`（7 个 CDP 脚本，需本机 Chrome） |
 | 发版 | `pnpm changeset` → `pnpm changeset version` → commit → 推 `v*` tag |
+
+### 文档站部署（腾讯云 EdgeOne）
+
+- `apps/docs` 走 `next.config.ts` 的 `output: 'export'`，静态产物在 `apps/docs/out`；EdgeOne（Makers）侧接入 Git，`main` 推送自动构建发布。
+- EdgeOne 构建值：根目录 `/`、安装 `pnpm install --frozen-lockfile`、构建 `pnpm --filter @theme-switch-animation/docs build`、输出目录 `apps/docs/out`、Node 22（开发工具链最低 22.13）。
+- 域名 `theme-switch-animation.baiwumm.com` 保持不变，仅 DNS 解析迁至腾讯云；`out/404.html` 作为错误页，目录索引/回退按控制台实际能力配置。
 
 ### 引擎矩阵（WebKit / Blink / Firefox 实机取证）
 

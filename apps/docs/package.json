@@ -6,7 +6,6 @@
     "dev": "pnpm -w run build && next dev",
     "build": "pnpm -w run build && next build",
     "preview": "npx serve@latest out",
-    "deploy": "npx wrangler deploy",
     "lint": "biome check ."
   },
   "dependencies": {

@@ -1,6 +1,6 @@
 import type { NextConfig } from 'next'
 
-// 纯静态落地页：导出静态文件由 Cloudflare Workers Static Assets 托管（wrangler.jsonc）
+// 纯静态落地页：导出静态文件，由腾讯云 EdgeOne 静态托管（output: 'export' → out/）
 const nextConfig: NextConfig = {
   output: 'export',
   images: { unoptimized: true },
