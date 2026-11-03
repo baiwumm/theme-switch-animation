@@ -2,8 +2,8 @@
 
 | 项目 | 内容 |
 |---|---|
-| 版本 | v1.17（宣传片门面进 README + 修 npm 页面裂图，无 API 变更；v1.16 那轮漏同步本行；见 §10 修订记录） |
-| 日期 | 2026-09-29 |
+| 版本 | v1.19（验收收口 + apps/docs biome 存量收敛转绿，无 API 变更；见 §10 修订记录） |
+| 日期 | 2026-09-21 |
 | 状态 | 已评审通过，持续开发中（进展见 §10 修订记录） |
 | 仓库 / npm 包名 | `theme-switch-animation`（npm 已注册并发布） |
 | 支持框架 | React 18+、Vue 3+、Next.js（App Router）、Nuxt 3+ |
@@ -311,11 +311,35 @@ export type { ThemeAnimationOptions, ... } from '@theme-switch-animation/core'
 
 ## 10. 修订记录
 
+### v1.19（2026-11-03）
+
+验收收口 + `apps/docs` biome 存量收敛。**无 `packages/` 代码改动**、无产物变化（tarball 逐字节不变），**不记 changeset**。
+
+1. **挂起项确认（需求方 2026-11-03 确认继续挂起，本轮未动）**：P2-2 LOGO_MASK 设计稿（解冻未立项，前置仍是 `docs/logo-mask-design.md`）与两条等外部反馈的真机排查项（OS 整屏缩放 125% / 150%、Safari / iOS 真机清单）维持现状，`docs/next-steps.md` §1 / §2 原样保留。
+2. **biome 存量收敛完成**：`biome check --write` 一次修完 20 个文件（基线 20 errors = 19 format + 1 `lint/style/useImportType`，另 1 warning）；逐文件复核非空白 diff，全部为缩进 / 换行 / 引号风格 / `import type` 内联标记，**零语义改动**。验收线全过：`pnpm -C apps/docs lint` 转绿（0 诊断）、`typecheck` exit 0、`pnpm -C apps/docs build`（next build 静态导出）exit 0——顺带补上 v1.17 轮未跑的文档站构建。`next-steps.md` §3「工程卫生」按"做完即删"整节移除；AGENTS.md 的"跑红属预期"表述同步改为"已收敛转绿、保持常绿"。
+3. **v1.14 / v1.15 / v1.16 验收收口**：roadmap §3 三条状态「已落地（待需求方验收）」→「已落地（需求方验收通过 2026-11-03）」（需求方口述确认）。roadmap 状态栏是活状态字段（文件头约定"每开工一个就把那一行的状态改掉"），原地更新，不涉历史改写。
+4. **v1.17 宣传片音频验收收口**：需求方 2026-11-03 人耳验收通过（v1.17 第 1 条当时记的是"未经人耳验收"＋实测口径）。**这条验收此前只在 v1.17 条目里以当时状态存在，没进 next-steps 台账**（登记位置不一致），本轮随 v1.19 一并收口。处理方式按 v1.9 第 5 条的先例（历史条目内的当时状态句不删改，在原句后加带日期的补注括弧）：v1.17 原句保留，句后已补注验收结论与本条指针。
+5. **遗留登记**：11 个零消费类型导出（`ShapeAnimationType` / `MaskGeometry` / `Point` / `QrGridMaskSpec` / `Size` / `BuildAnimationCSSParams` / `DomUpdateResult` / `RunThemeTransitionParams` / `RunThemeTransitionResult` / `StoredTheme` / `WaitForThemeSyncOptions`，均随 `.` 入口进公开 d.ts）本轮**不动**，待需求方确认破坏性变更口径后单独交代。
+6. **闸门**：根 `lint` / `typecheck` / `test`（12 文件 294 例）+ `apps/docs` 的 lint / typecheck / build 全绿。biome 收敛后基线清零，之后新诊断即修、不再攒。
+
+### v1.18（2026-11-03）
+
+文档校准 + CI 门禁补位。**无 `packages/` 代码改动**，动画类型与 options 均未变，tarball 逐字节不变，**不记 changeset**（沿 2026-09-22 纯文档轮次先例；本轮触碰的 `apps/docs`、`ci.yml`、`AGENTS.md` 均不进 tarball）。
+
+1. **文档站 FAQ 的 direction 文案修正**：旧文案"direction 只对 BLINDS / SCAN / QR_GRID 三种类型生效，其余类型静默忽略"与 v1.15 起的现行为矛盾（CURTAIN 已消费 direction）。补上 v1.15 第 6 条要求门面写明的两条行为说明：CURTAIN 的 direction 是开合轴（`ltr`/`rtl` 水平、`ttb`/`btt` 垂直，只有两种视觉形态）；QR_GRID 圆点格的 direction 静默（单层平铺无推进轴）。措辞以 README options 表与画廊 hint 为准对齐。
+2. **"门面批次"核销**：v1.14–v1.16 三条修订记录里"门面攒批押后（next-steps §1 门面批次条目）"所指事项已核实全部落地——README options 表两条行为说明、四个 playground 的 reverse 三档 / QR_GRID 格距与形状控件与提示文案、文档站画廊控件均在。next-steps 侧条目已按"做完即删"移除；历史修订条目不回填（§10 只增不改），仅在此记一笔关闭。
+3. **CI 补 typecheck 盲区**：根 `tsconfig.json` 的 `include` 仅 `packages/*/src`，文档站与四个 playground 的编译此前无门禁兜底——该盲区已在 v1.15 第 6 条致两起事故（`ThemeAnimationCellShape` 类型漏转发、`BLADE_OPTIONS` 误删的运行时 ReferenceError）。本轮：`apps/docs` 补 `typecheck` 脚本（`tsc --noEmit`）；`ci.yml` 在 Build 之后加「Typecheck docs & playgrounds」步，逐目录跑五处 typecheck，根门禁四件套行为不变。干净环境前提实测：`.next/` 与 `next-env.d.ts` 均不存在时 docs tsc exit 0（next 类型经 next 包自身 d.ts 解析）；`playground-nuxt` 的 typecheck 内含 `pnpm -w run build && nuxt prepare`，依赖前序 Build 步，故排在其后。
+4. **页脚状态同步**：npm latest 0.5.0 → 0.5.1、本文档 v1.16 → v1.18、日期 2026-09-28 → 2026-11-03。v1.17 第 7 条定的头部版本行同步约定本轮照做（v1.17 → v1.18）。
+5. **闸门**：根 `lint` / `typecheck` / `test`（12 文件 294 例）+ `apps/docs` 与四个 playground 的 typecheck 全绿；`build` / `verify:package` 未跑（无 packages 改动）。`apps/docs` biome 存量诊断（20 errors = 19 format + 1 useImportType，另 1 warning）维持原样，不在本轮范围。
+6. **头部 `| 日期 |` 行校准（2026-11-03，本条修订内的补充）**：该行含义是**文档初版日期**，需求方确认以 v1.17 第 7 条的说法为准——2026-09-29 是笔误，已改回 **2026-09-21**。注意它与页脚"当前状态（2026-11-03）"不是同一含义：后者是最后同步日，保持不变。§10 各历史条目标题里的日期（如"### v1.17（2026-09-29）"）是该轮修订的发生日，不在本次校准范围。
+7. **P2-2 LOGO_MASK 维持待办（需求方 2026-11-03 决定）**：本轮不动，保持"解冻但未立项"状态；`docs/next-steps.md` §1 的 P2-2 条目原样保留，启动前置仍是消毒规则设计稿 `docs/logo-mask-design.md`。
+8. **biome 存量收敛择期执行（需求方 2026-11-03 批准，本轮不执行）**：`apps/docs` 的 20 errors + 1 warning 属还开着的待办，已按 docs/ 约定登记进 `docs/next-steps.md` §3（新增小节，写明完成后即删、范围限 `apps/docs`、验收 = `pnpm -C apps/docs lint` 转绿）。
+
 ### v1.17（2026-09-29）
 
 宣传片交付 + README 门面改版，顺带修掉 npm 包首页的裂图。**无 `packages/` 代码改动**，动画类型与 options 均未变。
 
-1. **宣传片（工程在仓库外）**：`E:\personal-project\.video-work\theme-switch-film\`，横版 `renders/final.mp4`（1920×1080·57s·含 9 句中文口播）、竖版 `renders/final-vertical.mp4`（1080×1920·硬字幕）、三张封面 `covers/cover-{16x9,4x3,3x4}.png`；无口播版另存。产品仓库代码零改动，所有适配（真组件挂载、把不可 seek 的 View Transition 暂停后按电影时钟写 `currentTime`、`matchMedia('(prefers-reduced-motion)')` 按时钟命中以实拍降级镜头）都在视频工程侧。配乐/口播的自动检查全绿，但**音频未经需求方人耳验收**（实测口径：−16.0 LUFS / −1.5 dBTP，口播窗口 2–8kHz 能量 +4–5.5 dB）。
+1. **宣传片（工程在仓库外）**：`E:\personal-project\.video-work\theme-switch-film\`，横版 `renders/final.mp4`（1920×1080·57s·含 9 句中文口播）、竖版 `renders/final-vertical.mp4`（1080×1920·硬字幕）、三张封面 `covers/cover-{16x9,4x3,3x4}.png`；无口播版另存。产品仓库代码零改动，所有适配（真组件挂载、把不可 seek 的 View Transition 暂停后按电影时钟写 `currentTime`、`matchMedia('(prefers-reduced-motion)')` 按时钟命中以实拍降级镜头）都在视频工程侧。配乐/口播的自动检查全绿，但**音频未经需求方人耳验收**（实测口径：−16.0 LUFS / −1.5 dBTP，口播窗口 2–8kHz 能量 +4–5.5 dB）。（2026-11-03 补注：已经需求方人耳验收通过，见 v1.19 第 4 条。）
 2. **README 门面改版**：删掉 `## 📸 预览` 小节与文档站首页截图，改成居中入口链接行（文档站 / 产品宣传片 / npm / 开发规范）+ 一张整块可点的 16:9 封面跳抖音短链。判据来自需求方两轮反馈：「预览太多了，显示一个封面跳转抖音就可以了」→「和 better-admin 的 README 一样」。封面规格 1760×990 / 288KB，命名对齐 `assets/video/<pkg>-promo-cover-16x9.png`。
 3. **npm 裂图根因（实测）**：`package.json` 的 `files: ['dist']`，`assets/` 不进 tarball，而 npm 的 README 渲染不解析 `./assets/...` 相对路径——同一份 Markdown 在 GitHub 正常、在 npm 页面是裂图。2026-09-29 探测 registry 的 `readme` 字段确认线上 0.5.0 仍是 `![…](./assets/screen.jpg)`，即**该缺陷当时已在生产环境存在**。修法：门面图片改 `https://raw.githubusercontent.com/<owner>/<repo>/main/<path>`（探测返回 200），两处 `LICENSE` 链接改 GitHub blob 页，README 内留注释防止被改回相对写法。两条连带口径：raw 地址解析的是**远端分支**，push 之前图必然 404（不是 bug）；npm 页面是 JS 渲染，`curl` 只拿回约 5KB 空壳，**渲染结果无法自证**，只能核 URL 可达 + 人工确认。
 4. **门面截图资产作废**：`assets/screen.jpg` 删除（README 是它唯一消费者，全仓 grep 无代码引用）。`docs/animation-roadmap.md` §5 撤回清单第 6 项与「顺序建议」里的重拍表述同步去掉。**不改写的两处**：本文件 v1.7 第 5 条、`docs/reverse-option-design.md` §7 的「门面截图…必须重拍」——分别是历史修订记录与 PR4 迁移面记录，按归档规则保留原文。
@@ -487,4 +511,4 @@ export type { ThemeAnimationOptions, ... } from '@theme-switch-animation/core'
 
 ---
 
-**当前状态（2026-09-28）**：**0.1.0 / 0.2.0 / 0.3.0 / 0.4.0 / 0.5.0 均已发布**，npm `latest = 0.5.0`（0.2.0 起走 OIDC Trusted Publishing，provenance 已实测挂上；0.5.0 = P3 批次三项 minor：reverse 接入面 5 → 9、CURTAIN direction、QR_GRID cellSize/cellShape）。本文档随实现推进到 v1.16。动画类型扩展已冻结（v1.13 起 15 种，理由见 `docs/animation-roadmap.md` §4），`reverse` 的接入判据与分期见 `docs/reverse-option-design.md`；剩余事项（P2-2 LOGO_MASK 设计稿讨论、真机缩放与 Safari/iOS 反馈排查）见 `docs/next-steps.md`。
+**当前状态（2026-11-03）**：**0.1.0 / 0.2.0 / 0.3.0 / 0.4.0 / 0.5.0 / 0.5.1 均已发布**，npm `latest = 0.5.1`（0.2.0 起走 OIDC Trusted Publishing，provenance 已实测挂上；0.5.0 = P3 批次三项 minor：reverse 接入面 5 → 9、CURTAIN direction、QR_GRID cellSize/cellShape；0.5.1 = README 门面封面 patch）。本文档随实现推进到 v1.19。动画类型扩展已冻结（v1.13 起 15 种，理由见 `docs/animation-roadmap.md` §4），`reverse` 的接入判据与分期见 `docs/reverse-option-design.md`；剩余事项（P2-2 LOGO_MASK 设计稿讨论、真机缩放与 Safari/iOS 反馈排查）见 `docs/next-steps.md`。

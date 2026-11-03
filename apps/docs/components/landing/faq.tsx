@@ -25,7 +25,7 @@ const FAQS = [
   },
   {
     q: '0.1.x 的 LTR / RTL / TTB / BTT 类型去哪了？',
-    a: '0.2.0 起"四向"不再是动画类型，而是普通的 direction 选项：原 LTR/RTL/TTB/BTT 对应 SCAN + direction（取值不变），观感差异只有揭开前缘多了一条 12px 半透明光束带。同一版本新增 BLINDS（百叶窗，slatWidth 控叶宽）与 QR_GRID（方块格子逐格生长）；direction 只对这三种类型生效，其余类型静默忽略，它们的行为与 0.1.x 一致。',
+    a: '0.2.0 起"四向"不再是动画类型，而是普通的 direction 选项：原 LTR/RTL/TTB/BTT 对应 SCAN + direction（取值不变），观感差异只有揭开前缘多了一条 12px 半透明光束带。同一版本新增 BLINDS（百叶窗，slatWidth 控叶宽）与 QR_GRID（方块格子逐格生长）。0.5.0 起 CURTAIN 也消费 direction——它是开合轴而非四向：ltr/rtl 同为水平、ttb/btt 同为垂直，只有两种视觉形态；QR_GRID 切为圆点格时 direction 静默（单层平铺无推进轴，四向观感一致）。其余类型忽略 direction，行为与 0.1.x 一致。',
   },
   {
     q: 'Firefox 下没有动画？',
