@@ -2,7 +2,7 @@
 
 | 项目 | 内容 |
 |---|---|
-| 版本 | v1.20（类型导出清理，breaking 走 minor 0.6.0、未发版；见 §10 修订记录） |
+| 版本 | v1.21（0.6.0 发版与验收记录；见 §10 修订记录） |
 | 日期 | 2026-09-21 |
 | 状态 | 已评审通过，持续开发中（进展见 §10 修订记录） |
 | 仓库 / npm 包名 | `theme-switch-animation`（npm 已注册并发布） |
@@ -311,6 +311,16 @@ export type { ThemeAnimationOptions, ... } from '@theme-switch-animation/core'
 
 ## 10. 修订记录
 
+### v1.21（2026-11-03）
+
+**0.6.0 发版**（v1.20 类型导出清理落地），全链路实测通过。
+
+1. **链路事实**：`pnpm changeset version` 消费唯一 changeset（diff 仅 `package.json` / `CHANGELOG.md` / 删该 changeset，无连带 bump）→ 提交 `945cf4a`（`chore(release): 0.6.0`）→ push main → CI run `41615627955` 双矩阵（Node 22 / 24）全绿，**新增的「Typecheck docs & playgrounds」步在真实 runner 首次运行即绿** → tag `v0.6.0` → release run `41615872389` 全 13 步绿（OIDC Trusted Publishing 发布 + GitHub Release 建成）。
+2. **npm 验收**：官方 registry `npm view theme-switch-animation version --registry=https://registry.npmjs.org --prefer-online` = `0.6.0`（packument 延迟实测约 2 分钟；**本机默认 registry 是 npmmirror 镜像，验收必须显式指定官方源**——镜像侧同步更慢，首轮查到 0.5.1 是镜像滞后不是发布失败）。`npm pack` 取回真实 tarball 核对：四子路径（`.` / `react` / `vue` / `nuxt`）+ `nuxt-runtime` + LICENSE + README 齐；`dist/index.d.ts` 中 11 个被收回类型在 export 列表逐一核对为 0 命中。
+3. **文档站上线**：EdgeOne 随 push main 自动重建，线上 FAQ 已含新文案（"0.5.0 起 CURTAIN 也消费 direction……开合轴"），旧文案已不存在。取证坑：FAQ 在客户端 chunk 而非 HTML 直出，且 Invoke-WebRequest 默认 Latin-1 解码会把 UTF-8 中文变成乱码导致误判"未上线"——**探针必须按 UTF-8 解码、并搜 chunk 而非 HTML**。
+4. **changeset 状态**：`.changeset/` 已归零（release.yml 的未消费校验通过即证据）。
+5. **闸门**：发版链路内 release.yml 重跑了 lint / typecheck / test / build / verify:package 全绿；本地同口径此前已绿。
+
 ### v1.20（2026-11-03）
 
 类型导出清理（需求方定性"重构遗留"，批准删除）。**未发版**，changeset 已备、待下次 `changeset version` 消费为 **minor 0.6.0**。
@@ -520,4 +530,4 @@ export type { ThemeAnimationOptions, ... } from '@theme-switch-animation/core'
 
 ---
 
-**当前状态（2026-11-03）**：**0.1.0 / 0.2.0 / 0.3.0 / 0.4.0 / 0.5.0 / 0.5.1 均已发布**，npm `latest = 0.5.1`（0.2.0 起走 OIDC Trusted Publishing，provenance 已实测挂上；0.5.0 = P3 批次三项 minor：reverse 接入面 5 → 9、CURTAIN direction、QR_GRID cellSize/cellShape；0.5.1 = README 门面封面 patch）。本文档随实现推进到 v1.20。动画类型扩展已冻结（v1.13 起 15 种，理由见 `docs/animation-roadmap.md` §4），`reverse` 的接入判据与分期见 `docs/reverse-option-design.md`；剩余事项（P2-2 LOGO_MASK 设计稿讨论、真机缩放与 Safari/iOS 反馈排查）见 `docs/next-steps.md`。
+**当前状态（2026-11-03）**：**0.1.0 / 0.2.0 / 0.3.0 / 0.4.0 / 0.5.0 / 0.5.1 / 0.6.0 均已发布**，npm `latest = 0.6.0`（0.2.0 起走 OIDC Trusted Publishing，provenance 已实测挂上；0.5.0 = P3 批次三项 minor：reverse 接入面 5 → 9、CURTAIN direction、QR_GRID cellSize/cellShape；0.5.1 = README 门面封面 patch；0.6.0 = 11 个零消费类型导出收回，breaking 仅类型面）。本文档随实现推进到 v1.21。动画类型扩展已冻结（v1.13 起 15 种，理由见 `docs/animation-roadmap.md` §4），`reverse` 的接入判据与分期见 `docs/reverse-option-design.md`；剩余事项（P2-2 LOGO_MASK 设计稿讨论、真机缩放与 Safari/iOS 反馈排查）见 `docs/next-steps.md`。
