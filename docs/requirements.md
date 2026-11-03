@@ -2,7 +2,7 @@
 
 | 项目 | 内容 |
 |---|---|
-| 版本 | v1.21（0.6.0 发版与验收记录；见 §10 修订记录） |
+| 版本 | v1.22（行尾策略固化，无产物变化；见 §10 修订记录） |
 | 日期 | 2026-09-21 |
 | 状态 | 已评审通过，持续开发中（进展见 §10 修订记录） |
 | 仓库 / npm 包名 | `theme-switch-animation`（npm 已注册并发布） |
@@ -311,6 +311,15 @@ export type { ThemeAnimationOptions, ... } from '@theme-switch-animation/core'
 
 ## 10. 修订记录
 
+### v1.22（2026-11-03）
+
+行尾策略固化。**无产物变化、无版本号变动，不记 changeset**（`.gitattributes` 不进 tarball）。
+
+1. **起因（上一轮实测现象）**：biome 存量收敛报"修 20 文件"，但 `git add` 后仅 3 文件有真实入库 diff——根因链：`core.autocrlf=true`（本机 Windows）+ 仓库无 `.gitattributes` + biome 默认 `lineEnding: lf`。工作树检出产 CRLF，biome 把 CRLF→LF 计为 format 修改；而 git 提交时的 autocrlf 规范化又把 LF 写回与库内一致的 blob，于是 16 个文件"改了又等于没改"。库内 blob 本来就是全 LF（`git add --renormalize .` 实测**零内容文件变化**，暂存仅 `.gitattributes` 自身），本次固化防的是未来检出/编辑器造成的行尾漂移与 biome 误判复发。
+2. **落地**：根 `.gitattributes` = `* text=auto eol=lf` + 已知二进制类型（png / jpg / mp4 / woff2）显式 `binary`。提交 `3bbbc2e`，已推 main。
+3. **闸门**：根 `lint` / `typecheck` / `test`（12 文件 294 例）/ `build` / `verify:package` + apps/docs 的 `lint` / `typecheck` / `build` 全绿（行尾改动未触碰任何源文件，docs build 静态导出正常）。本次 push 触发 CI run `41617948275` **双矩阵全绿**——盯防时 gh 撞上 GitHub API 匿名限流（失效 token 回落匿名通道，60 次/小时），改走浏览器看板确认（Status: Success，Node 22 / 24 各 1m9s）。
+4. **AGENTS.md 核对**：无行尾相关误导性表述，未动。
+
 ### v1.21（2026-11-03）
 
 **0.6.0 发版**（v1.20 类型导出清理落地），全链路实测通过。
@@ -530,4 +539,4 @@ export type { ThemeAnimationOptions, ... } from '@theme-switch-animation/core'
 
 ---
 
-**当前状态（2026-11-03）**：**0.1.0 / 0.2.0 / 0.3.0 / 0.4.0 / 0.5.0 / 0.5.1 / 0.6.0 均已发布**，npm `latest = 0.6.0`（0.2.0 起走 OIDC Trusted Publishing，provenance 已实测挂上；0.5.0 = P3 批次三项 minor：reverse 接入面 5 → 9、CURTAIN direction、QR_GRID cellSize/cellShape；0.5.1 = README 门面封面 patch；0.6.0 = 11 个零消费类型导出收回，breaking 仅类型面）。本文档随实现推进到 v1.21。动画类型扩展已冻结（v1.13 起 15 种，理由见 `docs/animation-roadmap.md` §4），`reverse` 的接入判据与分期见 `docs/reverse-option-design.md`；剩余事项（P2-2 LOGO_MASK 设计稿讨论、真机缩放与 Safari/iOS 反馈排查）见 `docs/next-steps.md`。
+**当前状态（2026-11-03）**：**0.1.0 / 0.2.0 / 0.3.0 / 0.4.0 / 0.5.0 / 0.5.1 / 0.6.0 均已发布**，npm `latest = 0.6.0`（0.2.0 起走 OIDC Trusted Publishing，provenance 已实测挂上；0.5.0 = P3 批次三项 minor：reverse 接入面 5 → 9、CURTAIN direction、QR_GRID cellSize/cellShape；0.5.1 = README 门面封面 patch；0.6.0 = 11 个零消费类型导出收回，breaking 仅类型面）。本文档随实现推进到 v1.22。动画类型扩展已冻结（v1.13 起 15 种，理由见 `docs/animation-roadmap.md` §4），`reverse` 的接入判据与分期见 `docs/reverse-option-design.md`；剩余事项（P2-2 LOGO_MASK 设计稿讨论、真机缩放与 Safari/iOS 反馈排查）见 `docs/next-steps.md`。
