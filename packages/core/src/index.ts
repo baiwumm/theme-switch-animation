@@ -22,7 +22,6 @@ export {
 } from './types'
 export type {
   ResolvedAnimationOptions,
-  ShapeAnimationType,
   ThemeAnimationCellShape,
   ThemeAnimationOptions,
 } from './types'
@@ -102,12 +101,8 @@ export {
 } from './masks'
 export type {
   CircleHoleGeometry,
-  MaskGeometry,
-  Point,
-  QrGridMaskSpec,
   RectProvider,
   RevealMaskSpec,
-  Size,
 } from './masks'
 
 export {
@@ -119,7 +114,6 @@ export {
   injectAnimationStyle,
   removeAnimationStyle,
 } from './styles'
-export type { BuildAnimationCSSParams } from './styles'
 
 export {
   SKIP_TRANSITION,
@@ -131,9 +125,6 @@ export {
 } from './orchestrate'
 export type {
   DomUpdate,
-  DomUpdateResult,
-  RunThemeTransitionParams,
-  RunThemeTransitionResult,
   ViewTransitionLike,
 } from './orchestrate'
 
@@ -145,7 +136,5 @@ export {
   syncThemeOnMount,
   writeStoredTheme,
 } from './uncontrolled'
-export type { StoredTheme } from './uncontrolled'
 
 export { THEME_SYNC_TIMEOUT_MS, waitForThemeSync } from './controlled-sync'
-export type { WaitForThemeSyncOptions } from './controlled-sync'

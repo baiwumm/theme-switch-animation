@@ -2,7 +2,7 @@
 
 | 项目 | 内容 |
 |---|---|
-| 版本 | v1.19（验收收口 + apps/docs biome 存量收敛转绿，无 API 变更；见 §10 修订记录） |
+| 版本 | v1.20（类型导出清理，breaking 走 minor 0.6.0、未发版；见 §10 修订记录） |
 | 日期 | 2026-09-21 |
 | 状态 | 已评审通过，持续开发中（进展见 §10 修订记录） |
 | 仓库 / npm 包名 | `theme-switch-animation`（npm 已注册并发布） |
@@ -311,6 +311,15 @@ export type { ThemeAnimationOptions, ... } from '@theme-switch-animation/core'
 
 ## 10. 修订记录
 
+### v1.20（2026-11-03）
+
+类型导出清理（需求方定性"重构遗留"，批准删除）。**未发版**，changeset 已备、待下次 `changeset version` 消费为 **minor 0.6.0**。
+
+1. **从公开入口收回 11 个零消费类型导出**：`ShapeAnimationType`、`MaskGeometry`、`Point`、`QrGridMaskSpec`、`Size`、`BuildAnimationCSSParams`、`DomUpdateResult`、`RunThemeTransitionParams`、`RunThemeTransitionResult`、`StoredTheme`、`WaitForThemeSyncOptions`。删前逐一 `git grep -w` 复核（`packages/` + `apps/docs` + `playgrounds/` + `scripts/` + 测试），确认仓内零消费。11 个定义全部**保留**——它们仍是公开/内部函数的参数或返回值签名（如 `getCircleMaskGeometry(): MaskGeometry`、`runThemeTransition(params: RunThemeTransitionParams)`），删定义会删坏实现；收回的只是 `packages/core/src/index.ts` 的 `export type` 再导出。react / vue / nuxt 子路径本就只 re-export 公开 API 类型，零改动。
+2. **产物形态变化（实测 `pnpm build` 后核）**：`dist/index.d.ts` 不再按名导出这 11 个类型；其中 `MaskGeometry` / `QrGridMaskSpec` / `BuildAnimationCSSParams` 等仍以非导出 interface 存在于 d.ts 内（作为 `buildAnimationCSS` 等公开函数签名的结构类型），消费者推断不受影响，仅失去按名 `import type` 的能力。运行时 mjs 产物逐字节不变（纯类型面）。
+3. **破坏性承载方式**：0.x 阶段按 minor 承载 breaking（沿 0.2.0 删四向类型、0.4.0 删 `CIRCLE_REVERT` 先例），changeset `.changeset/remove-unused-type-exports.md` 记 minor 并列明名单与迁移含义。
+4. **闸门**：`lint` / `typecheck` / `test`（12 文件 294 例）/ `build` / `verify:package` 全绿，`apps/docs` typecheck 对新 d.ts 面 exit 0。注意 `apps/docs` typecheck 解析的是 workspace 源码（root tsconfig paths），`dist` 形态由 `verify:package` 与 build 兜底。
+
 ### v1.19（2026-11-03）
 
 验收收口 + `apps/docs` biome 存量收敛。**无 `packages/` 代码改动**、无产物变化（tarball 逐字节不变），**不记 changeset**。
@@ -511,4 +520,4 @@ export type { ThemeAnimationOptions, ... } from '@theme-switch-animation/core'
 
 ---
 
-**当前状态（2026-11-03）**：**0.1.0 / 0.2.0 / 0.3.0 / 0.4.0 / 0.5.0 / 0.5.1 均已发布**，npm `latest = 0.5.1`（0.2.0 起走 OIDC Trusted Publishing，provenance 已实测挂上；0.5.0 = P3 批次三项 minor：reverse 接入面 5 → 9、CURTAIN direction、QR_GRID cellSize/cellShape；0.5.1 = README 门面封面 patch）。本文档随实现推进到 v1.19。动画类型扩展已冻结（v1.13 起 15 种，理由见 `docs/animation-roadmap.md` §4），`reverse` 的接入判据与分期见 `docs/reverse-option-design.md`；剩余事项（P2-2 LOGO_MASK 设计稿讨论、真机缩放与 Safari/iOS 反馈排查）见 `docs/next-steps.md`。
+**当前状态（2026-11-03）**：**0.1.0 / 0.2.0 / 0.3.0 / 0.4.0 / 0.5.0 / 0.5.1 均已发布**，npm `latest = 0.5.1`（0.2.0 起走 OIDC Trusted Publishing，provenance 已实测挂上；0.5.0 = P3 批次三项 minor：reverse 接入面 5 → 9、CURTAIN direction、QR_GRID cellSize/cellShape；0.5.1 = README 门面封面 patch）。本文档随实现推进到 v1.20。动画类型扩展已冻结（v1.13 起 15 种，理由见 `docs/animation-roadmap.md` §4），`reverse` 的接入判据与分期见 `docs/reverse-option-design.md`；剩余事项（P2-2 LOGO_MASK 设计稿讨论、真机缩放与 Safari/iOS 反馈排查）见 `docs/next-steps.md`。
