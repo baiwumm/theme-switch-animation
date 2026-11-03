@@ -75,9 +75,15 @@ export function FeaturesSection() {
               <TiltCard max={6} className="h-full rounded-[1.5rem]">
                 <div className="card-premium flex h-full flex-col p-6">
                   <span className="icon-tile">
-                    <feature.icon size={20} className="text-foreground" strokeWidth={1.75} />
+                    <feature.icon
+                      size={20}
+                      className="text-foreground"
+                      strokeWidth={1.75}
+                    />
                   </span>
-                  <h3 className="mt-5 text-lg font-semibold">{feature.title}</h3>
+                  <h3 className="mt-5 text-lg font-semibold">
+                    {feature.title}
+                  </h3>
                   <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
                     {feature.description}
                   </p>

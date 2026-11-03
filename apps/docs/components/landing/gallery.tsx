@@ -6,7 +6,7 @@ import { useTheme } from 'next-themes'
 import type { JSX, SVGProps } from 'react'
 import { useEffect, useState } from 'react'
 import {
-  ThemeAnimationCellShape,
+  type ThemeAnimationCellShape,
   ThemeAnimationDirection,
   ThemeAnimationType,
   useThemeAnimation,
@@ -410,7 +410,10 @@ const CELL_SIZE_OPTIONS: ReadonlyArray<{ value: number; label: string }> = [
 ]
 
 /** QR_GRID 格子形状档位：方块（双层 intersect）与圆点（单层平铺 radial，免 @supports） */
-const CELL_SHAPE_OPTIONS: ReadonlyArray<{ value: ThemeAnimationCellShape; label: string }> = [
+const CELL_SHAPE_OPTIONS: ReadonlyArray<{
+  value: ThemeAnimationCellShape
+  label: string
+}> = [
   { value: 'square', label: '方块' },
   { value: 'dot', label: '圆点' },
 ]
@@ -455,7 +458,9 @@ function GalleryCard({
   )
   const [slatWidth, setSlatWidth] = useState(initialSlatWidth ?? 72)
   const [cellSize, setCellSize] = useState(initialCellSize ?? 64)
-  const [cellShape, setCellShape] = useState<ThemeAnimationCellShape>(initialCellShape ?? 'square')
+  const [cellShape, setCellShape] = useState<ThemeAnimationCellShape>(
+    initialCellShape ?? 'square',
+  )
   const [waveWidth, setWaveWidth] = useState(initialWaveWidth ?? 18)
   const [bladeCount, setBladeCount] = useState(initialBladeCount ?? 8)
   const [reverse, setReverse] = useState<boolean | 'auto'>(
@@ -716,8 +721,8 @@ export function GallerySection() {
           </h2>
           <p className="mt-3 text-muted-foreground">
             点击卡片中央按钮播放动画；BLINDS / SCAN / QR_GRID / CURTAIN
-            可在卡内切换方向，RIPPLE 可切换环带波长，FAN 可切换扇叶数，
-            QR_GRID 可切换格距与方块 / 圆点形状。
+            可在卡内切换方向，RIPPLE 可切换环带波长，FAN 可切换扇叶数， QR_GRID
+            可切换格距与方块 / 圆点形状。
           </p>
         </div>
 

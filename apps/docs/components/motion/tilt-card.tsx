@@ -1,4 +1,4 @@
-"use client"
+'use client'
 // beui.dev/components/motion/tilt-card
 
 import {
