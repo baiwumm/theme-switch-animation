@@ -6,7 +6,8 @@
     "dev": "pnpm -w run build && next dev",
     "build": "pnpm -w run build && next build",
     "preview": "npx serve@latest out",
-    "lint": "biome check ."
+    "lint": "biome check .",
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "clsx": "^2.1.1",

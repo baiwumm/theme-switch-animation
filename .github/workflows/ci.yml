@@ -46,3 +46,16 @@ jobs:
 
       - name: Build
         run: pnpm build
+
+      # 根 tsconfig 只 include packages/*/src；apps/docs 与四个 playground 各有自己的 typecheck，
+      # 不在此显式跑就没人跑（v1.15 该盲区已致两起文档站编译/运行错误）。
+      # 干净环境实测可过：docs 的 tsc 在 .next/ 与 next-env.d.ts 均不存在时仍 exit 0
+      #（next 类型经 next 包自身 d.ts 解析，不依赖构建产物）。
+      # playground-nuxt 的 typecheck 内含 `pnpm -w run build && nuxt prepare`，依赖上一步的根 build。
+      - name: Typecheck docs & playgrounds
+        run: |
+          pnpm -C apps/docs typecheck
+          pnpm -C playgrounds/react typecheck
+          pnpm -C playgrounds/vue typecheck
+          pnpm -C playgrounds/next typecheck
+          pnpm -C playgrounds/nuxt typecheck

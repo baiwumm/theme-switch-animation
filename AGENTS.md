@@ -31,7 +31,8 @@ SQUARE / RECTANGLE / CIRCLE_BLUR / DIAMOND，逐类观感见 README「🎬 动�
 
 | 用途 | 命令 |
 |---|---|
-| 门禁四件套 | `pnpm lint` / `pnpm typecheck` / `pnpm test` / `pnpm build` |
+| 门禁四件套 | `pnpm lint` / `pnpm typecheck` / `pnpm test` / `pnpm build`（只覆盖 `packages/`、`scripts/`、`playgrounds/` 的 lint 与 `packages/*/src` 的 tsc） |
+| 文档站 / 试验场 typecheck | `pnpm -C apps/docs typecheck`、各 `playgrounds/*` 的 `pnpm -C <dir> typecheck`（CI 已逐步兜底，见 ci.yml「Typecheck docs & playgrounds」） |
 | 单文件测试 / lint | `pnpm vitest run packages/core/src/masks.test.ts`（测试与源码同目录，共 12 个）；`pnpm eslint <file>` |
 | 产物校验 | `pnpm verify:package`（build 之后跑；**必须用 `pnpm build`**——postbuild 要拷 nuxt runtime，`npx tsup` 会绕过它） |
 | 实机验收 | `pnpm test:acceptance`（7 个 CDP 脚本，需本机 Chrome） |
@@ -84,5 +85,7 @@ SQUARE / RECTANGLE / CIRCLE_BLUR / DIAMOND，逐类观感见 README「🎬 动�
 - 注释密度高是刻意的：写"为什么"和约束（尤其动画观感上反直觉的结论），不写"这行做了什么"。
 - commit message 走 conventional commits + scope，中文主题：`fix(core): …`、`docs(next-steps): …`。
 - 根 `eslint` 管 `packages/`、`scripts/` 与 `playgrounds/`；`apps/docs` 用自己的 biome
-  （`pnpm -C apps/docs lint`，有既存存量诊断，跑红属预期）。**根门禁不覆盖 `apps/docs`**：改完文档站要单独跑
-  `pnpm -C apps/docs lint` 与 apps/docs 自己的 `tsc --noEmit`（或 `next build`）兜底。
+  （`pnpm -C apps/docs lint`，存量诊断已于 2026-11-03 收敛转绿，保持常绿、新诊断即修）。typecheck 盲区已由 CI 补位：
+  `ci.yml` 的「Typecheck docs & playgrounds」步逐目录跑 `apps/docs` + 四个 playground 的
+  `typecheck`（根 `tsc --noEmit` 只覆盖 `packages/*/src`）；改完文档站在本地仍应跑
+  `pnpm -C apps/docs typecheck` 与 `pnpm -C apps/docs lint`，不必再等 CI 报红。
