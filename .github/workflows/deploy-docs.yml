@@ -25,6 +25,8 @@ on:
       - 'package.json'
       - 'pnpm-lock.yaml'
       - 'pnpm-workspace.yaml'
+  # 手动触发一次镜像，等价于「重新部署」，不需要部署钩子：gh workflow run deploy-docs.yml
+  workflow_dispatch:
 
 permissions:
   contents: write
