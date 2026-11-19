@@ -1,0 +1,53 @@
+name: Deploy docs (EdgeOne Makers)
+
+# 生产环境的自动部署在 EdgeOne Makers 侧关不掉（控制台「生产环境默认开启」），它也没有
+# 任何按路径触发的能力（edgeone.json 只有 install / build / output / nodeVersion /
+# redirects / headers）。所以生产环境关联的是专用分支 `docs-release`：只有 apps/docs
+# 及其依赖变更时，本 workflow 才把 main 的当前提交镜像过去，EdgeOne 只会在那一刻构建。
+#
+# 一次性前置（顺序不能反，前两步已在仓库侧完成，剩下第 3 步要在控制台点）：
+#   1. 本文件合进 main —— 会触发一次构建，属预期（此时生产环境还盯着 main）
+#   2. git push origin main:refs/heads/docs-release
+#   3. 控制台 > 环境管理 > 生产 > 编辑 > 关联分支 = docs-release > 保存（自动部署保持开启）
+#   4. 顺手确认「预览」环境的自动部署：PR 分支的推送同样会触发预览构建，那才是额度大头
+#
+# paths 不能只写 apps/docs/**：它的 build 是 `pnpm -w run build && next build`，
+# 画廊演示直接消费 workspace 里的库，只监听 apps/docs 会让「库改了、站点还是旧的」。
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'apps/docs/**'
+      - 'packages/**'
+      - 'tsup.config.ts'
+      - 'tsconfig.json'
+      - 'package.json'
+      - 'pnpm-lock.yaml'
+      - 'pnpm-workspace.yaml'
+
+permissions:
+  contents: write
+
+# 连续两次 docs 推送只保留最新的一次镜像：旧 run 被取消，docs-release 最终指向最新提交。
+concurrency:
+  group: deploy-docs
+  cancel-in-progress: true
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout the triggering main commit
+        uses: actions/checkout@v7
+        with:
+          # 强推镜像需要完整历史才能让 GITHUB_TOKEN 走 fast path 之外的路径也稳定
+          fetch-depth: 0
+
+      - name: Mirror main onto the watched release branch
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git push --force origin "HEAD:refs/heads/docs-release"
+          echo "docs-release 已指向 ${GITHUB_SHA}，EdgeOne 会从这条分支构建"
