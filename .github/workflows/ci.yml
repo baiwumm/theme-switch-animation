@@ -20,7 +20,7 @@ jobs:
         # package.json 的 engines.node >= 18 描述的是发布产物的消费者环境。
         node: [22, 24]
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v5
