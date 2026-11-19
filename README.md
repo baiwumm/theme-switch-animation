@@ -7,7 +7,7 @@
 [![CI](https://github.com/baiwumm/theme-switch-animation/actions/workflows/ci.yml/badge.svg)](https://github.com/baiwumm/theme-switch-animation/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://github.com/baiwumm/theme-switch-animation/blob/main/LICENSE)
 
-**[English](https://github.com/baiwumm/theme-switch-animation/blob/main/README.md) · [中文](https://github.com/baiwumm/theme-switch-animation/blob/main/README.zh-CN.md)**
+**[English](https://github.com/baiwumm/theme-switch-animation/blob/main/README.md) · [中文](https://github.com/baiwumm/theme-switch-animation/blob/main/docs/README.zh-CN.md)**
 
 Theme switching, but as an animation: the new theme is revealed over the old one by a mask — a
 circle, a polygon, blinds, a ripple, a clock sweep, a curtain — instead of a hard flip. Built on the
@@ -23,7 +23,7 @@ browser's [View Transitions API](https://developer.mozilla.org/en-US/docs/Web/AP
 
 > 📚 **Full documentation** — https://theme-switch-animation.baiwumm.com (install guide, a gallery you
 > can play with, every parameter and the FAQ; the site is currently Chinese-only).
-> Migration notes for 0.1.x / 0.2.0 / 0.3.x live in the [Chinese README](https://github.com/baiwumm/theme-switch-animation/blob/main/README.zh-CN.md).
+> Migration notes for 0.1.x / 0.2.0 / 0.3.x live in the [Chinese README](https://github.com/baiwumm/theme-switch-animation/blob/main/docs/README.zh-CN.md).
 
 ## ✨ Features
 
