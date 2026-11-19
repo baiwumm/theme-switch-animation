@@ -1,0 +1,68 @@
+name: 💡 Feature request
+description: 提议一个功能或改进（参数面、reverse 扩面、框架适配、API、文档）
+title: "[Feature] "
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        **先读这一段：15 种动画类型已冻结，新增类型不受理。**
+
+        2026-09-24 需求方决定冻结动画类型：`SPIRAL` / `SEEDS` / `COMB` 三个都实现过又整体
+        撤回，`QUAD` 预检否决，`CIRCLE_REVERT` 在 0.4.0 并入 `CIRCLE` 的 `reverse`。理由与
+        「真要重启加类型必须先过的四关」在 [`docs/animation-roadmap.md`](https://github.com/baiwumm/theme-switch-animation/blob/main/docs/animation-roadmap.md)
+        的 §1 与 §4，**提新类型之前请先逐条读完那两节**。
+
+        仍然欢迎的方向：`reverse` 未接入的 6 个类型里技术上可行的那几个、既有参数面的
+        调整（范围、语义、默认值）、框架适配、API 与类型、文档站与画廊、构建产物与包导出。
+  - type: dropdown
+    id: area
+    attributes:
+      label: 涉及范围
+      options:
+        - 既有参数面（duration / easing / direction / 各类型专属参数）
+        - reverse 扩面
+        - React 适配
+        - Vue 适配
+        - Nuxt 模块
+        - API / 类型声明
+        - 文档站与画廊
+        - 构建产物与包导出
+        - 其它
+    validations:
+      required: true
+  - type: textarea
+    id: problem
+    attributes:
+      label: 要解决的问题
+      description: 先说场景，再说方案——现在卡在哪里、还有谁会受益。
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: 提议的方案
+      description: 如果涉及参数面，请写清取值语义、默认值与非法值的处理方式（本库的惯例是静默回落默认值）。
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: 考虑过的替代方案
+      description: 包括「不改库、用现有的类型或参数能不能凑出来」。
+  - type: textarea
+    id: context
+    attributes:
+      label: 其它上下文
+      description: 截图、录屏、相关 issue 或外部实现链接。
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: 提交前确认
+      options:
+        - label: 我已读过 `docs/animation-roadmap.md` §1 与 §4，确认这不是「新增动画类型」的提案。
+          required: true
+        - label: 这不是 SPIRAL / SEEDS / COMB / QUAD / CIRCLE_REVERT 的重新提案。
+          required: true
+        - label: 这是一个请求，不是多个请求捆在一起。
+          required: true

@@ -1,0 +1,119 @@
+name: 🐞 Bug report
+description: 报告一个可复现的问题（动画引擎、React / Vue / Nuxt 适配、构建产物或文档站）
+title: "[Bug] "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        感谢反馈。这个表单只收**可复现的 bug**；使用与接入问题请先看[文档站](https://theme-switch-animation.baiwumm.com)，安全问题走[私密报告](https://github.com/baiwumm/theme-switch-animation/security/advisories/new)。
+
+        观感类问题（末帧残留、边缘锯齿、某个类型辨识度）请按本仓库的取证口径给材料——AGENTS.md 里写死了「观感判据用像素取证，不靠肉眼截图下结论」：只贴一张截图，很难判断是末帧没盖满还是转场中途的冻结帧。
+  - type: dropdown
+    id: area
+    attributes:
+      label: 涉及范围
+      options:
+        - core 蒙版 / 动画引擎（packages/core）
+        - React 适配（theme-switch-animation/react）
+        - Vue 适配（theme-switch-animation/vue）
+        - Nuxt 模块（theme-switch-animation/nuxt）
+        - Next.js（App Router）
+        - 类型声明 / 包导出 / 构建产物
+        - 文档站与画廊（apps/docs）
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: 版本
+      description: 包版本（`pnpm ls theme-switch-animation` 或 package.json），以及框架版本（react / vue / nuxt / next）。
+      placeholder: theme-switch-animation 0.6.0 · react 19.3.0
+    validations:
+      required: true
+  - type: dropdown
+    id: engine
+    attributes:
+      label: 浏览器 / 引擎
+      description: WebKit 与 Blink 的渲染路径不同，同一现象未必都能复现。
+      options:
+        - Chrome / Edge（Chromium / Blink）
+        - Safari / iOS（WebKit）
+        - Firefox
+        - Playwright WebKit（无头验证）
+        - 其它或不确定
+    validations:
+      required: true
+  - type: dropdown
+    id: animation_type
+    attributes:
+      label: animationType
+      options:
+        - CIRCLE
+        - CIRCLE_BLUR
+        - SQUARE
+        - DIAMOND
+        - RECTANGLE
+        - HEXAGON
+        - TRIANGLE
+        - STAR
+        - BLINDS
+        - SCAN
+        - QR_GRID
+        - RIPPLE
+        - CLOCK_SWEEP
+        - FAN
+        - CURTAIN
+        - 未用到动画（直接切换 / 降级路径）
+    validations:
+      required: true
+  - type: input
+    id: options
+    attributes:
+      label: 相关选项
+      description: 出问题时的其它参数，没写的项省略即可。
+      placeholder: reverse='auto' · direction=ltr · duration=750 · easing=ease-in-out · waveWidth=18
+  - type: dropdown
+    id: reverse
+    attributes:
+      label: reverse
+      options:
+        - "false（默认）"
+        - "true"
+        - "'auto'"
+        - 不涉及
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: 复现步骤
+      description: 最好能给最小复现（playgrounds/react 或 playgrounds/vue 起一个页面）。
+      placeholder: |
+        1. ...
+        2. ...
+        3. ...
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: 预期与实际
+      description: 预期行为、实际行为，以及控制台的完整报错。
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: 取证材料
+      description: 像素级取证、逐帧截图或录像、控制台输出。观感问题请说明取的是哪一帧（起始帧 / 中转帧 / 末帧），单纯截图不能判定末帧是否盖满。
+      placeholder: 逐帧截图 + 时间点（例如 0% / 50% / 100%），或录屏链接。
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: 提交前确认
+      options:
+        - label: 我已在 playgrounds 或最小复现里确认过，不依赖业务页面的其它样式。
+          required: true
+        - label: 我已搜索现有 issue 和文档站。
+          required: true

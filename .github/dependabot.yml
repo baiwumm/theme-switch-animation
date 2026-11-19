@@ -1,0 +1,46 @@
+version: 2
+
+updates:
+  # pnpm workspace（apps/docs、packages/*、playgrounds/*）统一在仓库根目录处理：
+  # Dependabot 读根 pnpm-lock.yaml，子包的 package.json 不用单独登记。
+  - package-ecosystem: npm
+    directory: "/"
+    schedule:
+      interval: weekly
+      day: monday
+      time: "09:00"
+      timezone: Asia/Shanghai
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: "chore(deps)"
+    groups:
+      npm-minor-patch:
+        applies-to: version-updates
+        update-types:
+          - minor
+          - patch
+    ignore:
+      # typescript-eslint@8 还不支持 TS 的大版本跳跃（2026-11），升 major 会让
+      # `pnpm lint` 直接失败。等上游支持后删掉这条再手动升。
+      - dependency-name: "typescript"
+        update-types:
+          - version-update:semver-major
+
+  # 工作流里 pin 的 actions 版本（checkout / setup-node / pnpm action）。
+  # 这几个是 `v5` 这类浮动 major tag，升级只需改 yml，不会碰产物。
+  - package-ecosystem: github-actions
+    directory: "/"
+    schedule:
+      interval: weekly
+      day: monday
+      time: "09:00"
+      timezone: Asia/Shanghai
+    open-pull-requests-limit: 3
+    commit-message:
+      prefix: "ci(deps)"
+    groups:
+      actions-minor-patch:
+        applies-to: version-updates
+        update-types:
+          - minor
+          - patch
