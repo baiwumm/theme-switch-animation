@@ -84,6 +84,14 @@ SQUARE / RECTANGLE / CIRCLE_BLUR / DIAMOND，逐类观感见 README「🎬 动�
 
 - 注释密度高是刻意的：写"为什么"和约束（尤其动画观感上反直觉的结论），不写"这行做了什么"。
 - commit message 走 conventional commits + scope，中文主题：`fix(core): …`、`docs(next-steps): …`。
+- **AI 参与的提交必须带 trailer**：正文后空一行追加连续的 trailer 块，`Co-authored-by: <产品名>
+  <registry 邮箱>`（GitHub 只解析这一行，它决定多人作者与 Contributors 归属），模型名只进
+  `Assisted-by: <产品名>:<模型名>`；身份按**实际运行本次会话的产品**匹配 `ai-commit-trailer` skill
+  的 `references/agents.json`，不得照抄其它产品；纯人工改动不加 trailer。格式、身份表与校验流程以
+  该 skill 为唯一规范，本文件不重复其定义。
+- 提交前用该 skill 的 `scripts/normalize.mjs check --message <文件>` 自检，**exit 0 才算通过**
+  （`fix --write` 可自动归位 trailer）；`check --range` 报出的历史提交只报告、不重写——改写已推送
+  历史是另一次显式决定。
 - 根 `eslint` 管 `packages/`、`scripts/` 与 `playgrounds/`；`apps/docs` 用自己的 biome
   （`pnpm -C apps/docs lint`，存量诊断已于 2026-11-03 收敛转绿，保持常绿、新诊断即修）。typecheck 盲区已由 CI 补位：
   `ci.yml` 的「Typecheck docs & playgrounds」步逐目录跑 `apps/docs` + 四个 playground 的
