@@ -1,5 +1,6 @@
 /**
- * 发布清单校验（需求 §9-11）：npm pack 的内容必须只有 dist（含 nuxt-runtime）+ 三个根文件。
+ * 发布清单校验（需求 §9-11）：npm pack 的内容必须只有 dist（含 nuxt-runtime）+ 根文件
+ * （README.md / README.zh-CN.md / LICENSE / package.json）。
  *
  * 判据是「必备项齐全 + 越界项为零」，不是硬断言文件数——新增产物或 tsup 拆出共享
  * d.ts 块都会让数字漂移（历史上就因 rollup 新拆 uncontrolled-<hash> 块打破过"恰好 N 个"
@@ -27,7 +28,9 @@ REQUIRED.push(
 )
 
 const ALLOWED_PREFIXES = ['dist/']
-const ALLOWED_NAMES = new Set(['package.json', 'README.md', 'LICENSE'])
+// README.zh-CN.md 是刻意随包发布的第二份 README：npm 页面只渲染 README.md，tarball 里
+// 附带中文全文给中文用户。它只进白名单、不进 REQUIRED——缺了不算发布失败，英文版才是必备。
+const ALLOWED_NAMES = new Set(['package.json', 'README.md', 'README.zh-CN.md', 'LICENSE'])
 
 // Windows 上 Node 20+ 直接 spawn npm.cmd 会 EINVAL，改过 shell 执行（命令为固定字面量，无变量插值）
 const packed = JSON.parse(

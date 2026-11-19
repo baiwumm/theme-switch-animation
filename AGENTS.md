@@ -83,6 +83,11 @@ SQUARE / RECTANGLE / CIRCLE_BLUR / DIAMOND，逐类观感见 README「🎬 动�
 - 文件名一律 kebab-case；发布类一次性报告命名 `release-x.y.z-<主题>-report.md`。
 - 决策记录（为什么做 / 为什么不做 / 为什么撤回）写进活文档（requirements §10 或对应文档），
   不只留在 commit message 里；历史报告是事实记录，**绝不改写**。
+- **README 双语**：`README.md` 是英文精简版（GitHub 与 npm 默认展示，npm 只渲染这一份），
+  `README.zh-CN.md` 是中文全文——0.1.x / 0.2.0 / 0.3.x 迁移历史只维护在中文版，英文版只留
+  链接与稳定骨架（安装 / 最小示例 / 类型表 / options 表 / 契约）。改行为时两份都要改，各自顶部
+  带语言切换（绝对链接：npm 不解析相对路径）。`scripts/verify-package.mjs` 的白名单已含
+  `README.zh-CN.md`——npm 会把它一起打进 tarball，但页面只渲染 `README.md`。
 
 ## 代码与提交风格
 
