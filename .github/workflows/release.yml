@@ -45,7 +45,7 @@ jobs:
           # 下面要判 tag 是否落在 main 上，需要 origin/main 可达
           fetch-depth: 0
 
-      - uses: pnpm/action-setup@v5
+      - uses: pnpm/action-setup@v6
         # 版本取自 package.json 的 packageManager 字段
 
       - uses: actions/setup-node@v5
