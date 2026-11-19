@@ -43,6 +43,10 @@ SQUARE / RECTANGLE / CIRCLE_BLUR / DIAMOND，逐类观感见 README「🎬 动�
 - `apps/docs` 走 `next.config.ts` 的 `output: 'export'`，静态产物在 `apps/docs/out`；EdgeOne（Makers）侧接入 Git，`main` 推送自动构建发布。
 - EdgeOne 构建值：根目录 `/`、安装 `pnpm install --frozen-lockfile`、构建 `pnpm --filter @theme-switch-animation/docs build`、输出目录 `apps/docs/out`、Node 22（开发工具链最低 22.13）。
 - 域名 `theme-switch-animation.baiwumm.com` 保持不变，仅 DNS 解析迁至腾讯云；`out/404.html` 作为错误页，目录索引/回退按控制台实际能力配置。
+- **推送节奏：攒批**。每次 push main 都触发一次 EdgeOne 构建（额度有限），而仓库侧没有按路径
+  过滤的开关——本仓库构建配置全在 EdgeOne 控制台，`edgeone.json` 一类配置文件能配的也只有
+  install / build / output / nodeVersion / redirects / headers。所以只改 `.github/` 或文档也会
+  照样重建：本地提交先攒批、一起推；依赖升级 PR 同样攒批合并（PR 本身不触发构建，合进 main 才触发）。
 
 ### 引擎矩阵（WebKit / Blink / Firefox 实机取证）
 
