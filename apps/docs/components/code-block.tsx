@@ -96,7 +96,24 @@ export function CodeBlock({
                   const { key: tokenKey, ...tokenProps } = getTokenProps({
                     token,
                   })
-                  return <span key={String(tokenKey ?? k)} {...tokenProps} />
+                  /*
+                   * 类名撞车修复：Prism 的 tsx/jsx 语法给 JSX 标签 token 打
+                   * class="… tag …"，恰好命中 HeroUI Tag 组件的全局样式类
+                   * .tag（inline-flex + px-2 py-0.5 + 圆角），标点被撑出
+                   * 8px 内边距、行内出现裂缝。代码块配色全走 TOKEN_THEME
+                   * 内联样式，不依赖 class 做样式钩子，改名脱钩即可。
+                   */
+                  const className =
+                    typeof tokenProps.className === 'string'
+                      ? tokenProps.className.replace(/\btag\b/, 'prism-tag')
+                      : tokenProps.className
+                  return (
+                    <span
+                      key={String(tokenKey ?? k)}
+                      {...tokenProps}
+                      className={className}
+                    />
+                  )
                 })}
               </div>
             )
