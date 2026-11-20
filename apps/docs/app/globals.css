@@ -1,19 +1,11 @@
 @import "tailwindcss";
-@import "tw-animate-css";
-
-html {
-  scroll-behavior: smooth;
-}
-@media (prefers-reduced-motion: reduce) {
-  html {
-    scroll-behavior: auto;
-  }
-}
+/* HeroUI v3：组件样式与 design tokens（--background / --surface / --accent…），无需 Provider 与 tailwind config */
+@import "@heroui/styles";
 
 @custom-variant dark (&:is(.dark *));
 
 /*
- * Maple Mono CN —— 自托管子集字体（与 better-admin 端同源同命名）
+ * Maple Mono CN —— 自托管子集字体（与 better-admin / token-usage 端同源同命名）
  *
  * 来源：Maple Mono（开源，OFL-1.1，https://github.com/subframe7536/maple-font v7.9）
  * 子集：GB2312 常用汉字全集 + ASCII + 常见中文标点（woff2 ≈ 1.7MB）。
@@ -30,50 +22,31 @@ html {
     U+201C-201D, U+2026, U+3000-303F, U+4E00-9FFF, U+FF00-FFEF;
 }
 
+/*
+ * Tailwind 语义层（2026-11-20 HeroUI v3 接入，与 better-admin / token-usage 同一套变量）
+ *
+ * 组件一律用 HeroUI 的 token class（bg-background / bg-surface / bg-default /
+ * text-muted / text-accent / border-border…），颜色不写裸值。下面只补仍被引用的
+ * 旧词汇别名：card（代码块面板底色）/ primary（回到顶部进度环 stroke-primary）/
+ * muted-foreground（滚动条与旧类名残留）。
+ */
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
   --font-sans: var(--font-sans-stack);
   --font-mono: var(--font-mono-stack);
-  --color-sidebar-ring: var(--sidebar-ring);
-  --color-sidebar-border: var(--sidebar-border);
-  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
-  --color-sidebar-accent: var(--sidebar-accent);
-  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
-  --color-sidebar-primary: var(--sidebar-primary);
-  --color-sidebar-foreground: var(--sidebar-foreground);
-  --color-sidebar: var(--sidebar);
-  --color-chart-5: var(--chart-5);
-  --color-chart-4: var(--chart-4);
-  --color-chart-3: var(--chart-3);
-  --color-chart-2: var(--chart-2);
-  --color-chart-1: var(--chart-1);
-  --color-ring: var(--ring);
-  --color-input: var(--input);
-  --color-border: var(--border);
-  --color-destructive: var(--destructive);
-  --color-accent-foreground: var(--accent-foreground);
-  --color-accent: var(--accent);
-  --color-muted-foreground: var(--muted-foreground);
-  --color-muted: var(--muted);
-  --color-secondary-foreground: var(--secondary-foreground);
-  --color-secondary: var(--secondary);
-  --color-primary-foreground: var(--primary-foreground);
-  --color-primary: var(--primary);
-  --color-popover-foreground: var(--popover-foreground);
-  --color-popover: var(--popover);
-  --color-card-foreground: var(--card-foreground);
-  --color-card: var(--card);
-  --radius-sm: calc(var(--radius) - 4px);
-  --radius-md: calc(var(--radius) - 2px);
-  --radius-lg: var(--radius);
-  --radius-xl: calc(var(--radius) + 4px);
-  --radius-2xl: calc(var(--radius) + 8px);
-  --radius-3xl: calc(var(--radius) + 12px);
-  --radius-4xl: calc(var(--radius) + 16px);
+
+  --color-card: var(--surface);
+  --color-primary: var(--accent);
+  --color-muted-foreground: var(--muted);
 }
 
 :root {
+  /*
+   * theme-switch-animation 的必需项：mask 动画以 ::view-transition-new(root) 做整页快照，
+   * 根元素没命名的话浏览器不生成根快照，圆形扩散看起来就像「没有动画」。
+   * 名字必须与库的 viewTransitionName 默认值一致（与 better-admin 端同款声明）。
+   */
+  view-transition-name: root;
+
   /* 全局字体：Maple Mono CN（自托管子集），回退系统字体栈 */
   --font-sans-stack:
     "Maple Mono CN", ui-sans-serif, system-ui, -apple-system, "Segoe UI",
@@ -81,90 +54,29 @@ html {
   --font-mono-stack:
     "Maple Mono CN", ui-monospace, "Cascadia Code", "JetBrains Mono", Consolas,
     "Courier New", monospace;
-  --radius: 0.625rem;
-  --background: oklch(1 0 0);
+
+  /* ===== 亮色档（HeroUI token，值与 better-admin 网站逐项一致） ===== */
+  --background: oklch(0.985 0 0);
   --foreground: oklch(0.145 0 0);
-  /* beUI 组件用实色 bg-card 作底，成立的前提是 card 与 background 有分离度（beui.dev 取 99%/97%） */
-  --card: oklch(0.97 0 0);
-  --card-foreground: oklch(0.145 0 0);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
-  --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
-  --chart-1: oklch(0.646 0.222 41.116);
-  --chart-2: oklch(0.6 0.118 184.704);
-  --chart-3: oklch(0.398 0.07 227.392);
-  --chart-4: oklch(0.828 0.189 84.429);
-  --chart-5: oklch(0.769 0.188 70.08);
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.205 0 0);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.708 0 0);
-}
+  --surface: oklch(1 0 0);
+  --surface-secondary: oklch(0.96 0 0);
+  --surface-tertiary: oklch(0.94 0 0);
+  --overlay: oklch(1 0 0);
+  --muted: oklch(0.5 0 0);
+  --default: oklch(0.94 0 0);
+  --border: oklch(0.9 0 0);
+  --separator: oklch(0.92 0 0);
 
-.dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.205 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.922 0 0);
-  --primary-foreground: oklch(0.205 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
+  /*
+   * 品牌色：VERMILLION（与 token-usage / better-admin 同一枚朱红，
+   * oklch(55.43% 0.17 32.08) ≈ #b2331f）。HeroUI 的 --accent-hover /
+   * --accent-soft 等派生值都是 color-mix(--accent)，只改这一处即全站同色。
+   */
+  --accent: oklch(0.5543 0.17 32.08);
   --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.556 0 0);
-  --chart-1: oklch(0.488 0.243 264.376);
-  --chart-2: oklch(0.696 0.17 162.48);
-  --chart-3: oklch(0.769 0.188 70.08);
-  --chart-4: oklch(0.627 0.265 303.9);
-  --chart-5: oklch(0.645 0.246 16.439);
-  --sidebar: oklch(0.205 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.269 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.556 0 0);
-}
+  --focus: var(--accent);
+  --link: var(--accent);
 
-@layer base {
-  * {
-    @apply border-border outline-ring/50;
-  }
-  body {
-    @apply bg-background text-foreground;
-  }
-}
-
-/*
- * Apple 风格毛玻璃卡片（visionOS / macOS 材质语言）：
- * 低不透明度渐变底 + 重 backdrop-blur + 饱和提升 + 内侧 1px 高光 + 柔和大阴影。
- * 页面 fixed 层的 LightRays 与彩色光斑透过玻璃产生真实的磨砂折射。
- */
-:root {
   /*
    * 代码高亮配色（prism-react-renderer 的 oneLight / oneDark 调色板，改挂到 CSS 变量上）
    * 组件侧只引用 var(--tok-*)，暗色切换不重渲染、不闪未着色代码。
@@ -180,7 +92,28 @@ html {
   --tok-url: hsl(198 99% 37%);
 }
 
+/*
+ * 暗色档：近黑终端底色（oklch 13% ≈ #0a0a0b）。HeroUI 的 --surface-hover /
+ * --accent-soft 等计算色都是 color-mix(… var(--surface) / var(--accent) …)，
+ * 改源 token 即可联动；朱红在暗底沿用同一枚值，与参考站口径一致。
+ */
 .dark {
+  --background: oklch(0.13 0.002 285.89);
+  --foreground: oklch(0.985 0 0);
+  --surface: oklch(0.19 0 0);
+  --surface-secondary: oklch(0.23 0 0);
+  --surface-tertiary: oklch(0.26 0 0);
+  --overlay: oklch(0.2 0 0);
+  --muted: oklch(0.708 0 0);
+  --default: oklch(0.26 0 0);
+  --border: oklch(1 0 0 / 12%);
+  --separator: oklch(1 0 0 / 10%);
+
+  --accent: oklch(0.5543 0.17 32.08);
+  --accent-foreground: oklch(0.985 0 0);
+  --focus: var(--accent);
+  --link: var(--accent);
+
   --tok-comment: hsl(220 10% 40%);
   --tok-punct: hsl(220 14% 71%);
   --tok-const: hsl(29 54% 61%);
@@ -191,113 +124,37 @@ html {
   --tok-url: hsl(187 47% 55%);
 }
 
-.glass-card {
-  position: relative;
-  background: linear-gradient(
-    135deg,
-    rgba(255, 255, 255, 0.5),
-    rgba(255, 255, 255, 0.18)
-  );
-  -webkit-backdrop-filter: blur(24px) saturate(170%);
-  backdrop-filter: blur(24px) saturate(170%);
-  border: 1px solid rgba(255, 255, 255, 0.5);
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.4),
-    0 8px 32px rgba(0, 0, 0, 0.06);
-}
-.dark .glass-card {
-  background: linear-gradient(
-    135deg,
-    rgba(255, 255, 255, 0.09),
-    rgba(255, 255, 255, 0.03)
-  );
-  border-color: rgba(255, 255, 255, 0.12);
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.08),
-    0 8px 32px rgba(0, 0, 0, 0.35);
-}
+@layer base {
+  html {
+    scroll-behavior: smooth;
+  }
 
-/* beui.dev 的 premium 卡片质感：细描边 + 纵向微渐变 + 顶部高光线（配合 TiltCard 使用） */
-.card-premium {
-  position: relative;
-  border-radius: 1.5rem;
-  border: 1px solid var(--border);
-  background-image: linear-gradient(
-    180deg,
-    var(--card),
-    color-mix(in oklab, var(--muted) 55%, var(--card))
-  );
-  box-shadow:
-    0 1px 2px color-mix(in oklab, black 4%, transparent),
-    0 10px 26px -16px color-mix(in oklab, black 20%, transparent);
-}
+  * {
+    border-color: var(--border);
+  }
 
-.card-premium::before {
-  content: "";
-  position: absolute;
-  inset-inline: 0;
-  top: 0;
-  height: 1px;
-  border-start-start-radius: 1.5rem;
-  border-start-end-radius: 1.5rem;
-  background-image: linear-gradient(
-    90deg,
-    transparent,
-    color-mix(in oklab, white 75%, transparent),
-    transparent
-  );
-  pointer-events: none;
-}
+  body {
+    background-color: var(--background);
+    color: var(--foreground);
+  }
 
-.dark .card-premium::before {
-  background-image: linear-gradient(
-    90deg,
-    transparent,
-    color-mix(in oklab, white 22%, transparent),
-    transparent
-  );
-}
+  /* 键盘焦点统一走品牌色 */
+  :focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
 
-.dark .card-premium {
-  box-shadow:
-    0 1px 2px color-mix(in oklab, black 35%, transparent),
-    0 10px 26px -16px color-mix(in oklab, black 65%, transparent);
-}
-
-/* 图标容器：让图标有「嵌进去」的立体感 */
-.icon-tile {
-  display: inline-flex;
-  flex: none;
-  align-items: center;
-  justify-content: center;
-  width: 2.75rem;
-  height: 2.75rem;
-  border-radius: 0.875rem;
-  border: 1px solid var(--border);
-  background-image: linear-gradient(
-    180deg,
-    color-mix(in oklab, var(--card), white 10%),
-    var(--muted)
-  );
-  box-shadow:
-    inset 0 1px 0 color-mix(in oklab, white 70%, transparent),
-    0 1px 2px color-mix(in oklab, black 7%, transparent);
-}
-
-.dark .icon-tile {
-  background-image: linear-gradient(
-    180deg,
-    color-mix(in oklab, white 9%, transparent),
-    color-mix(in oklab, white 3%, transparent)
-  );
-  box-shadow:
-    inset 0 1px 0 color-mix(in oklab, white 12%, transparent),
-    0 1px 2px color-mix(in oklab, black 40%, transparent);
+  @media (prefers-reduced-motion: reduce) {
+    html {
+      scroll-behavior: auto;
+    }
+  }
 }
 
 /*
  * 细滚动条：10px 轨道内用「透明描边 + content-box 裁切」各留 2px 呼吸，实际滑块 6px 圆角。
- * 颜色跟随 --muted-foreground，亮/暗两态自动适配；hover 加深一档。
+ * 自绘滚动条属于页面渲染的一部分，会被 View Transitions 快照捕获、跟随蒙版动画；
+ * 原生滚动条是浏览器 UI 层绘制的，不在快照内，主题切换时会瞬间变色。
  */
 .custom_scrollbar::-webkit-scrollbar {
   width: 10px;
@@ -312,11 +169,7 @@ html {
 .custom_scrollbar::-webkit-scrollbar-thumb {
   background-color: oklch(0.556 0 0 / 0.4);
   /* biome-ignore lint/suspicious/noDuplicateProperties: 旧引擎不吃 color-mix 时回落到上一行 oklch，属刻意兜底 */
-  background-color: color-mix(
-    in oklab,
-    var(--muted-foreground) 40%,
-    transparent
-  );
+  background-color: color-mix(in oklab, var(--muted) 40%, transparent);
   background-clip: content-box;
   border: 2px solid transparent;
   border-radius: 999px;
@@ -325,11 +178,7 @@ html {
 .custom_scrollbar::-webkit-scrollbar-thumb:hover {
   background-color: oklch(0.556 0 0 / 0.7);
   /* biome-ignore lint/suspicious/noDuplicateProperties: 同上，color-mix 的旧引擎兜底 */
-  background-color: color-mix(
-    in oklab,
-    var(--muted-foreground) 70%,
-    transparent
-  );
+  background-color: color-mix(in oklab, var(--muted) 70%, transparent);
 }
 
 /* Chrome 121+ 一旦设了非 auto 的 scrollbar-color，就会忽略上面整套 ::-webkit-scrollbar 自绘；
@@ -337,6 +186,72 @@ html {
 @supports not selector(::-webkit-scrollbar) {
   .custom_scrollbar {
     scrollbar-width: thin;
-    scrollbar-color: var(--muted-foreground) transparent;
+    scrollbar-color: var(--muted) transparent;
+  }
+}
+
+/* ==========================================================================
+ * 编辑器式排版工具层（与 better-admin / token-usage 同一语言）
+ *
+ * 层级只靠字号 / 字距 / hairline 建立；质感来自终端窗口与朱红标记，
+ * 不使用卡片阴影、毛玻璃与 hover 倾斜。颜色一律写语义 token。
+ * ========================================================================== */
+@layer components {
+  /* 小节眉标：等宽 + 大字距 + 朱红，对应参考站的 `01 / 特性` 式编号 */
+  .eyebrow {
+    font-family: var(--font-mono-stack);
+    font-size: 11px;
+    font-weight: 600;
+    line-height: 1.4;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--accent);
+  }
+
+  /* 终端 / 代码窗外框：单层 hairline + 表面色，不带阴影 */
+  .frame {
+    overflow: hidden;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background-color: var(--surface);
+  }
+}
+
+/* 首页入场：blur → clear，一次性的克制动效（延迟由各元素内联指定） */
+@keyframes reveal {
+  from {
+    opacity: 0;
+    filter: blur(10px);
+    transform: translateY(10px);
+  }
+
+  to {
+    opacity: 1;
+    filter: blur(0);
+    transform: none;
+  }
+}
+
+.reveal {
+  animation: reveal 0.6s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .reveal {
+    animation: none;
+  }
+
+  /*
+   * 全局兜底：一条规则覆盖全站，不依赖每个文件自带 motion-reduce 变体。
+   * 这里的 !important 是刻意的（要压过 utilities 层与内联样式），
+   * biome 的 noImportantStyles 已在 biome.json overrides 里对本文件豁免。
+   */
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
   }
 }

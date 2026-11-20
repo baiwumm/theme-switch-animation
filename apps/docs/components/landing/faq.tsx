@@ -1,6 +1,7 @@
-'use client'
+import { Accordion, Typography } from '@heroui/react'
+import { ChevronDown } from 'lucide-react'
 
-import { BouncyAccordion } from '@/components/motion/bouncy-accordion'
+import { SectionHeader } from '@/components/landing/section-header'
 
 const FAQS = [
   {
@@ -33,23 +34,45 @@ const FAQS = [
   },
 ] as const
 
-const ITEMS = FAQS.map((item, index) => ({
-  id: `faq-${index}`,
-  title: item.q,
-  description: item.a,
-}))
-
 export function FaqSection() {
   return (
-    <section
-      id="faq"
-      className="relative z-10 scroll-mt-24 border-b border-dashed border-black/10 py-20 dark:border-white/10"
-    >
-      <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="mx-auto mb-10 max-w-2xl text-center">
-          <h2 className="text-3xl font-bold tracking-tight md:text-4xl">FAQ</h2>
-        </div>
-        <BouncyAccordion items={ITEMS} className="mx-auto max-w-3xl" />
+    <section id="faq" className="scroll-mt-14 border-t border-border">
+      <div className="mx-auto w-full max-w-6xl px-6 py-20 sm:py-24">
+        <SectionHeader eyebrow="04 / FAQ" title="常见问题" />
+
+        {/* Accordion（react-aria DisclosureGroup）：高度 + 淡入过渡，同一时间只展开一项 */}
+        <Accordion className="mt-10 border-t border-border">
+          {FAQS.map((item, index) => (
+            <Accordion.Item key={item.q} id={`faq-${index}`}>
+              <Accordion.Heading>
+                <Accordion.Trigger className="items-center gap-4 px-0 py-4">
+                  <span className="font-mono text-[11px] text-muted">
+                    {String(index + 1).padStart(2, '0')}
+                  </span>
+                  <span className="flex-1 text-start">
+                    <Typography type="body-sm" weight="medium">
+                      {item.q}
+                    </Typography>
+                  </span>
+                  <Accordion.Indicator>
+                    <ChevronDown />
+                  </Accordion.Indicator>
+                </Accordion.Trigger>
+              </Accordion.Heading>
+              <Accordion.Panel>
+                <div className="pb-4 pl-9">
+                  <Typography
+                    className="max-w-3xl leading-relaxed"
+                    color="muted"
+                    type="body-sm"
+                  >
+                    {item.a}
+                  </Typography>
+                </div>
+              </Accordion.Panel>
+            </Accordion.Item>
+          ))}
+        </Accordion>
       </div>
     </section>
   )

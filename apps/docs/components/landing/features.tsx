@@ -1,10 +1,7 @@
-'use client'
-
+import { Typography } from '@heroui/react'
 import { Layers, Link2, PlugZap, ShieldCheck, Sparkles } from 'lucide-react'
-import { motion } from 'motion/react'
 
-import { AnimatedBadge } from '@/components/motion/animated-badge'
-import { TiltCard } from '@/components/motion/tilt-card'
+import { SectionHeader } from '@/components/landing/section-header'
 
 const FEATURES = [
   {
@@ -46,57 +43,40 @@ const FEATURES = [
 
 export function FeaturesSection() {
   return (
-    <section
-      id="features"
-      className="relative z-10 scroll-mt-24 border-b border-dashed border-black/10 py-20 dark:border-white/10"
-    >
-      <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="mx-auto mb-12 max-w-2xl text-center">
-          <AnimatedBadge size="sm" className="mb-3">
-            Features
-          </AnimatedBadge>
-          <h2 className="text-3xl font-bold tracking-tight md:text-4xl">
-            小而完整的动画层
-          </h2>
-          <p className="mt-3 text-muted-foreground">
-            约 95% 代码与框架无关，两个薄适配层覆盖 React 与 Vue 生态。
-          </p>
-        </div>
-        <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-          {FEATURES.map((feature, index) => (
-            <motion.div
+    <section id="features" className="scroll-mt-14 border-t border-border">
+      <div className="mx-auto w-full max-w-6xl px-6 py-20 sm:py-24">
+        <SectionHeader
+          eyebrow="01 / 特性"
+          sub="约 95% 代码与框架无关，两个薄适配层覆盖 React 与 Vue 生态。"
+          title="小而完整的动画层"
+        />
+
+        {/* hairline 分格网格：gap-px 露出底色当分隔线，不用卡片阴影 */}
+        <div className="mt-10 grid grid-cols-1 gap-px overflow-hidden rounded-lg border border-border bg-border sm:grid-cols-2 lg:grid-cols-3">
+          {FEATURES.map((feature) => (
+            <div
               key={feature.title}
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true, margin: '-60px' }}
-              transition={{ duration: 0.45, delay: index * 0.08 }}
+              className="flex flex-col gap-2.5 bg-background px-6 py-7"
             >
-              {/* TiltCard 做外层倾斜 wrapper：glare 光斑的圆角裁剪与卡片圆角对齐都在这层 */}
-              <TiltCard max={6} className="h-full rounded-[1.5rem]">
-                <div className="card-premium flex h-full flex-col p-6">
-                  <span className="icon-tile">
-                    <feature.icon
-                      size={20}
-                      className="text-foreground"
-                      strokeWidth={1.75}
-                    />
-                  </span>
-                  <h3 className="mt-5 text-lg font-semibold">
-                    {feature.title}
-                  </h3>
-                  <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-                    {feature.description}
-                  </p>
-                  <div className="mt-auto flex flex-wrap gap-1.5 pt-5">
-                    {feature.tags.map((tag) => (
-                      <AnimatedBadge key={tag} size="sm" showIcon={false}>
-                        {tag}
-                      </AnimatedBadge>
-                    ))}
-                  </div>
-                </div>
-              </TiltCard>
-            </motion.div>
+              <feature.icon
+                aria-hidden
+                className="size-5 text-accent"
+                size={20}
+                strokeWidth={1.6}
+              />
+              <Typography type="body-sm" weight="medium">
+                {feature.title}
+              </Typography>
+              <Typography color="muted" type="body-xs">
+                {feature.description}
+              </Typography>
+              <Typography
+                className="mt-auto pt-2 font-mono text-[11px] text-muted"
+                type="body-xs"
+              >
+                {feature.tags.join(' · ')}
+              </Typography>
+            </div>
           ))}
         </div>
       </div>

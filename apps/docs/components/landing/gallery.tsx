@@ -1,7 +1,7 @@
 'use client'
 
+import { ToggleButton, ToggleButtonGroup, Typography } from '@heroui/react'
 import { Moon, Sun } from 'lucide-react'
-import { motion } from 'motion/react'
 import { useTheme } from 'next-themes'
 import type { JSX, SVGProps } from 'react'
 import { useEffect, useState } from 'react'
@@ -11,10 +11,10 @@ import {
   ThemeAnimationType,
   useThemeAnimation,
 } from 'theme-switch-animation/react'
-import { AnimatedBadge } from '@/components/motion/animated-badge'
-import { Button } from '@/components/motion/button/base'
 
-/** 每张卡片的迷你图形标（stroke 风格，颜色走渐变图标砖的 currentColor） */
+import { SectionHeader } from '@/components/landing/section-header'
+
+/** 每张卡片的迷你图形标（stroke 风格，颜色走图标砖的 currentColor） */
 function IcoCircle(props: SVGProps<SVGSVGElement>) {
   return (
     <svg
@@ -214,8 +214,6 @@ const ANIMATION_TYPES: Array<{
   /** 仅 reverse 已接通的 9 个类型：卡片内渲染反向三档选择器（初始值） */
   initialReverse?: boolean | 'auto'
   Icon: (props: SVGProps<SVGSVGElement>) => JSX.Element
-  /** 渐变图标砖：亮 / 暗两套底色 + 图标色（写全类名，避免动态拼接被 Tailwind 摇掉） */
-  tile: string
 }> = [
   {
     type: ThemeAnimationType.CIRCLE,
@@ -223,7 +221,6 @@ const ANIMATION_TYPES: Array<{
     hint: '圆形扩散 · 圆心 = 点击位置',
     initialReverse: false,
     Icon: IcoCircle,
-    tile: 'from-rose-100 to-rose-200 text-rose-600 dark:from-rose-500/15 dark:to-rose-500/5 dark:text-rose-400',
   },
   {
     type: ThemeAnimationType.CIRCLE_BLUR,
@@ -231,7 +228,6 @@ const ANIMATION_TYPES: Array<{
     hint: '圆形模糊扩散',
     initialReverse: false,
     Icon: IcoBlur,
-    tile: 'from-amber-100 to-amber-200 text-amber-600 dark:from-amber-500/15 dark:to-amber-500/5 dark:text-amber-400',
   },
   {
     type: ThemeAnimationType.SQUARE,
@@ -239,7 +235,6 @@ const ANIMATION_TYPES: Array<{
     hint: '正方形扩散',
     initialReverse: false,
     Icon: IcoShape('5,5 19,5 19,19 5,19'),
-    tile: 'from-emerald-100 to-emerald-200 text-emerald-600 dark:from-emerald-500/15 dark:to-emerald-500/5 dark:text-emerald-400',
   },
   {
     type: ThemeAnimationType.DIAMOND,
@@ -247,7 +242,6 @@ const ANIMATION_TYPES: Array<{
     hint: '菱形扩散',
     initialReverse: false,
     Icon: IcoShape('12,3.5 20.5,12 12,20.5 3.5,12'),
-    tile: 'from-teal-100 to-teal-200 text-teal-600 dark:from-teal-500/15 dark:to-teal-500/5 dark:text-teal-400',
   },
   {
     type: ThemeAnimationType.RECTANGLE,
@@ -255,21 +249,18 @@ const ANIMATION_TYPES: Array<{
     hint: '矩形 · 贴合视口比例',
     initialReverse: false,
     Icon: IcoRect,
-    tile: 'from-cyan-100 to-cyan-200 text-cyan-600 dark:from-cyan-500/15 dark:to-cyan-500/5 dark:text-cyan-400',
   },
   {
     type: ThemeAnimationType.HEXAGON,
     label: 'HEXAGON',
     hint: '六边形 · 尖顶朝上',
     Icon: IcoShape('12,2.8 19.8,7.4 19.8,16.6 12,21.2 4.2,16.6 4.2,7.4'),
-    tile: 'from-blue-100 to-blue-200 text-blue-600 dark:from-blue-500/15 dark:to-blue-500/5 dark:text-blue-400',
   },
   {
     type: ThemeAnimationType.TRIANGLE,
     label: 'TRIANGLE',
     hint: '三角形 · 顶点朝上',
     Icon: IcoShape('12,4 20,19 4,19'),
-    tile: 'from-fuchsia-100 to-fuchsia-200 text-fuchsia-600 dark:from-fuchsia-500/15 dark:to-fuchsia-500/5 dark:text-fuchsia-400',
   },
   {
     type: ThemeAnimationType.STAR,
@@ -278,7 +269,6 @@ const ANIMATION_TYPES: Array<{
     Icon: IcoShape(
       '12,2.8 14.7,9 21.5,9.6 16.3,14 17.9,20.7 12,17 6.1,20.7 7.7,14 2.5,9.6 9.3,9',
     ),
-    tile: 'from-pink-100 to-pink-200 text-pink-600 dark:from-pink-500/15 dark:to-pink-500/5 dark:text-pink-400',
   },
   {
     type: ThemeAnimationType.BLINDS,
@@ -287,7 +277,6 @@ const ANIMATION_TYPES: Array<{
     initialDirection: ThemeAnimationDirection.LTR,
     initialSlatWidth: 72,
     Icon: IcoBlinds,
-    tile: 'from-lime-100 to-lime-200 text-lime-600 dark:from-lime-500/15 dark:to-lime-500/5 dark:text-lime-400',
   },
   {
     type: ThemeAnimationType.SCAN,
@@ -295,7 +284,6 @@ const ANIMATION_TYPES: Array<{
     hint: '扫描 · 硬边扫开 + 前缘光束',
     initialDirection: ThemeAnimationDirection.TTB,
     Icon: IcoScan,
-    tile: 'from-green-100 to-green-200 text-green-600 dark:from-green-500/15 dark:to-green-500/5 dark:text-green-400',
   },
   {
     type: ThemeAnimationType.QR_GRID,
@@ -305,7 +293,6 @@ const ANIMATION_TYPES: Array<{
     initialCellSize: 64,
     initialCellShape: 'square',
     Icon: IcoQrGrid,
-    tile: 'from-stone-100 to-stone-200 text-stone-600 dark:from-stone-500/15 dark:to-stone-500/5 dark:text-stone-400',
   },
   {
     type: ThemeAnimationType.RIPPLE,
@@ -314,7 +301,6 @@ const ANIMATION_TYPES: Array<{
     initialWaveWidth: 18,
     initialReverse: false,
     Icon: IcoRipple,
-    tile: 'from-sky-100 to-sky-200 text-sky-600 dark:from-sky-500/15 dark:to-sky-500/5 dark:text-sky-400',
   },
   {
     type: ThemeAnimationType.CLOCK_SWEEP,
@@ -322,7 +308,6 @@ const ANIMATION_TYPES: Array<{
     hint: '时钟扇形 · 轴心',
     initialReverse: false,
     Icon: IcoClockSweep,
-    tile: 'from-violet-100 to-violet-200 text-violet-600 dark:from-violet-500/15 dark:to-violet-500/5 dark:text-violet-400',
   },
   {
     type: ThemeAnimationType.FAN,
@@ -331,7 +316,6 @@ const ANIMATION_TYPES: Array<{
     initialBladeCount: 8,
     initialReverse: false,
     Icon: IcoFan,
-    tile: 'from-indigo-100 to-indigo-200 text-indigo-600 dark:from-indigo-500/15 dark:to-indigo-500/5 dark:text-indigo-400',
   },
   {
     type: ThemeAnimationType.CURTAIN,
@@ -340,7 +324,6 @@ const ANIMATION_TYPES: Array<{
     initialDirection: ThemeAnimationDirection.LTR,
     initialReverse: false,
     Icon: IcoCurtain,
-    tile: 'from-yellow-100 to-yellow-200 text-yellow-700 dark:from-yellow-500/15 dark:to-yellow-500/5 dark:text-yellow-400',
   },
 ]
 
@@ -355,7 +338,7 @@ const EASING_PRESETS = [
   { value: 'linear', label: 'linear · 匀速' },
 ]
 
-/** 方向选择按钮：四个方向，每张卡片独立持有状态，互不影响 */
+/** 方向选择：四个方向，每张卡片独立持有状态，互不影响 */
 const DIRECTION_OPTIONS: ReadonlyArray<{
   value: ThemeAnimationDirection
   label: string
@@ -418,6 +401,63 @@ const CELL_SHAPE_OPTIONS: ReadonlyArray<{
   { value: 'dot', label: '圆点' },
 ]
 
+/**
+ * 参数选择组（HeroUI ToggleButtonGroup，单选受控）。
+ * 选项值的类型横跨 number / string / boolean | 'auto'，统一走 String() 做 key；
+ * 泛型在调用点显式给定（onChange 是 Dispatch，推断不出联合里的具体分支）。
+ * react-aria 单选组允许点选中的项取消选择（keys 变空），此时忽略、保持当前值。
+ */
+function ParamGroup<T extends number | string | boolean>({
+  label,
+  options,
+  value,
+  onChange,
+  align = 'row',
+}: {
+  label: string
+  options: ReadonlyArray<{ value: T; label: string }>
+  value: T
+  onChange: (v: T) => void
+  align?: 'row' | 'center'
+}) {
+  return (
+    <div
+      className={
+        align === 'center'
+          ? 'flex flex-wrap items-center justify-center gap-2'
+          : 'flex items-center justify-between gap-2'
+      }
+    >
+      <span
+        className={
+          align === 'center'
+            ? 'mr-1 font-mono text-[11px] tracking-wider text-muted uppercase'
+            : 'text-xs text-muted'
+        }
+      >
+        {label}
+      </span>
+      <ToggleButtonGroup
+        className="font-mono text-[11px]"
+        selectedKeys={new Set([String(value)])}
+        selectionMode="single"
+        onSelectionChange={(keys) => {
+          const first = [...keys][0]
+          if (first === undefined) return
+          const hit = options.find((o) => String(o.value) === String(first))
+          if (hit) onChange(hit.value)
+        }}
+      >
+        {options.map((o) => (
+          <ToggleButton key={String(o.value)} id={String(o.value)}>
+            {o.label}
+          </ToggleButton>
+        ))}
+      </ToggleButtonGroup>
+    </div>
+  )
+}
+
 function GalleryCard({
   animationType,
   label,
@@ -430,10 +470,8 @@ function GalleryCard({
   initialBladeCount,
   initialReverse,
   Icon,
-  tile,
   duration,
   easing,
-  index,
 }: {
   animationType: ThemeAnimationType
   label: string
@@ -446,10 +484,8 @@ function GalleryCard({
   initialBladeCount?: number
   initialReverse?: boolean | 'auto'
   Icon: (props: SVGProps<SVGSVGElement>) => JSX.Element
-  tile: string
   duration: number
   easing: string
-  index: number
 }) {
   const [mounted, setMounted] = useState(false)
   // direction 每张卡片独立（初始值来自配置），只在该类型消费 direction 时展示选择器
@@ -484,220 +520,135 @@ function GalleryCard({
   useEffect(() => setMounted(true), [])
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 18 }}
-      whileInView={{ opacity: 1, y: 0 }}
-      viewport={{ once: true, margin: '-40px' }}
-      transition={{ duration: 0.4, delay: (index % 3) * 0.06 }}
-      className="glass-card group flex flex-col items-center rounded-3xl p-6 transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_16px_48px_rgba(0,0,0,0.12)] dark:hover:shadow-[0_16px_48px_rgba(0,0,0,0.5)]"
-    >
-      {/* 渐变图标砖 */}
-      <div
-        className={`mb-3 flex size-14 items-center justify-center rounded-2xl bg-gradient-to-br ${tile}`}
-      >
-        <Icon className="size-7" />
+    <article className="flex flex-col items-center rounded-lg border border-border bg-surface p-6">
+      {/* 图标砖：hairline + 表面色 + 朱红图形，不再用彩色渐变 */}
+      <div className="mb-3 flex size-12 items-center justify-center rounded-md border border-border bg-surface-secondary text-accent">
+        <Icon className="size-6" />
       </div>
-      <h3 className="font-mono text-sm font-bold tracking-wide">{label}</h3>
-      <p className="mt-1 min-h-8 text-center text-xs text-muted-foreground">
+      <Typography
+        className="font-mono tracking-wide"
+        type="body-sm"
+        weight="semibold"
+      >
+        {label}
+      </Typography>
+      <Typography
+        className="mt-1 min-h-8 text-center"
+        color="muted"
+        type="body-xs"
+      >
         {hint}
-      </p>
+      </Typography>
 
-      {/* 中央切换按钮：唯一交互点，动画起收点即按钮中心 */}
+      {/* 中央切换按钮：唯一交互点，动画起收点即按钮中心（ref 必须始终挂载） */}
       <button
-        ref={mounted ? ref : undefined}
+        ref={ref}
         type="button"
         data-animation-type={animationType}
         aria-label={`播放 ${label} 动画并切换主题`}
         onClick={toggleTheme}
-        className="my-5 flex size-16 items-center justify-center rounded-full border bg-background text-foreground shadow-[0_2px_16px_rgba(0,0,0,0.10)] transition-all duration-300 hover:scale-105 hover:shadow-[0_4px_24px_rgba(0,0,0,0.16)] active:scale-95 dark:shadow-[0_2px_16px_rgba(0,0,0,0.5)]"
+        className="my-5 flex size-16 items-center justify-center rounded-full border border-border bg-background text-foreground transition-colors hover:border-accent hover:text-accent"
       >
         {mounted && isDark ? <Moon size={22} /> : <Sun size={22} />}
       </button>
 
       {/* 参数行（全局预设的当前值 + 卡片独立的方向选择） */}
-      <div className="w-full space-y-1.5 border-t pt-4 text-xs">
+      <div className="w-full space-y-1.5 border-t border-border pt-4">
         <div className="flex items-center justify-between">
-          <span className="text-muted-foreground">Duration</span>
-          <span className="font-mono">{duration}ms</span>
+          <span className="text-xs text-muted">Duration</span>
+          <span className="font-mono text-xs">{duration}ms</span>
         </div>
         <div className="flex items-center justify-between gap-2">
-          <span className="text-muted-foreground">Easing</span>
-          <span className="truncate font-mono">{easing}</span>
+          <span className="text-xs text-muted">Easing</span>
+          <span className="truncate font-mono text-xs">{easing}</span>
         </div>
         {initialDirection !== undefined && (
-          <div className="flex items-center justify-between gap-2 pt-0.5">
-            <span className="text-muted-foreground">Direction</span>
-            <div className="flex gap-1">
-              {DIRECTION_OPTIONS.map((d) => (
-                <button
-                  key={d.value}
-                  type="button"
-                  onClick={() => setDirection(d.value)}
-                  className={`rounded-md px-1.5 py-0.5 font-mono text-[10px] transition-colors ${
-                    direction === d.value
-                      ? 'bg-primary font-semibold text-primary-foreground'
-                      : 'border border-border bg-card text-muted-foreground hover:text-foreground'
-                  }`}
-                >
-                  {d.label}
-                </button>
-              ))}
-            </div>
+          <div className="pt-0.5">
+            <ParamGroup<ThemeAnimationDirection>
+              label="Direction"
+              options={DIRECTION_OPTIONS}
+              value={direction}
+              onChange={setDirection}
+            />
           </div>
         )}
         {initialSlatWidth !== undefined && (
-          <div className="flex items-center justify-between gap-2">
-            <span className="text-muted-foreground">Slat</span>
-            <div className="flex gap-1">
-              {SLAT_OPTIONS.map((s) => (
-                <button
-                  key={s.value}
-                  type="button"
-                  onClick={() => setSlatWidth(s.value)}
-                  className={`rounded-md px-1.5 py-0.5 font-mono text-[10px] transition-colors ${
-                    slatWidth === s.value
-                      ? 'bg-primary font-semibold text-primary-foreground'
-                      : 'border border-border bg-card text-muted-foreground hover:text-foreground'
-                  }`}
-                >
-                  {s.label}
-                </button>
-              ))}
-            </div>
-          </div>
+          <ParamGroup<number>
+            label="Slat"
+            options={SLAT_OPTIONS}
+            value={slatWidth}
+            onChange={setSlatWidth}
+          />
         )}
         {initialCellShape !== undefined && (
           <div className="flex items-center justify-between gap-2">
-            <span className="text-muted-foreground">Cell</span>
-            <div className="flex gap-1">
-              {CELL_SHAPE_OPTIONS.map((s) => (
-                <button
-                  key={s.value}
-                  type="button"
-                  onClick={() => setCellShape(s.value)}
-                  className={`rounded-md px-1.5 py-0.5 font-mono text-[10px] transition-colors ${
-                    cellShape === s.value
-                      ? 'bg-primary font-semibold text-primary-foreground'
-                      : 'border border-border bg-card text-muted-foreground hover:text-foreground'
-                  }`}
-                >
-                  {s.label}
-                </button>
-              ))}
-              {CELL_SIZE_OPTIONS.map((c) => (
-                <button
-                  key={c.value}
-                  type="button"
-                  onClick={() => setCellSize(c.value)}
-                  className={`rounded-md px-1.5 py-0.5 font-mono text-[10px] transition-colors ${
-                    cellSize === c.value
-                      ? 'bg-primary font-semibold text-primary-foreground'
-                      : 'border border-border bg-card text-muted-foreground hover:text-foreground'
-                  }`}
-                >
-                  {c.label}
-                </button>
-              ))}
+            <span className="text-xs text-muted">Cell</span>
+            <div className="flex gap-1.5">
+              <ToggleButtonGroup
+                className="font-mono text-[11px]"
+                selectedKeys={new Set([cellShape])}
+                selectionMode="single"
+                onSelectionChange={(keys) => {
+                  const first = [...keys][0]
+                  if (first === undefined) return
+                  const hit = CELL_SHAPE_OPTIONS.find((o) => o.value === first)
+                  if (hit) setCellShape(hit.value)
+                }}
+              >
+                {CELL_SHAPE_OPTIONS.map((s) => (
+                  <ToggleButton key={s.value} id={s.value}>
+                    {s.label}
+                  </ToggleButton>
+                ))}
+              </ToggleButtonGroup>
+              <ToggleButtonGroup
+                className="font-mono text-[11px]"
+                selectedKeys={new Set([String(cellSize)])}
+                selectionMode="single"
+                onSelectionChange={(keys) => {
+                  const first = [...keys][0]
+                  if (first === undefined) return
+                  const hit = CELL_SIZE_OPTIONS.find(
+                    (o) => String(o.value) === String(first),
+                  )
+                  if (hit) setCellSize(hit.value)
+                }}
+              >
+                {CELL_SIZE_OPTIONS.map((c) => (
+                  <ToggleButton key={c.value} id={String(c.value)}>
+                    {c.label}
+                  </ToggleButton>
+                ))}
+              </ToggleButtonGroup>
             </div>
           </div>
         )}
         {initialWaveWidth !== undefined && (
-          <div className="flex items-center justify-between gap-2">
-            <span className="text-muted-foreground">Wave</span>
-            <div className="flex gap-1">
-              {WAVE_OPTIONS.map((w) => (
-                <button
-                  key={w.value}
-                  type="button"
-                  onClick={() => setWaveWidth(w.value)}
-                  className={`rounded-md px-1.5 py-0.5 font-mono text-[10px] transition-colors ${
-                    waveWidth === w.value
-                      ? 'bg-primary font-semibold text-primary-foreground'
-                      : 'border border-border bg-card text-muted-foreground hover:text-foreground'
-                  }`}
-                >
-                  {w.label}
-                </button>
-              ))}
-            </div>
-          </div>
+          <ParamGroup<number>
+            label="Wave"
+            options={WAVE_OPTIONS}
+            value={waveWidth}
+            onChange={setWaveWidth}
+          />
         )}
         {initialBladeCount !== undefined && (
-          <div className="flex items-center justify-between gap-2">
-            <span className="text-muted-foreground">Blades</span>
-            <div className="flex gap-1">
-              {BLADE_OPTIONS.map((b) => (
-                <button
-                  key={b.value}
-                  type="button"
-                  onClick={() => setBladeCount(b.value)}
-                  className={`rounded-md px-1.5 py-0.5 font-mono text-[10px] transition-colors ${
-                    bladeCount === b.value
-                      ? 'bg-primary font-semibold text-primary-foreground'
-                      : 'border border-border bg-card text-muted-foreground hover:text-foreground'
-                  }`}
-                >
-                  {b.label}
-                </button>
-              ))}
-            </div>
-          </div>
+          <ParamGroup<number>
+            label="Blades"
+            options={BLADE_OPTIONS}
+            value={bladeCount}
+            onChange={setBladeCount}
+          />
         )}
         {initialReverse !== undefined && (
-          <div className="flex items-center justify-between gap-2">
-            <span className="text-muted-foreground">Reverse</span>
-            <div className="flex gap-1">
-              {REVERSE_OPTIONS.map((r) => (
-                <button
-                  key={String(r.value)}
-                  type="button"
-                  onClick={() => setReverse(r.value)}
-                  className={`rounded-md px-1.5 py-0.5 font-mono text-[10px] transition-colors ${
-                    reverse === r.value
-                      ? 'bg-primary font-semibold text-primary-foreground'
-                      : 'border border-border bg-card text-muted-foreground hover:text-foreground'
-                  }`}
-                >
-                  {r.label}
-                </button>
-              ))}
-            </div>
-          </div>
+          <ParamGroup<boolean | 'auto'>
+            label="Reverse"
+            options={REVERSE_OPTIONS}
+            value={reverse}
+            onChange={setReverse}
+          />
         )}
       </div>
-    </motion.div>
-  )
-}
-
-function PresetRow<T extends number | string>({
-  label,
-  presets,
-  value,
-  onChange,
-}: {
-  label: string
-  presets: ReadonlyArray<{ value: T; label: string }>
-  value: T
-  onChange: (v: T) => void
-}) {
-  return (
-    <div className="flex flex-wrap items-center justify-center gap-2">
-      <span className="mr-1 font-mono text-xs uppercase tracking-wider text-muted-foreground">
-        {label}
-      </span>
-      {presets.map((p) => (
-        <Button
-          key={String(p.value)}
-          size="sm"
-          variant={value === p.value ? 'primary' : 'secondary'}
-          aria-pressed={value === p.value}
-          onClick={() => onChange(p.value)}
-          className="font-mono"
-        >
-          {p.label}
-        </Button>
-      ))}
-    </div>
+    </article>
   )
 }
 
@@ -707,42 +658,33 @@ export function GallerySection() {
   const [easing, setEasing] = useState('ease-in-out')
 
   return (
-    <section
-      id="gallery"
-      className="relative z-10 scroll-mt-24 border-b border-dashed border-black/10 py-20 dark:border-white/10"
-    >
-      <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="mx-auto mb-10 max-w-2xl text-center">
-          <AnimatedBadge size="sm" className="mb-3">
-            Playground
-          </AnimatedBadge>
-          <h2 className="text-3xl font-bold tracking-tight md:text-4xl">
-            Try Different Animations
-          </h2>
-          <p className="mt-3 text-muted-foreground">
-            点击卡片中央按钮播放动画；BLINDS / SCAN / QR_GRID / CURTAIN
-            可在卡内切换方向，RIPPLE 可切换环带波长，FAN 可切换扇叶数， QR_GRID
-            可切换格距与方块 / 圆点形状。
-          </p>
-        </div>
+    <section id="gallery" className="scroll-mt-14 border-t border-border">
+      <div className="mx-auto w-full max-w-6xl px-6 py-20 sm:py-24">
+        <SectionHeader
+          eyebrow="02 / 动画演示"
+          sub="点击卡片中央按钮播放动画；BLINDS / SCAN / QR_GRID / CURTAIN 可在卡内切换方向，RIPPLE 可切换环带波长，FAN 可切换扇叶数，QR_GRID 可切换格距与方块 / 圆点形状。"
+          title="Try Different Animations"
+        />
 
-        <div className="glass-card mx-auto mb-10 flex max-w-3xl flex-col items-center gap-2.5 rounded-3xl p-5">
-          <PresetRow
+        <div className="mx-auto mt-10 flex w-fit max-w-full flex-col items-center gap-2.5 rounded-lg border border-border bg-surface p-5">
+          <ParamGroup<number>
+            align="center"
             label="duration"
-            presets={DURATION_PRESETS}
+            options={DURATION_PRESETS}
             value={duration}
-            onChange={(v) => setDuration(v)}
+            onChange={setDuration}
           />
-          <PresetRow
+          <ParamGroup<string>
+            align="center"
             label="easing"
-            presets={EASING_PRESETS}
+            options={EASING_PRESETS}
             value={easing}
-            onChange={(v) => setEasing(v)}
+            onChange={setEasing}
           />
         </div>
 
-        <div className="mx-auto grid max-w-5xl grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
-          {ANIMATION_TYPES.map((t, index) => (
+        <div className="mx-auto mt-10 grid max-w-6xl grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
+          {ANIMATION_TYPES.map((t) => (
             <GalleryCard
               key={t.type}
               animationType={t.type}
@@ -756,10 +698,8 @@ export function GallerySection() {
               initialBladeCount={t.initialBladeCount}
               initialReverse={t.initialReverse}
               Icon={t.Icon}
-              tile={t.tile}
               duration={duration}
               easing={easing}
-              index={index}
             />
           ))}
         </div>

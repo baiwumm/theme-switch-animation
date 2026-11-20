@@ -1,12 +1,11 @@
 'use client'
 
-import { Copy } from 'lucide-react'
+import { Button, Tabs, Typography } from '@heroui/react'
+import { Check, Copy } from 'lucide-react'
 import { useState } from 'react'
 
 import { CodeBlock } from '@/components/code-block'
-import { AnimatedBadge } from '@/components/motion/animated-badge'
-import { StatefulButton } from '@/components/motion/button/stateful'
-import { Tabs, TabsList, TabsTrigger } from '@/components/motion/tabs'
+import { SectionHeader } from '@/components/landing/section-header'
 import {
   NextIcon,
   NuxtIcon,
@@ -134,16 +133,19 @@ function CopyButton({ text }: { text: string }) {
   }
 
   return (
-    <StatefulButton
-      size="sm"
-      variant="ghost"
-      state={copied ? 'success' : 'idle'}
-      successText="已复制"
-      icon={<Copy size={14} />}
-      onClick={copy}
-    >
-      复制
-    </StatefulButton>
+    <Button size="sm" variant="ghost" onPress={copy}>
+      {copied ? (
+        <>
+          <Check className="size-3.5 text-success" />
+          已复制
+        </>
+      ) : (
+        <>
+          <Copy className="size-3.5" />
+          复制
+        </>
+      )}
+    </Button>
   )
 }
 
@@ -154,52 +156,60 @@ export function QuickStartSection() {
   const current = FRAMEWORKS.find((f) => f.id === active) ?? FRAMEWORKS[0]
 
   return (
-    <section
-      id="quick-start"
-      className="relative z-10 scroll-mt-24 border-b border-dashed border-black/10 py-20 dark:border-white/10"
-    >
-      <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="mx-auto mb-10 max-w-2xl text-center">
-          <AnimatedBadge size="sm" className="mb-3">
-            Quick Start
-          </AnimatedBadge>
-          <h2 className="text-3xl font-bold tracking-tight md:text-4xl">
-            三行代码接入
-          </h2>
-          <p className="mt-3 text-muted-foreground">四个入口，同一套 API。</p>
-        </div>
+    <section id="quick-start" className="scroll-mt-14 border-t border-border">
+      <div className="mx-auto w-full max-w-6xl px-6 py-20 sm:py-24">
+        <SectionHeader
+          eyebrow="03 / 快速开始"
+          sub="四个入口，同一套 API。"
+          title="三行代码接入"
+        />
 
-        <div className="mx-auto max-w-3xl">
-          {/* 分段式 Tab（带框架品牌图标，滑块走共享布局动画） */}
+        <div className="mx-auto mt-10 max-w-3xl">
+          {/* 框架切换（react-aria Tabs，选中态由 HeroUI 样式接管） */}
           <Tabs
-            value={active}
-            onValueChange={(v) =>
-              setActive(v as (typeof FRAMEWORKS)[number]['id'])
+            selectedKey={active}
+            onSelectionChange={(key) =>
+              setActive(key as (typeof FRAMEWORKS)[number]['id'])
             }
           >
-            <TabsList wrapperClassName="mx-auto mb-5 w-fit">
-              {FRAMEWORKS.map((f) => (
-                <TabsTrigger key={f.id} value={f.id} className="gap-2">
-                  <f.Icon
-                    className={`size-4 shrink-0 ${active === f.id ? '' : f.iconClass}`}
-                  />
-                  {f.label}
-                </TabsTrigger>
-              ))}
-            </TabsList>
+            <Tabs.ListContainer className="mb-5 flex justify-center">
+              <Tabs.List aria-label="选择框架">
+                {FRAMEWORKS.map((f) => (
+                  <Tabs.Tab key={f.id} id={f.id} className="gap-2">
+                    <f.Icon
+                      className={`size-4 shrink-0 ${active === f.id ? 'text-accent' : f.iconClass}`}
+                    />
+                    {f.label}
+                  </Tabs.Tab>
+                ))}
+              </Tabs.List>
+            </Tabs.ListContainer>
           </Tabs>
 
-          {/* 编辑器窗口：红绿灯 chrome + 安装命令条 + 代码区 */}
-          <div className="overflow-hidden rounded-2xl border bg-card/80 shadow-xl shadow-black/5 backdrop-blur dark:shadow-black/30">
-            <div className="flex items-center justify-between border-b bg-background/50 px-4 py-2.5">
+          {/* 编辑器窗口：hairline 外框 + 红绿灯 chrome + 安装命令条 + 代码区 */}
+          <div className="frame">
+            <div className="flex items-center justify-between gap-3 border-b border-border bg-surface-secondary px-4 py-2.5">
               <div className="flex items-center gap-1.5">
-                <span className="size-3 rounded-full bg-red-400" />
-                <span className="size-3 rounded-full bg-amber-400" />
-                <span className="size-3 rounded-full bg-emerald-400" />
+                <span
+                  aria-hidden
+                  className="size-2.5 rounded-full bg-danger/70"
+                />
+                <span
+                  aria-hidden
+                  className="size-2.5 rounded-full bg-warning/60"
+                />
+                <span
+                  aria-hidden
+                  className="size-2.5 rounded-full bg-success/60"
+                />
+                <Typography
+                  className="ms-3 hidden font-mono sm:block"
+                  color="muted"
+                  type="body-xs"
+                >
+                  {current.install}
+                </Typography>
               </div>
-              <code className="font-mono text-xs text-muted-foreground">
-                {current.install}
-              </code>
               <CopyButton text={`${current.install}\n\n${current.code}`} />
             </div>
             <CodeBlock code={current.code} language={current.lang} />

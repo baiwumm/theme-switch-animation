@@ -1,5 +1,6 @@
 'use client'
 
+import { Button } from '@heroui/react'
 import { Moon, Sun } from 'lucide-react'
 import { useTheme } from 'next-themes'
 import { useEffect, useState } from 'react'
@@ -9,11 +10,16 @@ import {
   useThemeAnimation,
 } from 'theme-switch-animation/react'
 
-import { Button } from '@/components/motion/button/base'
-
 /**
  * 站点自己的主题切换按钮 = 本库受控模式 × next-themes 的活示例（§6.1 接线）。
- * mounted 守卫：next-themes 的 resolvedTheme 服务端为 undefined，直接渲染图标会水合不一致。
+ * 外观与顶栏其它图标按钮一致：HeroUI `Button isIconOnly` + `variant="outline"`
+ * + `size="sm"`（better-admin 端同款）。
+ *
+ * ref 必须无条件挂上：库要拿按钮的 getBoundingClientRect() 算圆形扩散圆心，
+ * HeroUI 的 Button 会把 ref 透传到内部 <button>，直接挂上去即可；
+ * 若按 mounted 延迟传（undefined → ref 对象），库侧可能拿不到元素，动画会回落到视口中心。
+ * 水合守卫只针对图标：next-themes 的 resolvedTheme 服务端为 undefined，
+ * isDark 未水合前不渲染图标，避免 SSR 与首帧不一致。
  */
 export function ThemeToggle() {
   const [mounted, setMounted] = useState(false)
@@ -29,17 +35,19 @@ export function ThemeToggle() {
 
   return (
     <Button
-      variant="ghost"
-      size="icon"
-      // ref 必须无条件挂上：motion 组件只在自身挂载时转发一次 ref，
-      // 若按 mounted 延迟传（undefined → ref 对象）库侧永远拿不到元素，动画会回落到视口中心。
-      // 水合守卫只针对图标：isDark 未水合前不渲染，避免 SSR 与首帧不一致。
       ref={ref}
+      isIconOnly
       aria-label="切换主题"
+      size="sm"
+      variant="outline"
       // 按压缩放不影响动画起收点：库取 trigger getBoundingClientRect 的中心，等比缩放不改中心
-      onClick={toggleTheme}
+      onPress={toggleTheme}
     >
-      {mounted && isDark ? <Moon size={18} /> : <Sun size={18} />}
+      {mounted && isDark ? (
+        <Moon className="size-4" />
+      ) : (
+        <Sun className="size-4" />
+      )}
     </Button>
   )
 }

@@ -1,17 +1,21 @@
 'use client'
 
-import { ArrowRight, Check, Copy } from 'lucide-react'
-import { motion } from 'motion/react'
-import Link from 'next/link'
+import { Button, Typography } from '@heroui/react'
+import { Check, Copy } from 'lucide-react'
 import { useState } from 'react'
 
 import { PromoVideo } from '@/components/landing/promo-video'
-import { Button, ButtonLink } from '@/components/motion/button/base'
-import { TextReveal } from '@/components/motion/text-reveal'
 import { GithubIcon } from '@/components/ui/brand-icons'
 import { REPO_URL } from '@/constants/site'
 
 const INSTALL_CMD = 'npm install theme-switch-animation'
+
+const STATS = [
+  { label: '动画类型', value: '15' },
+  { label: 'reverse 反向', value: '9' },
+  { label: '框架适配', value: '4' },
+  { label: '框架无关代码', value: '95%' },
+] as const
 
 function InstallCommand() {
   const [copied, setCopied] = useState(false)
@@ -27,106 +31,126 @@ function InstallCommand() {
   }
 
   return (
-    <Button
-      variant="secondary"
-      onClick={copy}
-      className="group font-mono whitespace-nowrap"
-    >
-      <span className="text-muted-foreground select-none">$</span>
-      <span>{INSTALL_CMD}</span>
-      {copied ? (
-        <Check size={15} className="text-emerald-500" />
-      ) : (
-        <Copy
-          size={15}
-          className="text-muted-foreground opacity-60 group-hover:opacity-100"
-        />
-      )}
-    </Button>
+    <div className="frame reveal w-fit" style={{ animationDelay: '240ms' }}>
+      <div className="flex items-center gap-3 px-4 py-2.5 font-mono text-[13px]">
+        <span aria-hidden className="select-none text-accent">
+          $
+        </span>
+        <span className="whitespace-nowrap">{INSTALL_CMD}</span>
+        <Button
+          isIconOnly
+          aria-label="复制安装命令"
+          size="sm"
+          variant="ghost"
+          onPress={copy}
+        >
+          {copied ? (
+            <Check className="size-3.5 text-success" />
+          ) : (
+            <Copy className="size-3.5" />
+          )}
+        </Button>
+      </div>
+    </div>
   )
 }
 
 export function HeroSection() {
   return (
-    <section className="relative z-10 border-b border-dashed border-black/10 dark:border-white/10">
-      <div className="container mx-auto p-2 pt-32 pb-16 sm:px-6 md:pt-40 md:pb-24 lg:px-8">
-        <div className="mx-auto flex max-w-5xl flex-col items-center gap-7 text-center">
-          <motion.div
-            initial={{ opacity: 0, y: -14, scale: 0.98, filter: 'blur(10px)' }}
-            animate={{ opacity: 1, y: 0, scale: 1, filter: 'blur(0px)' }}
-            transition={{
-              type: 'spring',
-              stiffness: 320,
-              damping: 26,
-              delay: 0.1,
-            }}
-            whileTap={{ scale: 0.98 }}
-          >
-            <Link
-              href={REPO_URL}
-              target="_blank"
-              rel="noreferrer"
-              className="group mx-auto flex w-fit items-center gap-3 rounded-full border bg-background/80 p-1 pl-4 shadow-md backdrop-blur transition-colors duration-300 hover:bg-muted dark:border-t-white/5 dark:hover:border-t-border"
+    <section className="relative overflow-hidden">
+      {/* 朱红氛围光：低占比 radial，只铺首屏右上方（与参考站同一手法） */}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-0"
+        style={{
+          background:
+            'radial-gradient(760px circle at 80% 22%, color-mix(in oklab, var(--accent) 14%, transparent), transparent 70%)',
+        }}
+      />
+
+      <div className="relative mx-auto w-full max-w-6xl px-6 pt-16 pb-14 sm:pt-24">
+        <div className="flex flex-col gap-12 lg:flex-row lg:items-center lg:gap-16">
+          {/* 左：文案 + 安装命令 + CTA + 数据行 */}
+          <div className="flex min-w-0 flex-1 flex-col items-start gap-6">
+            <Typography
+              className="eyebrow reveal"
+              type="body-xs"
+              weight="semibold"
             >
-              <span className="text-sm font-medium">
-                View Transitions API · MIT
-              </span>
-              <span className="hidden h-4 w-0.5 border-l bg-border md:block" />
-              {/* 箭头循环滑入：两支箭头错开一个圆宽，悬停时整体右移，视觉上无限推进 */}
-              <span className="relative flex size-6 items-center justify-center overflow-hidden rounded-full bg-muted transition-colors duration-300 group-hover:bg-background">
-                <ArrowRight className="absolute inset-0 m-auto size-4 transition-transform duration-300 ease-out group-hover:translate-x-6 motion-reduce:transition-none motion-reduce:group-hover:translate-x-0" />
-                <ArrowRight className="absolute inset-0 m-auto size-4 -translate-x-6 transition-transform duration-300 ease-out group-hover:translate-x-0 motion-reduce:transition-none motion-reduce:group-hover:translate-x-0" />
-              </span>
-            </Link>
-          </motion.div>
+              View Transitions API · MIT
+            </Typography>
 
-          <div className="mx-auto max-w-2xl">
-            <TextReveal
-              as="h1"
-              text="Theme switching, cinematic"
-              stagger={0.1}
-              yOffset={-40}
-              blur={10}
-              className="mb-5 text-4xl font-bold tracking-tight text-balance md:text-6xl"
-            />
-            <TextReveal
-              as="p"
-              text="15 种形状揭开新主题，React / Vue / Next.js / Nuxt 通用。"
-              split="char"
-              stagger={0.022}
-              yOffset={0}
-              blur={8}
-              className="mx-auto max-w-xl leading-relaxed text-pretty text-muted-foreground md:text-lg"
-            />
-          </div>
+            <Typography
+              className="reveal max-w-xl text-balance text-4xl leading-[1.12] tracking-tight sm:text-5xl"
+              style={{ animationDelay: '80ms' }}
+              type="h1"
+              weight="semibold"
+            >
+              Theme switching, cinematic
+            </Typography>
 
-          <motion.div
-            initial={{ opacity: 0, y: 14, filter: 'blur(10px)' }}
-            animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
-            transition={{
-              type: 'spring',
-              stiffness: 300,
-              damping: 28,
-              delay: 0.55,
-            }}
-            className="flex w-full max-w-xl flex-col items-center gap-4"
-          >
+            <Typography
+              className="reveal max-w-xl text-pretty leading-relaxed"
+              color="muted"
+              style={{ animationDelay: '160ms' }}
+              type="body-sm"
+            >
+              15 种形状揭开新主题，React / Vue / Next.js / Nuxt 通用。
+            </Typography>
+
             <InstallCommand />
-            <div className="flex flex-row items-center gap-3">
-              <ButtonLink href="#gallery">在下方试玩 15 种动画</ButtonLink>
-              <ButtonLink
-                href={REPO_URL}
-                target="_blank"
-                rel="noreferrer"
-                variant="secondary"
+
+            <div className="reveal flex flex-wrap items-center gap-3 pt-1">
+              <Button
+                size="lg"
+                variant="primary"
+                onPress={() =>
+                  document
+                    .getElementById('gallery')
+                    ?.scrollIntoView({ behavior: 'smooth' })
+                }
+              >
+                在下方试玩 15 种动画
+              </Button>
+              <Button
+                size="lg"
+                variant="outline"
+                onPress={() =>
+                  window.open(REPO_URL, '_blank', 'noopener,noreferrer')
+                }
               >
                 <GithubIcon className="size-4" />
                 GitHub
-              </ButtonLink>
+              </Button>
             </div>
-          </motion.div>
 
-          <PromoVideo />
+            {/* 数据行：hairline 分隔，等宽数字，不做卡片 */}
+            <dl
+              className="reveal mt-6 grid w-full grid-cols-2 gap-8 border-t border-border pt-8 sm:grid-cols-4"
+              style={{ animationDelay: '480ms' }}
+            >
+              {STATS.map((stat) => (
+                <div key={stat.label} className="flex min-w-0 flex-col gap-1">
+                  <dt>
+                    <Typography color="muted" type="body-xs">
+                      {stat.label}
+                    </Typography>
+                  </dt>
+                  <dd className="font-mono text-3xl tabular-nums sm:text-4xl">
+                    {stat.value}
+                  </dd>
+                </div>
+              ))}
+            </dl>
+          </div>
+
+          {/* 右：产品宣传片（渐入延迟与参考站 spec-sheet 同款节奏） */}
+          <div
+            className="reveal min-w-0 flex-1"
+            style={{ animationDelay: '400ms' }}
+          >
+            <PromoVideo />
+          </div>
         </div>
       </div>
     </section>
