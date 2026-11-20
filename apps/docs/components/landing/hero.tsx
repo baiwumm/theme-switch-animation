@@ -69,8 +69,8 @@ export function HeroSection() {
       />
 
       <div className="relative mx-auto w-full max-w-6xl px-6 pt-16 pb-14 sm:pt-24">
+        {/* 主体行：左文案 + 右视频，垂直居中（与 better-admin 排版一致） */}
         <div className="flex flex-col gap-12 lg:flex-row lg:items-center lg:gap-16">
-          {/* 左：文案 + 安装命令 + CTA + 数据行 */}
           <div className="flex min-w-0 flex-1 flex-col items-start gap-6">
             <Typography
               className="eyebrow reveal"
@@ -123,25 +123,6 @@ export function HeroSection() {
                 GitHub
               </Button>
             </div>
-
-            {/* 数据行：hairline 分隔，等宽数字，不做卡片 */}
-            <dl
-              className="reveal mt-6 grid w-full grid-cols-2 gap-8 border-t border-border pt-8 sm:grid-cols-4"
-              style={{ animationDelay: '480ms' }}
-            >
-              {STATS.map((stat) => (
-                <div key={stat.label} className="flex min-w-0 flex-col gap-1">
-                  <dt>
-                    <Typography color="muted" type="body-xs">
-                      {stat.label}
-                    </Typography>
-                  </dt>
-                  <dd className="font-mono text-3xl tabular-nums sm:text-4xl">
-                    {stat.value}
-                  </dd>
-                </div>
-              ))}
-            </dl>
           </div>
 
           {/* 右：产品宣传片（渐入延迟与参考站 spec-sheet 同款节奏） */}
@@ -152,6 +133,25 @@ export function HeroSection() {
             <PromoVideo />
           </div>
         </div>
+
+        {/* 数据行：主体行之下单独一行，通栏 hairline + 全宽 4 列（better-admin 同款） */}
+        <dl
+          className="reveal mt-14 grid w-full grid-cols-2 gap-8 border-t border-border pt-8 sm:grid-cols-4"
+          style={{ animationDelay: '480ms' }}
+        >
+          {STATS.map((stat) => (
+            <div key={stat.label} className="flex min-w-0 flex-col gap-1">
+              <dt>
+                <Typography color="muted" type="body-xs">
+                  {stat.label}
+                </Typography>
+              </dt>
+              <dd className="font-mono text-3xl tabular-nums sm:text-4xl">
+                {stat.value}
+              </dd>
+            </div>
+          ))}
+        </dl>
       </div>
     </section>
   )

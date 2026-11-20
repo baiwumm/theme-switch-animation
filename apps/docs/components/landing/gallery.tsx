@@ -438,6 +438,7 @@ function ParamGroup<T extends number | string | boolean>({
         {label}
       </span>
       <ToggleButtonGroup
+        size="sm"
         className="font-mono text-[11px]"
         selectedKeys={new Set([String(value)])}
         selectionMode="single"
@@ -585,6 +586,7 @@ function GalleryCard({
             <span className="text-xs text-muted">Cell</span>
             <div className="flex gap-1.5">
               <ToggleButtonGroup
+                size="sm"
                 className="font-mono text-[11px]"
                 selectedKeys={new Set([cellShape])}
                 selectionMode="single"
@@ -602,6 +604,7 @@ function GalleryCard({
                 ))}
               </ToggleButtonGroup>
               <ToggleButtonGroup
+                size="sm"
                 className="font-mono text-[11px]"
                 selectedKeys={new Set([String(cellSize)])}
                 selectionMode="single"

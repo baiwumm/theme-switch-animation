@@ -2,18 +2,11 @@
 
 import { Button, Tooltip, Typography } from '@heroui/react'
 import Link from 'next/link'
-import { type ReactNode, useEffect, useState } from 'react'
+import type { ReactNode } from 'react'
 
 import { ThemeToggle } from '@/components/theme/theme-toggle'
 import { GithubIcon, NpmIcon } from '@/components/ui/brand-icons'
 import { NPM_URL, REPO_URL } from '@/constants/site'
-
-const NAV_LINKS = [
-  { href: '#features', label: '特性' },
-  { href: '#gallery', label: '动画演示' },
-  { href: '#quick-start', label: '快速开始' },
-  { href: '#faq', label: 'FAQ' },
-] as const
 
 /** 顶栏图标按钮共用的箭头提示（与 better-admin / token-usage 同款交互） */
 function NavTooltip({
@@ -35,26 +28,8 @@ function NavTooltip({
 }
 
 export function Navbar() {
-  const [active, setActive] = useState('')
-
-  // 滚动到哪一节就高亮哪个锚点：视口 40%~55% 这条窄带即"当前节"的判定区
-  useEffect(() => {
-    const sections = NAV_LINKS.map((l) =>
-      document.getElementById(l.href.slice(1)),
-    ).filter((el): el is HTMLElement => el !== null)
-    const observer = new IntersectionObserver(
-      (entries) => {
-        for (const entry of entries)
-          if (entry.isIntersecting) setActive(entry.target.id)
-      },
-      { rootMargin: '-40% 0px -55% 0px' },
-    )
-    for (const section of sections) observer.observe(section)
-    return () => observer.disconnect()
-  }, [])
-
   return (
-    // 贴顶 hairline 条：sticky（不是 fixed 浮舱），滚动条不遮内容，锚点 scroll-mt 对位
+    // 贴顶 hairline 条：sticky（不是 fixed 浮舱），滚动条不遮内容
     <header className="sticky top-0 z-40 border-b border-border bg-background/80 backdrop-blur-md">
       <div className="mx-auto flex h-14 w-full max-w-6xl items-center gap-4 px-6">
         {/* 左：Logo + 站名 */}
@@ -87,28 +62,8 @@ export function Navbar() {
           </Typography>
         </Link>
 
-        {/* 中：锚点（滚动到哪一节，朱红高亮跟随；hover 只换色不位移） */}
-        <nav
-          aria-label="页内导航"
-          className="ml-auto hidden items-center gap-5 lg:flex"
-        >
-          {NAV_LINKS.map((link) => (
-            <a
-              key={link.href}
-              href={link.href}
-              className={`text-sm transition-colors ${
-                active === link.href.slice(1)
-                  ? 'text-accent'
-                  : 'text-muted hover:text-foreground'
-              }`}
-            >
-              {link.label}
-            </a>
-          ))}
-        </nav>
-
         {/* 右：GitHub / npm 图标入口 + 主题切换（本库驱动） */}
-        <div className="flex items-center gap-2 lg:ml-2">
+        <div className="ml-auto flex items-center gap-2">
           <NavTooltip label="GitHub 仓库">
             <Button
               isIconOnly

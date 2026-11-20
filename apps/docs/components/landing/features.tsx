@@ -1,5 +1,12 @@
 import { Typography } from '@heroui/react'
-import { Layers, Link2, PlugZap, ShieldCheck, Sparkles } from 'lucide-react'
+import {
+  Layers,
+  Link2,
+  PlugZap,
+  ShieldCheck,
+  SlidersHorizontal,
+  Sparkles,
+} from 'lucide-react'
 
 import { SectionHeader } from '@/components/landing/section-header'
 
@@ -38,6 +45,13 @@ const FEATURES = [
     description:
       '不支持 View Transitions、SSR、prefers-reduced-motion：跳过动画，状态永远正确。',
     tags: ['SSR 安全', 'reduced-motion'],
+  },
+  {
+    icon: SlidersHorizontal,
+    title: '缓动可调',
+    description:
+      'easing 原样透传给浏览器动画：任意 cubic-bezier 与 linear() 缓动都能用，旧引擎自动以双 animation 声明降级。',
+    tags: ['easing', 'cubic-bezier', 'linear()'],
   },
 ] as const
 

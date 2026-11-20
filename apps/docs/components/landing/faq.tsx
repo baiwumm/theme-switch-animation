@@ -37,7 +37,8 @@ const FAQS = [
 export function FaqSection() {
   return (
     <section id="faq" className="scroll-mt-14 border-t border-border">
-      <div className="mx-auto w-full max-w-6xl px-6 py-20 sm:py-24">
+      {/* 定宽居中（better-admin 同款）：FAQ 是阅读型内容，不像特性区需要通栏 */}
+      <div className="mx-auto w-full max-w-3xl px-6 py-20 sm:py-24">
         <SectionHeader eyebrow="04 / FAQ" title="常见问题" />
 
         {/* Accordion（react-aria DisclosureGroup）：高度 + 淡入过渡，同一时间只展开一项 */}

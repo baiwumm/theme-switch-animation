@@ -172,7 +172,8 @@ export function QuickStartSection() {
               setActive(key as (typeof FRAMEWORKS)[number]['id'])
             }
           >
-            <Tabs.ListContainer className="mb-5 flex justify-center">
+            {/* 药丸宽度收敛为内容宽并居中：默认块级会被撑满整行，视觉上不像 Tabs */}
+            <Tabs.ListContainer className="mx-auto mb-5 w-fit">
               <Tabs.List aria-label="选择框架">
                 {FRAMEWORKS.map((f) => (
                   <Tabs.Tab key={f.id} id={f.id} className="gap-2">
