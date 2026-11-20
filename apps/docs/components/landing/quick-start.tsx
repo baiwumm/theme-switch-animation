@@ -165,21 +165,18 @@ export function QuickStartSection() {
         />
 
         <div className="mx-auto mt-10 max-w-3xl">
-          {/* 框架切换（react-aria Tabs，选中态由 HeroUI 样式接管） */}
+          {/* 框架切换（react-aria Tabs）：宽度/选中态全部走组件默认，只补上下间距 */}
           <Tabs
             selectedKey={active}
             onSelectionChange={(key) =>
               setActive(key as (typeof FRAMEWORKS)[number]['id'])
             }
           >
-            {/* 药丸宽度收敛为内容宽并居中：默认块级会被撑满整行，视觉上不像 Tabs */}
-            <Tabs.ListContainer className="mx-auto mb-5 w-fit">
+            <Tabs.ListContainer className="mb-5">
               <Tabs.List aria-label="选择框架">
                 {FRAMEWORKS.map((f) => (
                   <Tabs.Tab key={f.id} id={f.id} className="gap-2">
-                    <f.Icon
-                      className={`size-4 shrink-0 ${active === f.id ? 'text-accent' : f.iconClass}`}
-                    />
+                    <f.Icon className={`size-4 shrink-0 ${f.iconClass}`} />
                     {f.label}
                   </Tabs.Tab>
                 ))}
