@@ -16,6 +16,17 @@ allowBuilds:
 minimumReleaseAgeExclude:
   - vite@8.3.0
 
+# Dependabot 安全告警的强制修复：上游钉死旧范围、semver 内无法自然升到修复版，
+# 只能 override 跨 major。若上游（@eslint/config-array / js-beautify）未来放开范围，
+# 应删掉对应条目回归自然解析。
+# - minimatch@~10.2.4（@eslint/config-array 等）：>= 10.0.0 < 11.0.1 有 globparts DoS，
+#   修复版 11.0.1；只匹配 10.x 请求，不动更老的 minimatch。
+# - glob@^13.0.6（js-beautify）：>= 9.0.0 <= 14.0.1 有 AbortSignal 取消绕过，
+#   修复版 14.0.2；只匹配 13.x 请求，不动 glob@2/3/4 这类老包。
+overrides:
+  'minimatch@10': ^11.0.1
+  'glob@13': ^14.0.2
+
 # chokidar@4.0.3（2024-12 发布，tsup 的依赖）未附带 provenance 而更早的 4.0.1 有，
 # 会触发 pnpm `trustPolicy: no-downgrade` 的 ERR_PNPM_TRUST_DOWNGRADE。
 # 该版本发布已久且被广泛使用，按 pnpm 官方文档示例精确排除这一个版本，信任检查对其他包继续生效。
