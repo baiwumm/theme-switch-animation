@@ -556,6 +556,9 @@ function GalleryCard({
             </Typography>
           </div>
         </div>
+        {/* 触发按钮是本库受控模式的活演示：ref 必须始终挂载（库取
+            getBoundingClientRect 中心当动画圆心），HeroUI Button 会透传到内部 button；
+            尺寸与样式全部走组件默认 */}
         <Button
           ref={ref}
           isIconOnly
@@ -563,15 +566,19 @@ function GalleryCard({
           data-animation-type={animationType}
           aria-label={`播放 ${label} 动画并切换主题`}
           onPress={toggleTheme}
-          className="size-16 shrink-0 rounded-full text-foreground hover:border-accent hover:text-accent"
         >
-          {mounted && isDark ? <Moon size={22} /> : <Sun size={22} />}
+          {mounted && isDark ? (
+            <Moon className="size-4" />
+          ) : (
+            <Sun className="size-4" />
+          )}
         </Button>
       </div>
 
       {/* 参数行（全局预设的当前值 + 卡片独立的方向选择）：
-          mt-auto 钉底，同行卡片高度不一致时参数区仍然底对齐 */}
-      <div className="mt-auto w-full space-y-2 border-t border-border pt-4">
+          flex-1 占满头部以下全部空间，分割线在同行卡片上恒定对齐；
+          justify-evenly 让参数行数少的卡自动均分剩余空间 */}
+      <div className="flex flex-1 flex-col justify-evenly border-t border-border pt-3">
         <div className="flex items-center justify-between gap-2">
           <span className="text-xs text-muted">Duration</span>
           <Chip className="font-mono">
