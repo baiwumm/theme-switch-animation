@@ -176,6 +176,8 @@ export function QuickStartSection() {
               <Tabs.List aria-label="选择框架">
                 {FRAMEWORKS.map((f) => (
                   <Tabs.Tab key={f.id} id={f.id} className="gap-2">
+                    {/* 高亮药丸是 SelectionIndicator，必须显式渲染才有选中样式 */}
+                    <Tabs.Indicator />
                     <f.Icon className={`size-4 shrink-0 ${f.iconClass}`} />
                     {f.label}
                   </Tabs.Tab>
