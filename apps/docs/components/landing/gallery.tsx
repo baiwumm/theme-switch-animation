@@ -1,6 +1,7 @@
 'use client'
 
 import {
+  Button,
   Chip,
   ToggleButton,
   ToggleButtonGroup,
@@ -531,38 +532,45 @@ function GalleryCard({
 
   return (
     <article className="flex flex-col rounded-lg border border-border bg-surface p-6">
-      {/* 头部：左图标 + 右侧标题/副标题，垂直居中对齐 */}
-      <div className="flex items-center gap-3">
-        <div className="flex size-10 shrink-0 items-center justify-center rounded-md border border-border bg-surface-secondary text-accent">
-          <Icon className="size-5" />
+      {/* 头部行：图标 + 标题/副标题 + 触发按钮，左右排布垂直居中；
+          一行放不下时按钮自动换行并水平居中（flex-wrap + justify-center）。
+          触发按钮是本库受控模式的活演示：ref 必须始终挂载（库取
+          getBoundingClientRect 中心当动画圆心），HeroUI Button 会透传到内部 button */}
+      <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-4 pb-4">
+        <div className="flex min-w-0 flex-1 items-center gap-3">
+          <div className="flex size-10 shrink-0 items-center justify-center rounded-md border border-border bg-surface-secondary text-accent">
+            <Icon className="size-5" />
+          </div>
+          {/* flex-1：文字块吃掉剩余宽度，超长 hint 截断而不是把按钮挤到换行，
+              保证同行卡片的头部形态一致（按钮都和标题同排） */}
+          <div className="min-w-0 flex-1">
+            <Typography
+              className="font-mono tracking-wide"
+              type="body-sm"
+              weight="semibold"
+            >
+              {label}
+            </Typography>
+            <Typography className="truncate" color="muted" type="body-xs">
+              {hint}
+            </Typography>
+          </div>
         </div>
-        <div className="min-w-0">
-          <Typography
-            className="font-mono tracking-wide"
-            type="body-sm"
-            weight="semibold"
-          >
-            {label}
-          </Typography>
-          <Typography className="truncate" color="muted" type="body-xs">
-            {hint}
-          </Typography>
-        </div>
+        <Button
+          ref={ref}
+          isIconOnly
+          variant="outline"
+          data-animation-type={animationType}
+          aria-label={`播放 ${label} 动画并切换主题`}
+          onPress={toggleTheme}
+          className="size-16 shrink-0 rounded-full text-foreground hover:border-accent hover:text-accent"
+        >
+          {mounted && isDark ? <Moon size={22} /> : <Sun size={22} />}
+        </Button>
       </div>
 
-      {/* 中央切换按钮：唯一交互点，动画起收点即按钮中心（ref 必须始终挂载） */}
-      <button
-        ref={ref}
-        type="button"
-        data-animation-type={animationType}
-        aria-label={`播放 ${label} 动画并切换主题`}
-        onClick={toggleTheme}
-        className="mx-auto my-5 flex size-16 items-center justify-center rounded-full border border-border bg-background text-foreground transition-colors hover:border-accent hover:text-accent"
-      >
-        {mounted && isDark ? <Moon size={22} /> : <Sun size={22} />}
-      </button>
-
-      {/* 参数行（全局预设的当前值 + 卡片独立的方向选择） */}
+      {/* 参数行（全局预设的当前值 + 卡片独立的方向选择）：
+          mt-auto 钉底，同行卡片高度不一致时参数区仍然底对齐 */}
       <div className="mt-auto w-full space-y-2 border-t border-border pt-4">
         <div className="flex items-center justify-between gap-2">
           <span className="text-xs text-muted">Duration</span>
