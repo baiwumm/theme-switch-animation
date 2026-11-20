@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from 'next'
-import { ScrollTop } from '@/components/motion/scroll-top'
+import { BackToTop } from '@/components/back-to-top'
 import { ThemeProvider } from '@/components/provider/theme-provider'
 import { SITE_INFO } from '@/constants/site'
 
@@ -58,8 +58,8 @@ export default function RootLayout({
           disableTransitionOnChange
         >
           {children}
-          {/* 全站浮钮：滚动进度环 + 百分比，悬停换箭头，点击平滑回顶 */}
-          <ScrollTop />
+          {/* 全站浮钮：滚过一屏后浮出，点击平滑回顶（token-usage 同款） */}
+          <BackToTop />
         </ThemeProvider>
       </body>
     </html>

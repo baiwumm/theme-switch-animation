@@ -1,6 +1,11 @@
 'use client'
 
-import { ToggleButton, ToggleButtonGroup, Typography } from '@heroui/react'
+import {
+  Chip,
+  ToggleButton,
+  ToggleButtonGroup,
+  Typography,
+} from '@heroui/react'
 import { Moon, Sun } from 'lucide-react'
 import { useTheme } from 'next-themes'
 import type { JSX, SVGProps } from 'react'
@@ -13,6 +18,7 @@ import {
 } from 'theme-switch-animation/react'
 
 import { SectionHeader } from '@/components/landing/section-header'
+import { FlowNumber } from '@/components/ui/flow-number'
 
 /** 每张卡片的迷你图形标（stroke 风格，颜色走图标砖的 currentColor） */
 function IcoCircle(props: SVGProps<SVGSVGElement>) {
@@ -439,7 +445,6 @@ function ParamGroup<T extends number | string | boolean>({
       </span>
       <ToggleButtonGroup
         size="sm"
-        className="font-mono text-[11px]"
         selectedKeys={new Set([String(value)])}
         selectionMode="single"
         onSelectionChange={(keys) => {
@@ -450,7 +455,11 @@ function ParamGroup<T extends number | string | boolean>({
         }}
       >
         {options.map((o) => (
-          <ToggleButton key={String(o.value)} id={String(o.value)}>
+          <ToggleButton
+            key={String(o.value)}
+            id={String(o.value)}
+            className="px-2 font-mono text-xs"
+          >
             {o.label}
           </ToggleButton>
         ))}
@@ -521,25 +530,25 @@ function GalleryCard({
   useEffect(() => setMounted(true), [])
 
   return (
-    <article className="flex flex-col items-center rounded-lg border border-border bg-surface p-6">
-      {/* 图标砖：hairline + 表面色 + 朱红图形，不再用彩色渐变 */}
-      <div className="mb-3 flex size-12 items-center justify-center rounded-md border border-border bg-surface-secondary text-accent">
-        <Icon className="size-6" />
+    <article className="flex flex-col rounded-lg border border-border bg-surface p-6">
+      {/* 头部：左图标 + 右侧标题/副标题，垂直居中对齐 */}
+      <div className="flex items-center gap-3">
+        <div className="flex size-10 shrink-0 items-center justify-center rounded-md border border-border bg-surface-secondary text-accent">
+          <Icon className="size-5" />
+        </div>
+        <div className="min-w-0">
+          <Typography
+            className="font-mono tracking-wide"
+            type="body-sm"
+            weight="semibold"
+          >
+            {label}
+          </Typography>
+          <Typography className="truncate" color="muted" type="body-xs">
+            {hint}
+          </Typography>
+        </div>
       </div>
-      <Typography
-        className="font-mono tracking-wide"
-        type="body-sm"
-        weight="semibold"
-      >
-        {label}
-      </Typography>
-      <Typography
-        className="mt-1 min-h-8 text-center"
-        color="muted"
-        type="body-xs"
-      >
-        {hint}
-      </Typography>
 
       {/* 中央切换按钮：唯一交互点，动画起收点即按钮中心（ref 必须始终挂载） */}
       <button
@@ -548,20 +557,25 @@ function GalleryCard({
         data-animation-type={animationType}
         aria-label={`播放 ${label} 动画并切换主题`}
         onClick={toggleTheme}
-        className="my-5 flex size-16 items-center justify-center rounded-full border border-border bg-background text-foreground transition-colors hover:border-accent hover:text-accent"
+        className="mx-auto my-5 flex size-16 items-center justify-center rounded-full border border-border bg-background text-foreground transition-colors hover:border-accent hover:text-accent"
       >
         {mounted && isDark ? <Moon size={22} /> : <Sun size={22} />}
       </button>
 
       {/* 参数行（全局预设的当前值 + 卡片独立的方向选择） */}
-      <div className="w-full space-y-1.5 border-t border-border pt-4">
-        <div className="flex items-center justify-between">
+      <div className="mt-auto w-full space-y-2 border-t border-border pt-4">
+        <div className="flex items-center justify-between gap-2">
           <span className="text-xs text-muted">Duration</span>
-          <span className="font-mono text-xs">{duration}ms</span>
+          <Chip className="font-mono">
+            {/* 数值滚动：全局切换档位时 15 张卡同步滚到新值 */}
+            <FlowNumber suffix="ms" value={duration} />
+          </Chip>
         </div>
         <div className="flex items-center justify-between gap-2">
           <span className="text-xs text-muted">Easing</span>
-          <span className="truncate font-mono text-xs">{easing}</span>
+          <Chip className="max-w-[70%] font-mono">
+            <span className="truncate">{easing}</span>
+          </Chip>
         </div>
         {initialDirection !== undefined && (
           <div className="pt-0.5">
@@ -587,7 +601,6 @@ function GalleryCard({
             <div className="flex gap-1.5">
               <ToggleButtonGroup
                 size="sm"
-                className="font-mono text-[11px]"
                 selectedKeys={new Set([cellShape])}
                 selectionMode="single"
                 onSelectionChange={(keys) => {
@@ -598,14 +611,17 @@ function GalleryCard({
                 }}
               >
                 {CELL_SHAPE_OPTIONS.map((s) => (
-                  <ToggleButton key={s.value} id={s.value}>
+                  <ToggleButton
+                    key={s.value}
+                    id={s.value}
+                    className="px-2 font-mono text-xs"
+                  >
                     {s.label}
                   </ToggleButton>
                 ))}
               </ToggleButtonGroup>
               <ToggleButtonGroup
                 size="sm"
-                className="font-mono text-[11px]"
                 selectedKeys={new Set([String(cellSize)])}
                 selectionMode="single"
                 onSelectionChange={(keys) => {
@@ -618,7 +634,11 @@ function GalleryCard({
                 }}
               >
                 {CELL_SIZE_OPTIONS.map((c) => (
-                  <ToggleButton key={c.value} id={String(c.value)}>
+                  <ToggleButton
+                    key={c.value}
+                    id={String(c.value)}
+                    className="px-2 font-mono text-xs"
+                  >
                     {c.label}
                   </ToggleButton>
                 ))}
@@ -665,7 +685,7 @@ export function GallerySection() {
       <div className="mx-auto w-full max-w-6xl px-6 py-20 sm:py-24">
         <SectionHeader
           eyebrow="02 / 动画演示"
-          sub="点击卡片中央按钮播放动画；BLINDS / SCAN / QR_GRID / CURTAIN 可在卡内切换方向，RIPPLE 可切换环带波长，FAN 可切换扇叶数，QR_GRID 可切换格距与方块 / 圆点形状。"
+          sub="点击卡片中央按钮播放动画，方向与参数可在卡内调整。"
           title="Try Different Animations"
         />
 

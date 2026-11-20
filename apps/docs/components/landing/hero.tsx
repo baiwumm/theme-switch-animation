@@ -6,15 +6,16 @@ import { useState } from 'react'
 
 import { PromoVideo } from '@/components/landing/promo-video'
 import { GithubIcon } from '@/components/ui/brand-icons'
+import { FlowNumber } from '@/components/ui/flow-number'
 import { REPO_URL } from '@/constants/site'
 
 const INSTALL_CMD = 'npm install theme-switch-animation'
 
 const STATS = [
-  { label: '动画类型', value: '15' },
-  { label: 'reverse 反向', value: '9' },
-  { label: '框架适配', value: '4' },
-  { label: '框架无关代码', value: '95%' },
+  { label: '动画类型', value: 15 },
+  { label: 'reverse 反向', value: 9 },
+  { label: '框架适配', value: 4 },
+  { label: '框架无关代码', value: 95, suffix: '%' },
 ] as const
 
 function InstallCommand() {
@@ -147,7 +148,10 @@ export function HeroSection() {
                 </Typography>
               </dt>
               <dd className="font-mono text-3xl tabular-nums sm:text-4xl">
-                {stat.value}
+                <FlowNumber
+                  suffix={'suffix' in stat ? stat.suffix : undefined}
+                  value={stat.value}
+                />
               </dd>
             </div>
           ))}
