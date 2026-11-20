@@ -562,6 +562,7 @@ function GalleryCard({
         <Button
           ref={ref}
           isIconOnly
+          size="lg"
           variant="outline"
           data-animation-type={animationType}
           aria-label={`播放 ${label} 动画并切换主题`}
@@ -577,8 +578,9 @@ function GalleryCard({
 
       {/* 参数行（全局预设的当前值 + 卡片独立的方向选择）：
           flex-1 占满头部以下全部空间，分割线在同行卡片上恒定对齐；
-          justify-evenly 让参数行数少的卡自动均分剩余空间 */}
-      <div className="flex flex-1 flex-col justify-evenly border-t border-border pt-3">
+          gap-2 是最小间距兜底（最高的卡没有富余空间可均分时不会贴死），
+          justify-evenly 把剩余空间均分给参数行数少的卡 */}
+      <div className="flex flex-1 flex-col justify-evenly gap-2 border-t border-border pt-3">
         <div className="flex items-center justify-between gap-2">
           <span className="text-xs text-muted">Duration</span>
           <Chip className="font-mono">
