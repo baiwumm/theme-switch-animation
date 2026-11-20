@@ -577,10 +577,9 @@ function GalleryCard({
       </div>
 
       {/* 参数行（全局预设的当前值 + 卡片独立的方向选择）：
-          flex-1 占满头部以下全部空间，分割线在同行卡片上恒定对齐；
-          gap-2 是最小间距兜底（最高的卡没有富余空间可均分时不会贴死），
-          justify-evenly 把剩余空间均分给参数行数少的卡 */}
-      <div className="flex flex-1 flex-col justify-evenly gap-2 border-t border-border pt-3">
+          flex-1 让分割线在同行卡片上恒定对齐；参数行从分割线下方
+          正常向下堆叠（gap-2 常规间距），底部空间自然留白，不做均分 */}
+      <div className="flex flex-1 flex-col gap-2 border-t border-border pt-3">
         <div className="flex items-center justify-between gap-2">
           <span className="text-xs text-muted">Duration</span>
           <Chip className="font-mono">

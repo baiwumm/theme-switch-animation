@@ -41,13 +41,14 @@ export function FaqSection() {
       <div className="mx-auto w-full max-w-3xl px-6 py-20 sm:py-24">
         <SectionHeader eyebrow="04 / FAQ" title="常见问题" />
 
-        {/* Accordion（react-aria DisclosureGroup）：高度 + 淡入过渡，同一时间只展开一项 */}
-        <Accordion className="mt-10 border-t border-border">
+        {/* Accordion（react-aria DisclosureGroup）：高度 + 淡入过渡，同一时间只展开一项。
+            内边距/分隔线等全部走组件默认样式，不做定制 */}
+        <Accordion className="mt-10">
           {FAQS.map((item, index) => (
             <Accordion.Item key={item.q} id={`faq-${index}`}>
               <Accordion.Heading>
-                <Accordion.Trigger className="items-center gap-4 px-0 py-4">
-                  <span className="font-mono text-[11px] text-muted">
+                <Accordion.Trigger>
+                  <span className="mr-3 font-mono text-[11px] text-muted">
                     {String(index + 1).padStart(2, '0')}
                   </span>
                   <span className="flex-1 text-start">
@@ -61,15 +62,13 @@ export function FaqSection() {
                 </Accordion.Trigger>
               </Accordion.Heading>
               <Accordion.Panel>
-                <div className="pb-4 pl-9">
-                  <Typography
-                    className="max-w-3xl leading-relaxed"
-                    color="muted"
-                    type="body-sm"
-                  >
-                    {item.a}
-                  </Typography>
-                </div>
+                <Typography
+                  className="leading-relaxed"
+                  color="muted"
+                  type="body-sm"
+                >
+                  {item.a}
+                </Typography>
               </Accordion.Panel>
             </Accordion.Item>
           ))}
