@@ -125,24 +125,26 @@ export function Footer() {
               </a>
             </span>
             <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-[11px] text-muted">
-              <a
-                href="https://beian.miit.gov.cn/"
-                target="_blank"
-                rel="noreferrer"
-                className="inline-flex items-center gap-1 transition-colors hover:text-accent"
-              >
-                {/* biome-ignore lint/performance/noImgElement: 备案官方小图标，不值得上 next/image */}
-                <img
-                  src="/beian/icp.png"
-                  alt=""
-                  aria-hidden="true"
-                  className="size-3.5 shrink-0"
-                  width={14}
-                  height={14}
-                  loading="lazy"
-                />
-                {BEIAN.icp}
-              </a>
+              {BEIAN.icp ? (
+                <a
+                  href="https://beian.miit.gov.cn/"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex items-center gap-1 transition-colors hover:text-accent"
+                >
+                  {/* biome-ignore lint/performance/noImgElement: 备案官方小图标，不值得上 next/image */}
+                  <img
+                    src="/beian/icp.png"
+                    alt=""
+                    aria-hidden="true"
+                    className="size-3.5 shrink-0"
+                    width={14}
+                    height={14}
+                    loading="lazy"
+                  />
+                  {BEIAN.icp}
+                </a>
+              ) : null}
               {POLICE_CODE ? (
                 <a
                   href={`https://beian.mps.gov.cn/#/query/webSearch?code=${POLICE_CODE}`}
