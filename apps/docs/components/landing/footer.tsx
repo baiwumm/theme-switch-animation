@@ -2,7 +2,10 @@ import { Typography } from '@heroui/react'
 import Link from 'next/link'
 
 import { GithubIcon } from '@/components/ui/brand-icons'
-import { AUTHOR_URL, NPM_URL, REPO_URL } from '@/constants/site'
+import { AUTHOR_URL, BEIAN, NPM_URL, REPO_URL } from '@/constants/site'
+
+/** 公安备案号里提取纯数字，拼查询链接（better-admin 同款做法） */
+const POLICE_CODE = BEIAN.police.match(/\d+/)?.[0] ?? ''
 
 const RESOURCE_LINKS = [
   { label: 'GitHub 仓库', href: REPO_URL },
@@ -99,27 +102,69 @@ export function Footer() {
           </nav>
         </div>
 
-        <div className="mt-14 flex flex-col items-center justify-between gap-3 border-t border-border pt-6 text-xs text-muted sm:flex-row">
+        <div className="mt-14 flex flex-col gap-2 border-t border-border pt-6 text-xs text-muted sm:flex-row sm:items-center sm:justify-between">
           <span>© {new Date().getFullYear()} baiwumm · MIT License</span>
-          <span className="flex items-center gap-4">
-            <Link
-              href={AUTHOR_URL}
-              target="_blank"
-              rel="noreferrer"
-              className="transition-colors hover:text-accent"
-            >
-              baiwumm.com
-            </Link>
-            <a
-              href={REPO_URL}
-              target="_blank"
-              rel="noreferrer"
-              className="inline-flex items-center gap-1.5 transition-colors hover:text-accent"
-            >
-              <GithubIcon className="size-3.5" />
-              Source
-            </a>
-          </span>
+          <div className="flex flex-col gap-2 sm:items-end">
+            <span className="flex items-center gap-4">
+              <Link
+                href={AUTHOR_URL}
+                target="_blank"
+                rel="noreferrer"
+                className="transition-colors hover:text-accent"
+              >
+                baiwumm.com
+              </Link>
+              <a
+                href={REPO_URL}
+                target="_blank"
+                rel="noreferrer"
+                className="inline-flex items-center gap-1.5 transition-colors hover:text-accent"
+              >
+                <GithubIcon className="size-3.5" />
+                Source
+              </a>
+            </span>
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-[11px] text-muted">
+              <a
+                href="https://beian.miit.gov.cn/"
+                target="_blank"
+                rel="noreferrer"
+                className="inline-flex items-center gap-1 transition-colors hover:text-accent"
+              >
+                {/* biome-ignore lint/performance/noImgElement: 备案官方小图标，不值得上 next/image */}
+                <img
+                  src="/beian/icp.png"
+                  alt=""
+                  aria-hidden="true"
+                  className="size-3.5 shrink-0"
+                  width={14}
+                  height={14}
+                  loading="lazy"
+                />
+                {BEIAN.icp}
+              </a>
+              {POLICE_CODE ? (
+                <a
+                  href={`https://beian.mps.gov.cn/#/query/webSearch?code=${POLICE_CODE}`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex items-center gap-1 transition-colors hover:text-accent"
+                >
+                  {/* biome-ignore lint/performance/noImgElement: 同上，公安备案图标 */}
+                  <img
+                    src="/beian/gongan.png"
+                    alt=""
+                    aria-hidden="true"
+                    className="size-3.5 shrink-0"
+                    width={14}
+                    height={14}
+                    loading="lazy"
+                  />
+                  {BEIAN.police}
+                </a>
+              ) : null}
+            </div>
+          </div>
         </div>
       </div>
     </footer>

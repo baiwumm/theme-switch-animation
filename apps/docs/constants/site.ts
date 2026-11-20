@@ -12,3 +12,9 @@ export const SITE_INFO = {
   url: SITE_URL,
   siteName: 'theme-switch-animation',
 } as const
+
+/** 备案信息（与 better-admin 网站同主体同域名，值与其 lib/site.ts 默认值一致） */
+export const BEIAN = {
+  icp: '粤ICP备2023007649号-2',
+  police: '粤公网安备44030402006402号',
+} as const

@@ -64,13 +64,20 @@
   },
   "keywords": [
     "theme",
+    "theme-switch",
+    "theme-toggle",
     "dark-mode",
+    "dark-mode-toggle",
     "view-transitions",
     "animation",
+    "mask",
+    "css",
+    "transition",
     "react",
     "vue",
     "nextjs",
-    "nuxt"
+    "nuxt",
+    "typescript"
   ],
   "license": "MIT",
   "author": {

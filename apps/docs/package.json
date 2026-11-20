@@ -2,6 +2,32 @@
   "name": "@theme-switch-animation/docs",
   "version": "0.0.0",
   "private": true,
+  "description": "theme-switch-animation — official landing & docs site, statically exported and deployed on Tencent EdgeOne Makers.",
+  "author": {
+    "name": "baiwumm",
+    "url": "https://github.com/baiwumm"
+  },
+  "license": "MIT",
+  "homepage": "https://theme-switch-animation.baiwumm.com",
+  "keywords": [
+    "theme",
+    "dark-mode",
+    "view-transitions",
+    "animation",
+    "documentation",
+    "landing",
+    "nextjs",
+    "static-site",
+    "typescript"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/baiwumm/theme-switch-animation.git",
+    "directory": "apps/docs"
+  },
+  "bugs": {
+    "url": "https://github.com/baiwumm/theme-switch-animation/issues"
+  },
   "scripts": {
     "dev": "pnpm -w run build && next dev",
     "build": "pnpm -w run build && next build",
