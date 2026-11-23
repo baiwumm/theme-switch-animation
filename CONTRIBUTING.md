@@ -5,8 +5,8 @@ Thanks for taking the time to contribute. This repository is maintained by a sin
 ## Before you start
 
 - Read [AGENTS.md](./AGENTS.md). It is the source of truth for repository layout, the two hard technical constraints of the View Transitions mask approach, `docs/` conventions, the animation type freeze and the commit trailer format.
-- For anything larger than a small fix, open an issue first describing the approach so it can be agreed on before code lands.
-- Bug reports and feature requests go through the issue forms (`.github/ISSUE_TEMPLATE` — blank issues are disabled). The bug form already collects what matters: affected version, engine, `animationType`, options, repro steps. Animation look-and-feel reports are welcome too — they feed `docs/animation-roadmap.md`, they are just not security issues.
+- For anything larger than a small fix, start an [Ideas discussion](https://github.com/baiwumm/theme-switch-animation/discussions/categories/ideas) first so the approach can be agreed on before code lands. Setup and usage questions go to [Q&A](https://github.com/baiwumm/theme-switch-animation/discussions/categories/q-a) — both categories have form templates.
+- Bug reports go through the issue forms (`.github/ISSUE_TEMPLATE` — blank issues are disabled). The bug form already collects what matters: affected version, engine, `animationType`, options, repro steps. Animation look-and-feel reports are welcome too — they feed `docs/animation-roadmap.md`, they are just not security issues.
 
 ## Development
 

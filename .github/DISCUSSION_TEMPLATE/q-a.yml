@@ -1,0 +1,54 @@
+title: "[Q&A] "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for asking. Please search existing discussions and the [docs](https://theme-switch-animation.baiwumm.com) first — install, the 15 animation types and every option are documented there.
+
+        提问前请先检索已有讨论与文档站。日志与截图里不要带真实站点的 token、内部地址或用户数据。
+  - type: input
+    id: version
+    attributes:
+      label: 库版本
+      description: 安装的 theme-switch-animation 版本（`npm ls theme-switch-animation` 可查）
+      placeholder: 0.7.0
+    validations:
+      required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: 问题发生在哪
+      options:
+        - 安装与接入（React / Vue / Next.js / Nuxt）
+        - 动画类型与参数（animationType / options）
+        - reverse 反向揭开
+        - 样式层级与 View Transitions 伪元素
+        - 降级与无障碍（不支持 VT / prefers-reduced-motion）
+        - 文档站
+        - 其他
+    validations:
+      required: true
+  - type: textarea
+    id: question
+    attributes:
+      label: 想做什么 / 遇到了什么
+      description: 预期行为、实际行为、报错原文。
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: 复现步骤（如有）
+      placeholder: |
+        1. ...
+        2. ...
+        3. ...
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: 发帖前确认
+      options:
+        - label: 我检索过已有讨论与文档站，没有找到答案。
+          required: true
+        - label: 帖子里没有真实站点的 token、内部地址或用户数据。
+          required: true
