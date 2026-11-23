@@ -2,7 +2,7 @@
 
 | 项目 | 内容 |
 |---|---|
-| 版本 | v1.24（reverse 补接 HEXAGON，接入面 10 → 11；见 §10 修订记录） |
+| 版本 | v1.25（开启 GitHub Code scanning + 依赖批聚合合并；见 §10 修订记录） |
 | 日期 | 2026-09-21 |
 | 状态 | 已评审通过，持续开发中（进展见 §10 修订记录） |
 | 仓库 / npm 包名 | `theme-switch-animation`（npm 已注册并发布） |
@@ -313,6 +313,19 @@ export type { ThemeAnimationOptions, ... } from '@theme-switch-animation/core'
 
 ## 10. 修订记录
 
+### v1.25（2026-11-23）
+
+仓库安全面与依赖批：**开启 GitHub Code scanning（Default setup）**、首扫 5 条告警全部处置、3 条 Dependabot PR 经聚合分支并批。**无 `packages/` 产物语义变化**（dev 依赖刷新，发布包零运行时依赖不变），随 0.7.0 同批发版。
+
+1. **Code scanning 开启（需求方 2026-11-23 要求，参照 `baiwumm/token-usage` 同款）**：Default setup（仓库托管，不落 workflow 文件，与 ci / deploy-docs / release 三条现有 workflow 零冲突）——languages = actions + javascript + javascript-typescript + typescript、query suite default、每周定时、standard runner；公共仓库免费。触发面 = push main + 碰代码的 PR + 周定。首扫 5 条告警，处置如下（#1/#5 修复后随下次 push 自动关闭）：
+   - **js/bad-tag-filter（high，`apps/docs/components/code-block.tsx:65`）→ 修复**：Prism vue 语法的 `</script>` 正则补 `\s*` 容忍 `</script >` 变体。用途是自撰文档片段高亮、无远程输入面，低危顺手清零。
+   - **actions/missing-workflow-permissions（medium，`ci.yml:14`）→ 修复**：显式 `permissions: contents: read`（纯读流程）。
+   - **js/bad-code-sanitization（medium ×3，`scripts/jitter-lab/run.mjs:484/516`）→ dismiss（false positive）**：本地开发工具（不进发布包，发布白名单不含 `scripts/`）；CLI 参数经 `JSON.stringify` 转义后嵌入 CDP evaluate 表达式，序列化即充分转义；sink 是脚本自行拉起的本机 Chrome 调试端口，无远程输入面。REST 端点（PATCH alerts）只收 `state` / `dismissed_reason` 两键，不支持附评——处置理由以本条为准。
+2. **3 条 Dependabot PR 并批（#14 / #15 / #16）**：为避免多次 push 触发 EdgeOne 文档站部署，走聚合分支 `chore/p3-11-batch`（承 P3-11 三笔 + 告警修复 + 依赖批），一次合并进 main = 一次部署（AGENTS.md「仍然攒批」惯例，同 PR #13 先例）。内容：jsdom 30 → **31**（跨 major，vitest 环境）、@types/node 24 → **26**（跨 major，apps/docs + playgrounds/next）、16 包 semver 内组批（#14）。均为 dev 侧，发布包零运行时依赖不变。
+3. **锁文件冲突的并集收敛（踩坑记录）**：三条分支都改 `pnpm-lock.yaml`，按 #14 → #16 → #15 序合并；#16 冲突取对方侧时**覆盖过 #14 的组批刷新**（对方锁文件基于旧 main 生成）——用 `pnpm up -r <16 包名>` 按 manifest 语义范围重新落齐，落点比 Dependabot 取证时更新但仍在原范围内（如 vue 3.5.45 → 3.5.46），`playgrounds/vue` 的 spec 随 `^3.5.42 → ^3.5.46`、其余 devDep spec 由 `pnpm up` 重写为与锁文件一致（均为良性改写）。`pnpm install --frozen-lockfile` 通过 = CI 同口径成立。**教训：多条 Dependabot 锁文件分支并批时，manifest 改动分支的锁文件冲突侧不要直接取，先并完再整体 `pnpm up -r` 收敛。**
+4. **biome 2.6.8（#14 组批带入）新诊断即修**：新增 `lint/correctness/noComponentHookFactories` 打中画廊 `IcoShape` 工厂——改模块级 `ShapeIcon`（points 走 props）+ 5 个调用点改模块级箭头（组件身份仍在模块级创建一次，语义等价），`apps/docs lint` 保持常绿。
+5. **闸门**：聚合分支上门禁四件套（308 单测）+ `verify:package` + apps/docs 与四 playground typecheck / lint 全绿；聚合 PR 合并后 CI 双矩阵复验。
+
 ### v1.24（2026-11-23）
 
 `reverse` 补接第四批（roadmap P3-11 补全）：`HEXAGON`，接入面 10 → 11。**范围决策修订（需求方 2026-11-23）**：推翻 v1.23 的「只接 TRIANGLE」，改判 TRIANGLE + HEXAGON 都接、完成后连同发版（0.7.0）；HEXAGON 免单独观感验收轮（预检证据 + 与 TRIANGLE 同构造类）。
@@ -563,4 +576,4 @@ export type { ThemeAnimationOptions, ... } from '@theme-switch-animation/core'
 
 ---
 
-**当前状态（2026-11-23）**：**0.1.0 / 0.2.0 / 0.3.0 / 0.4.0 / 0.5.0 / 0.5.1 / 0.6.0 / 0.6.1 / 0.6.2 均已发布**，npm `latest = 0.6.2`（0.7.0 随 v1.24 发版中：TRIANGLE + HEXAGON 反向，接入面 11；发布后页脚另行校准）（0.2.0 起走 OIDC Trusted Publishing，provenance 已实测挂上；0.5.0 = P3 批次三项 minor：reverse 接入面 5 → 9、CURTAIN direction、QR_GRID cellSize/cellShape；0.5.1 = README 门面封面 patch；0.6.0 = 11 个零消费类型导出收回，breaking 仅类型面；0.6.1 / 0.6.2 = README 双语拆分与 npm 包页语言修正）。本文档随实现推进到 v1.24。动画类型扩展已冻结（v1.13 起 15 种，理由见 `docs/animation-roadmap.md` §4），`reverse` 接入面 v1.24 起 11 类（判据与分期见 `docs/reverse-option-design.md`）；剩余事项（P2-2 LOGO_MASK 设计稿讨论、真机缩放与 Safari/iOS 反馈排查）见 `docs/next-steps.md`。
+**当前状态（2026-11-23）**：**0.1.0 / 0.2.0 / 0.3.0 / 0.4.0 / 0.5.0 / 0.5.1 / 0.6.0 / 0.6.1 / 0.6.2 均已发布**，npm `latest = 0.6.2`（0.7.0 随 v1.24 发版中：TRIANGLE + HEXAGON 反向，接入面 11；发布后页脚另行校准）（0.2.0 起走 OIDC Trusted Publishing，provenance 已实测挂上；0.5.0 = P3 批次三项 minor：reverse 接入面 5 → 9、CURTAIN direction、QR_GRID cellSize/cellShape；0.5.1 = README 门面封面 patch；0.6.0 = 11 个零消费类型导出收回，breaking 仅类型面；0.6.1 / 0.6.2 = README 双语拆分与 npm 包页语言修正）。本文档随实现推进到 v1.25。动画类型扩展已冻结（v1.13 起 15 种，理由见 `docs/animation-roadmap.md` §4），`reverse` 接入面 v1.24 起 11 类（判据与分期见 `docs/reverse-option-design.md`）；剩余事项（P2-2 LOGO_MASK 设计稿讨论、真机缩放与 Safari/iOS 反馈排查）见 `docs/next-steps.md`。
