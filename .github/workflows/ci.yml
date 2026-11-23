@@ -5,6 +5,10 @@ on:
     branches: [main]
   pull_request:
 
+# 纯读流程（lint / typecheck / test / build），显式收紧 GITHUB_TOKEN（actions/missing-workflow-permissions）
+permissions:
+  contents: read
+
 concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
