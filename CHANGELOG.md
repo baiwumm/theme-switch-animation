@@ -1,5 +1,20 @@
 # theme-switch-animation
 
+## 0.7.0
+
+### Minor Changes
+
+- cd33445: `reverse` 补接 `HEXAGON`（接入面 10 → 11 个类型）：尖顶朝上的六边形洞从视口六边向触发点收拢。
+  
+  - **构造**：三条透明芯条带默认 `add`——轴取 90° / 150° / 210°（90° 法向水平 ⇒ 左右竖直边、上下出顶点 = 尖顶，与正向蒙版朝向一致），每层 `linear-gradient(Adeg, #000 0 calc(S−v×0.8661−0.5px), transparent …, #000 calc(S+v×0.8661+0.5px))`，透明区取交集 = 六边形洞，免 `@supports`；与 DIAMOND 的洞式条带同一构造类。边心距 `a = ceil4(cos30°) × v = 0.8661v`，向上取整防欠覆盖（round2 的 0.87 会让内切半径小 0.4%）。
+  - **几何**：`S = L/2 + (触发点 − 视口中心)·u` 烘进 px 常量；条带是**双侧**约束，`needed = max over (视口角 p, 轴法向 u) of |(p−c)·u|`（与 TRIANGLE 半平面的单侧 needed 不同）、`from = 1.05 × needed / 0.8661`、`to = 0`——不复用正向欧氏外接圆余量（多留 14.7%，起手空转 125ms → 240ms）。
+  - **范围决策（P3-11 补全，2026-11-23）**：预检（同 `TRIANGLE` 一份报告）早已逐像素过关；首轮「只接 TRIANGLE」因 HEXAGON 与 CIRCLE 同帧区分度仅 6.75% / 15.87（略高于 DIAMOND vs CIRCLE 基线 7.06% / 16.84），本次需求方改判都接、连同发版。`STAR` 真凹维持不做：add / intersect / subtract 三种合成的构造空间已穷举（交集恒凸；过中心扇区并集 = FAN@5 撞车；subtract 近似伤中腔）。文档站画廊 HEXAGON 卡挂 `Reverse` 三档控件。
+- 2297d4b: `reverse` 补接 `TRIANGLE`（接入面 9 → 10 个类型）：顶点朝上的等边三角形洞从视口三边向触发点收拢。
+  
+  - **构造**：三个半平面默认 `add`——三条边取内法向 0° / 120° / 240° 的 `linear-gradient`（边界靠视口外一侧 `#000`、洞内一侧 `transparent`），透明区取交集 = 三角形洞，免 `@supports`；与 DIAMOND 的洞式条带同一构造类（**凸多边形 = 半平面/条带的交集**）。内切半径 `a = v × 0.5`（外接圆 = 2a）；±0.5px 斜坡是洞边抗锯齿，同 DIAMOND。
+  - **几何**：`S = L/2 + (触发点 − 视口中心)·u` 烘进 px 常量（`L = |W·sinA| + |H·cosA|`）；`from = 1.05 × needed / 0.5`（`needed = max over (视口角 p, 内法向 u) of −(p−c)·u`，洞盖满视口的充要条件）、`to = 0`——不复用正向欧氏外接圆余量（照抄多留 ~12%，起手空转 125ms → 240ms）。
+  - **范围决策（P3-11 预检，2026-11-23）**：只接 `TRIANGLE`。预检同时证明 `HEXAGON` 构造可接（同为凸多边形），但与 `CIRCLE` 同帧区分度仅 6.75% / 15.87（基线 DIAMOND vs CIRCLE 7.06% / 16.84），收益不足未接；`STAR` 真凹、无半平面构造，维持不做。原「形状族斜线轮廓无静止盒子绕路」的理由经预检证伪，分界修正为**凸 vs 凹**（roadmap §4 / requirements §7 已同步）。文档站画廊 TRIANGLE 卡挂 `Reverse` 三档控件。
+
 ## 0.6.2
 
 ### Patch Changes
