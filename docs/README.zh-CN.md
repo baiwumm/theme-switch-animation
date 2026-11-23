@@ -121,7 +121,7 @@ export default defineNuxtConfig({
 
 | 类型 | 观感 | 起收点 | 消费的选项 |
 | --- | --- | --- | --- |
-| `CIRCLE` | 圆形扩散；`reverse` 改为"新主题从四周显出、向触发点收拢"（0.3.x 的 `CIRCLE_REVERT` 收起形态） | 触发元素中心 | `reverse` |
+| `CIRCLE` | 圆形扩散；`reverse` 改为"新主题从四周显出、向触发点收拢" | 触发元素中心 | `reverse` |
 | `CIRCLE_BLUR` | 边缘高斯模糊的圆形扩散；`reverse` 为模糊边界的圆洞收拢 | 触发元素中心 | `blurAmount` / `reverse` |
 | `SQUARE` / `DIAMOND` / `RECTANGLE` / `HEXAGON` / `TRIANGLE` / `STAR` | 多边形从触发点扩散（朝向见文档站画廊）；`SQUARE` / `DIAMOND` / `RECTANGLE` / `TRIANGLE` / `HEXAGON` 的 `reverse` 为对应形状的洞从四周收拢 | 触发元素中心 | `reverse`（除 `STAR` 外） |
 | `BLINDS` | 百叶窗：叶片逐条揭开 | 无触发点（全屏按叶宽平铺） | `direction` / `slatWidth` |
@@ -170,51 +170,6 @@ export default defineNuxtConfig({
 - `waitForThemeSync(params)`：受控模式的等待协议（300ms 超时，`THEME_SYNC_TIMEOUT_MS`）。
 - `supportsViewTransition()` / `prefersReducedMotion()` / `shouldSkipTransition()`：降级判定。
 - 蒙版几何与样式构建（`getMaskGeometry` / `buildAnimationCSS` 等）亦从主入口公开导出，自定义动画 / SSR 预注入等场景可用。
-
-## ⚠️ 从 0.3.x 升级（0.4.0 破坏性变更）
-
-0.4.0 新增跨类型选项 `reverse`（反向揭开），并删掉被它完全覆盖的 `CIRCLE_REVERT` 类型——"暗色圆收拢进触发点"从此是 `CIRCLE` 的一个形态，不再独占一个类型值。
-
-**移除**：`ThemeAnimationType.CIRCLE_REVERT`（值 `'circle-revert'`）与导出函数 `getCircleRevertMaskGeometry`。动画类型 16 → 15 种。
-
-**迁移**：
-
-```tsx
-// 0.3.x
-useThemeAnimation({ animationType: ThemeAnimationType.CIRCLE_REVERT })
-
-// 0.4.0
-useThemeAnimation({ animationType: ThemeAnimationType.CIRCLE, reverse: 'auto' })
-```
-
-`reverse: 'auto'` 与原 `CIRCLE_REVERT` 同形：切暗是暗色圆从触发点扩散、切亮是暗色圆收拢进触发点，注入的 CSS 只在 keyframes 名上不同（`theme-switch-circle-revert` → `theme-switch-circle`）。想无论切哪个方向都收拢，写 `reverse: true`——这是 0.3.x 没有的形态。
-
-`getCircleRevertHoleGeometry`（洞式收起的几何计算）保留原名导出，现在由 `CIRCLE + reverse` 消费。`reverse` 对未接入的 6 个类型静默无效，除 `CIRCLE` 外的类型行为与 0.3.x 完全一致。
-
-## ⚠️ 从 0.1.x 升级（0.2.0 破坏性变更）
-
-0.2.0 把"四个方向"从**动画类型**降级为**普通选项** `direction`，并新增三种条带 / 格子类动画。
-
-**移除**：`ThemeAnimationType.LTR / RTL / TTB / BTT` 四个类型值，`DirectionalAnimationType` 类型，以及 `BAR_MASK_IMAGE` / `BAR_START_PX` / `getDirectionalMaskGeometry` / `isDirectionalAnimationType` 四个导出。
-
-**迁移**：原四向擦除 → `SCAN` + `direction`。
-
-```tsx
-// 0.1.x
-useThemeAnimation({ animationType: ThemeAnimationType.RTL })
-
-// 0.2.0
-useThemeAnimation({
-  animationType: ThemeAnimationType.SCAN,
-  direction: ThemeAnimationDirection.RTL, // 或字符串 'rtl'
-})
-```
-
-观感差异只有一处：`SCAN` 的揭开前缘多了一条 12px 半透明光束带（带宽与透明度是导出常量 `SCAN_BAND_WIDTH_PX` / `SCAN_BAND_ALPHA`，未开放为选项）。除此之外逐帧扫开效果与原四向类型一致。
-
-**新增**：`BLINDS`（`slatWidth` 控叶宽 16–200px，默认 72）、`SCAN`、`QR_GRID`（方块格子，格距 `QR_GRID_CELL_PX` = 64）三种类型；`direction` / `slatWidth` 两个选项；`ThemeAnimationDirection` 常量与同名类型（`.` / `./react` / `./vue` / `./nuxt` 四个入口均可用，Nuxt 侧自动导入含同名类型别名）。
-
-`direction` 对未消费它的类型（`CIRCLE` 家族与形状家族）静默无效，这些类型的行为与 0.1.x 完全一致。
 
 ## ✅ 行为契约
 

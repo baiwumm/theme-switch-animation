@@ -23,7 +23,6 @@ browser's [View Transitions API](https://developer.mozilla.org/en-US/docs/Web/AP
 
 > 📚 **Full documentation** — https://theme-switch-animation.baiwumm.com (install guide, a gallery you
 > can play with, every parameter and the FAQ; the site is currently Chinese-only).
-> Migration notes for 0.1.x / 0.2.0 / 0.3.x live in the [Chinese README](https://github.com/baiwumm/theme-switch-animation/blob/main/docs/README.zh-CN.md).
 
 ## ✨ Features
 
