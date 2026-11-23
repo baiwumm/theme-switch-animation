@@ -412,7 +412,7 @@ describe('runThemeTransition 动画路径（jsdom + 模拟 startViewTransition�
     expect(forward).not.toContain('@property --theme-switch-reveal')
   })
 
-  it('reverse 未接入的类型传 true 也静默无效：QR_GRID / BLINDS / SCAN / 形状族其余 3 个输出不变', () => {
+  it('reverse 未接入的类型传 true 也静默无效：QR_GRID / BLINDS / SCAN / 形状族其余 2 个输出不变', () => {
     installFakeViewTransition()
     vi.spyOn(window, 'innerWidth', 'get').mockReturnValue(800)
     vi.spyOn(window, 'innerHeight', 'get').mockReturnValue(600)
@@ -420,7 +420,7 @@ describe('runThemeTransition 动画路径（jsdom + 模拟 startViewTransition�
 
     for (const animationType of [
       ThemeAnimationType.QR_GRID, ThemeAnimationType.BLINDS, ThemeAnimationType.SCAN,
-      ThemeAnimationType.HEXAGON, ThemeAnimationType.TRIANGLE,
+      ThemeAnimationType.HEXAGON,
       ThemeAnimationType.STAR,
     ]) {
       runThemeTransition({ domUpdate: () => {}, trigger, options: { animationType } })
@@ -463,6 +463,41 @@ describe('runThemeTransition 动画路径（jsdom + 模拟 startViewTransition�
     runThemeTransition({ domUpdate: () => {}, trigger, options: { animationType: ThemeAnimationType.DIAMOND } })
     const forward = styleNode()!.textContent!
     expect(forward).toContain('@keyframes theme-switch-diamond')
+    expect(forward).toContain('will-change: mask-size, mask-position')
+    expect(forward).not.toContain('@property --theme-switch-reveal')
+  })
+
+  it("reverse 已接入 TRIANGLE：三个半平面交集成顶点朝上的洞，from = 1.05×needed/0.5、to = 0", () => {
+    installFakeViewTransition()
+    vi.spyOn(window, 'innerWidth', 'get').mockReturnValue(800)
+    vi.spyOn(window, 'innerHeight', 'get').mockReturnValue(600)
+    const trigger = { getBoundingClientRect: () => ({ left: 100, top: 50, width: 40, height: 20 }) }
+
+    runThemeTransition({
+      domUpdate: () => {},
+      trigger,
+      options: { animationType: ThemeAnimationType.TRIANGLE, reverse: true },
+    })
+    const reversed = styleNode()!.textContent!
+    removeAnimationStyle(document)
+
+    // 中心 (120, 60)：S = 540 / 133.92 / 618.9，needed = 618.9 → from = ×2.1 = 1299.68
+    expect(reversed).toContain('@property --theme-switch-reveal')
+    expect(reversed).toContain('linear-gradient(0deg, #000 0 calc(540px - var(--theme-switch-reveal) * 0.5 - 0.5px)')
+    expect(reversed).toContain('linear-gradient(120deg, #000 0 calc(133.92px - var(--theme-switch-reveal) * 0.5 - 0.5px)')
+    expect(reversed).toContain('linear-gradient(240deg, #000 0 calc(618.9px - var(--theme-switch-reveal) * 0.5 - 0.5px)')
+    expect(reversed).toContain('mask-size: 100% 100%, 100% 100%, 100% 100%;')
+    expect(reversed).toContain('mask-repeat: no-repeat, no-repeat, no-repeat;')
+    expect(reversed).toContain('--theme-switch-reveal: 1299.68px;')
+    expect(reversed).toContain('--theme-switch-reveal: 0px;')
+    // add 是默认合成：免 @supports 门控、无 mask-composite 声明
+    expect(reversed).not.toContain('@supports')
+    expect(reversed).not.toContain('mask-composite')
+
+    // 正向未被连带改动：仍是 SVG 三角形蒙版 + mask-size 驱动
+    runThemeTransition({ domUpdate: () => {}, trigger, options: { animationType: ThemeAnimationType.TRIANGLE } })
+    const forward = styleNode()!.textContent!
+    expect(forward).toContain('@keyframes theme-switch-triangle')
     expect(forward).toContain('will-change: mask-size, mask-position')
     expect(forward).not.toContain('@property --theme-switch-reveal')
   })

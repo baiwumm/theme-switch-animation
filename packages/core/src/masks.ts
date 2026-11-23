@@ -632,6 +632,80 @@ export function getDiamondReverseRevealSpec(center: Point, viewport: Size): Reve
   }
 }
 
+/**
+ * TRIANGLE 反向（P3-11）：顶点朝上的等边三角形洞从视口三边向触发点收拢。
+ * 与 DIAMOND reverse 同一构造类——洞是凸多边形 = 若干半平面的交集：每层
+ * `linear-gradient(<A>deg)` 沿一条边的**内法向**（CSS 角度，0deg 朝上）铺「边界靠视口外
+ * 一侧 #000、靠洞内一侧 transparent」的半平面，默认 `add` 合成下透明区取交集即三角形
+ * （免 `@supports` / `mask-composite`，同 DIAMOND / CURTAIN 反向的路数）。
+ *
+ * 轴取 0° / 120° / 240°：三条内法向正好对应顶点朝上等边三角形的三条边（顶点极角
+ * −90 / 30 / 150，与正向 `TRIANGLE_MASK_IMAGE` 朝向一致），且三者之和为零向量——
+ * v→0 时三条透明半平面的交集因此为空，末帧零残留（仅在触发点交叉处留亚像素半透明点，
+ * 与 DIAMOND / CIRCLE reverse 的中心像素同类容忍；预检 18 帧 × 两档 dsf 末帧旧主题像素 = 0）。
+ *
+ * 几何常量（烘进 stop 的 px）：渐变线过视口中心、长 L = |W·sinA| + |H·cosA|，点 p 的渐变
+ * 位置 = L/2 + (p − 视口中心)·u（u = (sinA, −cosA)）；层边界钉在触发点沿 −u 侧推内切半径
+ * a = v/2 处（等边三角形内切半径 = 外接圆的一半，与正向 `TRIANGLE_CIRCUMRADIUS_FACTOR`
+ * 的 2 倍关系同源）。±0.5px 斜坡是洞边抗锯齿，同 DIAMOND——不用 `SHAPE_REVERSE_FEATHER_PX`
+ * （24px 软边在 120° 顶点处会互相吃掉，且与 DIAMOND 观感不一致）。
+ *
+ * from 推导（最容易写错的地方，预检踩过）：洞盖满视口的充要条件是每条边的法向偏移
+ * 都超过该边最靠外的视口角——
+ *
+ * ```
+ * needed = max over (视口角 p, 内法向 u_i) of  −(p − c)·u_i
+ * from   = 1.05 × needed / k      （k = 内切半径系数 0.5）
+ * ```
+ *
+ * **不是** max +(p−c)·u_i（符号反了：算出的是「角在多远之外」不是「洞要多大」，from 放大
+ * 10% 以上、起手空转 125ms → 240ms），**也不是**正向的 `getMaxRadiusToCorners` ×
+ * `TRIANGLE_CIRCUMRADIUS_FACTOR`——欧氏外接圆判据对三角形多留 12%，代价是 32% 的时长
+ * 画面完全静止（RIPPLE 反向同款教训）。1.05 余量带来约 125ms 起手空转，是 CIRCLE /
+ * DIAMOND 反向的既有基线，不是新增缺陷。
+ */
+export const TRIANGLE_REVERSE_COVERAGE_FACTOR = SQUARE_COVERAGE_MARGIN
+
+/** 等边三角形的内切半径系数：a = v × 0.5（外接圆半径 = 2a） */
+export const TRIANGLE_REVERSE_INRADIUS_FACTOR = 0.5
+
+/** 顶点朝上等边三角形三条边的内法向（CSS 角度，0deg 朝上） */
+const TRIANGLE_REVERSE_EDGE_NORMALS = [0, 120, 240]
+
+export function getTriangleReverseRevealSpec(center: Point, viewport: Size): RevealMaskSpec {
+  const { width, height } = viewport
+  const k = TRIANGLE_REVERSE_INRADIUS_FACTOR
+  const corners: Array<[number, number]> = [[0, 0], [width, 0], [0, height], [width, height]]
+  const normals = TRIANGLE_REVERSE_EDGE_NORMALS.map((angle) => {
+    const rad = (angle * Math.PI) / 180
+    return { angle, ux: Math.sin(rad), uy: -Math.cos(rad) }
+  })
+  // from = 1.05 × needed / k：needed 是「盖住视口所需的最小法向偏移」（推导见函数注释）
+  const needed = Math.max(
+    ...normals.map(({ ux, uy }) =>
+      Math.max(...corners.map(([x, y]) => -(x - center.x) * ux - (y - center.y) * uy)),
+    ),
+  )
+  const from = roundTo((needed * TRIANGLE_REVERSE_COVERAGE_FACTOR) / k, 2)
+  const v = `var(${REVEAL_VAR})`
+  // 半平面层：S = L/2 + (触发点 − 视口中心)·u 烘进 px 常量；边界 = S − v×k，±0.5px 斜坡
+  const halfPlane = ({ angle, ux, uy }: { angle: number; ux: number; uy: number }): string => {
+    const lineHalf = (Math.abs(width * ux) + Math.abs(height * uy)) / 2
+    const s = roundTo(lineHalf + (center.x - width / 2) * ux + (center.y - height / 2) * uy, 2)
+    return (
+      `linear-gradient(${angle}deg, #000 0 calc(${s}px - ${v} * 0.5 - 0.5px),` +
+      ` transparent calc(${s}px - ${v} * 0.5 + 0.5px))`
+    )
+  }
+  return {
+    from,
+    to: 0,
+    maskImage: normals.map(halfPlane).join(', '),
+    maskSize: '100% 100%, 100% 100%, 100% 100%',
+    maskRepeat: 'no-repeat, no-repeat, no-repeat',
+  }
+}
+
 export function isRevealAnimationType(type: ThemeAnimationType): boolean {
   return type === ThemeAnimationType.BLINDS || type === ThemeAnimationType.SCAN
     || type === ThemeAnimationType.CURTAIN

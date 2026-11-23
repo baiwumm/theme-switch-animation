@@ -30,7 +30,7 @@
 ## ✨ 特性
 
 - 🔀 **跨框架**：React 18+、Vue 3+、Next.js（App Router）、Nuxt 3+
-- 🎨 **动画类型分族**：圆形扩散（含边缘模糊变体）、几何形状扩散、条带与格子（由 `direction` 控制四方向）、中线对开（`direction` 控开合轴）、环带前缘（由 `waveWidth` 控制波长）、角度扫开（由 `bladeCount` 控制扇叶数）；其中 9 个类型支持 `reverse` 改为反向揭开。完整清单与逐个的观感说明见下方「🎬 动画类型」表
+- 🎨 **动画类型分族**：圆形扩散（含边缘模糊变体）、几何形状扩散、条带与格子（由 `direction` 控制四方向）、中线对开（`direction` 控开合轴）、环带前缘（由 `waveWidth` 控制波长）、角度扫开（由 `bladeCount` 控制扇叶数）；其中 10 个类型支持 `reverse` 改为反向揭开。完整清单与逐个的观感说明见下方「🎬 动画类型」表
 - 🔌 **受控模式**：不独占主题状态管理，`next-themes`、`@nuxtjs/color-mode` 用户可直接接入
 - 🔄 **非受控多实例同步**：同页多个实例的 `isDark` 以 `<html>` 暗色类名为事实源镜像，其它标签页经 storage 事件同步
 - 🛟 **自动降级**：不支持 View Transitions 或 `prefers-reduced-motion: reduce` 时自动降级为直接切换（状态永远正确）
@@ -123,7 +123,7 @@ export default defineNuxtConfig({
 | --- | --- | --- | --- |
 | `CIRCLE` | 圆形扩散；`reverse` 改为"新主题从四周显出、向触发点收拢"（0.3.x 的 `CIRCLE_REVERT` 收起形态） | 触发元素中心 | `reverse` |
 | `CIRCLE_BLUR` | 边缘高斯模糊的圆形扩散；`reverse` 为模糊边界的圆洞收拢 | 触发元素中心 | `blurAmount` / `reverse` |
-| `SQUARE` / `DIAMOND` / `RECTANGLE` / `HEXAGON` / `TRIANGLE` / `STAR` | 多边形从触发点扩散（朝向见文档站画廊）；`SQUARE` / `DIAMOND` / `RECTANGLE` 的 `reverse` 为对应形状的洞从四周收拢 | 触发元素中心 | `reverse`（仅前三者） |
+| `SQUARE` / `DIAMOND` / `RECTANGLE` / `HEXAGON` / `TRIANGLE` / `STAR` | 多边形从触发点扩散（朝向见文档站画廊）；`SQUARE` / `DIAMOND` / `RECTANGLE` / `TRIANGLE` 的 `reverse` 为对应形状的洞从四周收拢 | 触发元素中心 | `reverse`（除 `HEXAGON` / `STAR` 外） |
 | `BLINDS` | 百叶窗：叶片逐条揭开 | 无触发点（全屏按叶宽平铺） | `direction` / `slatWidth` |
 | `SCAN` | 硬边扫开 + 前缘半透明光束 | 无触发点（沿推进轴） | `direction` |
 | `QR_GRID` | 方块格子逐格生长、末帧融为整屏；`cellShape: 'dot'` 切换为圆点格（单层平铺，免 `@supports`），`cellSize` 控格距。**圆点格的 `direction` 静默**（单层无推进轴，四向观感一致） | 无触发点（按 `direction` 锚定方位） | `direction` / `cellSize` / `cellShape` |
@@ -150,7 +150,7 @@ export default defineNuxtConfig({
 | `cellShape` | `'square' \| 'dot'` | QR_GRID 格子形状，默认 `'square'`。`'dot'` 为单层平铺圆点格（免 `@supports`，圆点直径终值 ≥ 格距 × √2 保证末帧无缝）；**圆点格的 `direction` 静默**。非法值静默回落默认 |
 | `waveWidth` | `number` | 涟漪波长 px（相邻两圈波峰间距），范围 `[8, 60]`，默认 18。仅 `RIPPLE` 生效，越界静默回落默认 |
 | `bladeCount` | `number` | 扇叶数，范围 `[4, 16]` 的**整数**，默认 8。仅 `FAN` 生效，非整数或越界静默回落默认（非整数会让 `360 / bladeCount` 不整除，末帧留一条永不闭合的缝） |
-| `reverse` | `boolean \| 'auto'` | 反向揭开，默认 `false`。`true` 恒反向；`'auto'` 切暗正向、切亮收起（跟随本次切换方向）。**与 `direction` 正交**：`direction` 决定推进轴，`reverse` 决定从内还是从外揭开。已接入 `CIRCLE` / `FAN` / `RIPPLE` / `CLOCK_SWEEP` / `CURTAIN` / `SQUARE` / `RECTANGLE` / `CIRCLE_BLUR` / `DIAMOND` 九个类型，其余静默忽略——形状族其余 3 个（HEXAGON / TRIANGLE / STAR）的反向必须动 `mask-size`，会重新引入已修完的像素对齐抖动，做不到无副作用（见 `docs/animation-roadmap.md` §4）。非法值静默回落 `false` |
+| `reverse` | `boolean \| 'auto'` | 反向揭开，默认 `false`。`true` 恒反向；`'auto'` 切暗正向、切亮收起（跟随本次切换方向）。**与 `direction` 正交**：`direction` 决定推进轴，`reverse` 决定从内还是从外揭开。已接入 `CIRCLE` / `FAN` / `RIPPLE` / `CLOCK_SWEEP` / `CURTAIN` / `SQUARE` / `RECTANGLE` / `CIRCLE_BLUR` / `DIAMOND` / `TRIANGLE` 十个类型，其余静默忽略——形状族的分界是凸 vs 凹：`HEXAGON` 同为凸多边形、构造与 `TRIANGLE` 同类可接，只是与 `CIRCLE` 观感区分度不足未接；`STAR` 真凹、半平面构造不可行（见 `docs/animation-roadmap.md` §4）。非法值静默回落 `false` |
 | `darkClassName` | `string` | 暗色类名，默认 `dark`（与 next-themes / color-mode 默认一致） |
 | `isDark` + `onChange` | — | 同时提供 → 受控模式；都缺省 → 非受控（localStorage key 为 `THEME_STORAGE_KEY` 常量 `theme-switch-animation`，`observeThemeClass` 可带自定义 key）；只提供其一 → 契约不完整（开发环境 console.warn，按非受控工作） |
 

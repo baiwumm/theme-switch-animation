@@ -21,7 +21,7 @@ const ANIMATION_TYPES: Array<{
   initialWaveWidth?: number
   /** 仅 FAN：卡片下方渲染扇叶数选择按钮 */
   initialBladeCount?: number
-  /** 仅 reverse 已接通的 9 个类型：卡片下方渲染反向三档按钮 */
+  /** 仅 reverse 已接通的 10 个类型：卡片下方渲染反向三档按钮 */
   initialReverse?: boolean | 'auto'
 }> = [
   { type: ThemeAnimationType.CIRCLE, label: 'CIRCLE', hint: '圆形扩散 · 圆心 = 点击位置', initialReverse: false },
@@ -30,7 +30,7 @@ const ANIMATION_TYPES: Array<{
   { type: ThemeAnimationType.DIAMOND, label: 'DIAMOND', hint: '菱形扩散 · reverse 菱形洞收拢', initialReverse: false },
   { type: ThemeAnimationType.RECTANGLE, label: 'RECTANGLE', hint: '矩形扩散 · 贴合视口比例，reverse 矩形洞收拢', initialReverse: false },
   { type: ThemeAnimationType.HEXAGON, label: 'HEXAGON', hint: '六边形扩散 · 尖顶朝上' },
-  { type: ThemeAnimationType.TRIANGLE, label: 'TRIANGLE', hint: '三角形扩散 · 顶点朝上' },
+  { type: ThemeAnimationType.TRIANGLE, label: 'TRIANGLE', hint: '三角形扩散 · 顶点朝上，reverse 三角形洞收拢', initialReverse: false },
   { type: ThemeAnimationType.STAR, label: 'STAR', hint: '五角星扩散 · 顶点朝上' },
   { type: ThemeAnimationType.BLINDS, label: 'BLINDS', hint: '百叶窗 · 叶片逐条揭开，direction 控方向', initialDirection: ThemeAnimationDirection.LTR, initialSlatWidth: 72 },
   { type: ThemeAnimationType.SCAN, label: 'SCAN', hint: '扫描 · 硬边扫开 + 前缘光束，direction 控方向', initialDirection: ThemeAnimationDirection.TTB },
@@ -79,7 +79,7 @@ onUnmounted(() => stopObserving?.())
     <p>
       15 个按钮各自是一个独立的 <code>useThemeAnimation</code> 实例——非受控模式下所有实例的
       <code>isDark</code> 以 <code>&lt;html&gt;</code> class 为事实源自动镜像（库内
-      <code>observeThemeClass</code>），其它标签页的切换经 storage 事件同步。中心扩散与角度扫开类动画（含 RIPPLE / CLOCK_SWEEP / FAN）的起收点都是按钮中心：在不同位置点击可验证跟随效果；BLINDS / SCAN / QR_GRID / CURTAIN 不读触发元素几何。卡片下方各有独立的 direction 选择（QR_GRID 圆点格除外——单层无推进轴，direction 静默；CURTAIN 的 direction 是开合轴，只有水平 / 垂直两种形态），RIPPLE 另有 waveWidth 档位、FAN 另有 bladeCount 档位、QR_GRID 另有格子形状与格距档位，9 个类型各有 reverse 三档，都只影响本卡片。
+      <code>observeThemeClass</code>），其它标签页的切换经 storage 事件同步。中心扩散与角度扫开类动画（含 RIPPLE / CLOCK_SWEEP / FAN）的起收点都是按钮中心：在不同位置点击可验证跟随效果；BLINDS / SCAN / QR_GRID / CURTAIN 不读触发元素几何。卡片下方各有独立的 direction 选择（QR_GRID 圆点格除外——单层无推进轴，direction 静默；CURTAIN 的 direction 是开合轴，只有水平 / 垂直两种形态），RIPPLE 另有 waveWidth 档位、FAN 另有 bladeCount 档位、QR_GRID 另有格子形状与格距档位，10 个类型各有 reverse 三档，都只影响本卡片。
     </p>
     <div class="presets" role="group" aria-label="duration 预设">
       <span>duration</span>

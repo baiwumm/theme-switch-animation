@@ -22,7 +22,7 @@ const FEATURES = [
     icon: Sparkles,
     title: '15 种动画',
     description:
-      '圆形 / 形状 / 百叶窗 / 扫描 / 格子 / 涟漪 / 扇形 / 双开门，方向与参数可调；9 个类型支持 reverse 反向揭开。',
+      '圆形 / 形状 / 百叶窗 / 扫描 / 格子 / 涟漪 / 扇形 / 双开门，方向与参数可调；10 个类型支持 reverse 反向揭开。',
     tags: ['CIRCLE', 'RIPPLE', 'CLOCK_SWEEP', 'BLINDS', '…'],
   },
   {
