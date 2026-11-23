@@ -73,6 +73,10 @@ SQUARE / RECTANGLE / CIRCLE_BLUR / DIAMOND，逐类观感见 README「🎬 动�
   npm Trusted Publishing（OIDC 免密，仓库无任何 secret），**无 GitHub Environment、无人工审批**。
 - workflow 取 **tag 指向 commit** 里的那份文件——`release.yml` 的改动必须**先进 main 再打 tag**，
   否则 tag 跑的还是旧版。
+- **main 已开分支保护**（2026-11-23）：必须走 PR、必过 CI 双矩阵 + CodeQL、禁止 force push 与删除；
+  审批数 0（单维护者自合）、管理员可越权应急（enforce_admins=false）、不要求线性历史（保留聚合
+  PR 的 merge commit）。**发版 commit（`changeset version` 产物）同样走 release PR**，合并后再打
+  `v*` tag。
 - workflow 会校验：tag 在 origin/main 上、`package.json` version 与 tag 一致、`.changeset/` 无未消费条目。
 - 发版后 npm 侧有约 2.5 分钟 packument 延迟，干净安装验版本要加 `--prefer-online`。
 
