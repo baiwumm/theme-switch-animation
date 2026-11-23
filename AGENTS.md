@@ -5,8 +5,8 @@
 ## 项目是什么
 
 `theme-switch-animation`：基于浏览器 View Transitions API 的主题切换动画库——15 种 mask 揭示动画
-+ `reverse`（`boolean | 'auto'`，接入 9 类：CIRCLE / FAN / RIPPLE / CLOCK_SWEEP / CURTAIN /
-SQUARE / RECTANGLE / CIRCLE_BLUR / DIAMOND，逐类观感见 README「🎬 动画类型」表）。
++ `reverse`（`boolean | 'auto'`，接入 11 类：CIRCLE / FAN / RIPPLE / CLOCK_SWEEP / CURTAIN /
+SQUARE / RECTANGLE / CIRCLE_BLUR / DIAMOND / TRIANGLE / HEXAGON，逐类观感见 README「🎬 动画类型」表）。
 
 - **发布包就是仓库根**的 `package.json`（exports `.` / `./react` / `./vue` / `./nuxt` 四个子路径，ESM-only）。
 - `packages/{core,react,vue,nuxt}` 是**私有内部包**（`@theme-switch-animation/*`）：core 框架无关实现
@@ -36,7 +36,7 @@ SQUARE / RECTANGLE / CIRCLE_BLUR / DIAMOND，逐类观感见 README「🎬 动�
 | 单文件测试 / lint | `pnpm vitest run packages/core/src/masks.test.ts`（测试与源码同目录，共 12 个）；`pnpm eslint <file>` |
 | 产物校验 | `pnpm verify:package`（build 之后跑；**必须用 `pnpm build`**——postbuild 要拷 nuxt runtime，`npx tsup` 会绕过它） |
 | 实机验收 | `pnpm test:acceptance`（7 个 CDP 脚本，需本机 Chrome） |
-| 发版 | `pnpm changeset` → `pnpm changeset version` → commit → 推 `v*` tag |
+| 发版 | `pnpm changeset` → `pnpm changeset version` → commit → 经 PR 合进 main → 推 `v*` tag |
 
 ### 文档站部署（腾讯云 EdgeOne）
 
@@ -75,8 +75,10 @@ SQUARE / RECTANGLE / CIRCLE_BLUR / DIAMOND，逐类观感见 README「🎬 动�
   否则 tag 跑的还是旧版。
 - **main 已开分支保护**（2026-11-23）：必须走 PR、必过 CI 双矩阵 + CodeQL、禁止 force push 与删除；
   审批数 0（单维护者自合）、管理员可越权应急（enforce_admins=false）、不要求线性历史（保留聚合
-  PR 的 merge commit）。**发版 commit（`changeset version` 产物）同样走 release PR**，合并后再打
-  `v*` tag。
+  PR 的 merge commit）。**发版 commit（`changeset version` 产物）同样走 PR**，合并后再打
+  `v*` tag（轻量 tag，打在合并后的 main 顶端）。
+- **发版 commit 放进聚合分支、与内容批同一次合并**：`package.json` 在 `deploy-docs.yml` 的路径
+  过滤里，单独为发版开 PR 再合一次 = 多镜像一次 `docs-release`、多一次文档站构建。
 - workflow 会校验：tag 在 origin/main 上、`package.json` version 与 tag 一致、`.changeset/` 无未消费条目。
 - 发版后 npm 侧有约 2.5 分钟 packument 延迟，干净安装验版本要加 `--prefer-online`。
 
