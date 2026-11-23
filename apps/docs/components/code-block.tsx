@@ -59,12 +59,13 @@ const TOKEN_THEME: PrismTheme = {
 }
 
 // prism-react-renderer 的内置包不含 vue 语法：以 markup 为底，把 <script> 内容交给 typescript
+// 闭合标签容忍 </script > 变体（> 前空白），否则该类片段高亮中断（js/bad-tag-filter）
 if (!Prism.languages.vue) {
   const vue = Prism.languages.extend('markup', {})
   ;(vue as PrismGrammar & Record<string, unknown>).script = {
-    pattern: /<script[\s\S]*?<\/script>/i,
+    pattern: /<script[\s\S]*?<\/script\s*>/i,
     inside: {
-      punctuation: /^<script[^>]*>|<\/script>$/i,
+      punctuation: /^<script[^>]*>|<\/script\s*>$/i,
       rest: Prism.languages.typescript,
     },
     greedy: true,
