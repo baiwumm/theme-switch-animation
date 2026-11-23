@@ -55,21 +55,23 @@ function IcoBlur(props: SVGProps<SVGSVGElement>) {
     </svg>
   )
 }
-function IcoShape(points: string) {
-  return function Shape(props: SVGProps<SVGSVGElement>) {
-    return (
-      <svg
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth={1.9}
-        aria-hidden="true"
-        {...props}
-      >
-        <polygon points={points} strokeLinejoin="round" />
-      </svg>
-    )
-  }
+/** 多边形图标：points 走 props 的模块级组件（biome noComponentHookFactories——不在函数内定义组件） */
+function ShapeIcon({
+  points,
+  ...props
+}: { points: string } & SVGProps<SVGSVGElement>) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={1.9}
+      aria-hidden="true"
+      {...props}
+    >
+      <polygon points={points} strokeLinejoin="round" />
+    </svg>
+  )
 }
 function IcoRect(props: SVGProps<SVGSVGElement>) {
   return (
@@ -241,14 +243,16 @@ const ANIMATION_TYPES: Array<{
     label: 'SQUARE',
     hint: '正方形扩散',
     initialReverse: false,
-    Icon: IcoShape('5,5 19,5 19,19 5,19'),
+    Icon: (props) => <ShapeIcon points="5,5 19,5 19,19 5,19" {...props} />,
   },
   {
     type: ThemeAnimationType.DIAMOND,
     label: 'DIAMOND',
     hint: '菱形扩散',
     initialReverse: false,
-    Icon: IcoShape('12,3.5 20.5,12 12,20.5 3.5,12'),
+    Icon: (props) => (
+      <ShapeIcon points="12,3.5 20.5,12 12,20.5 3.5,12" {...props} />
+    ),
   },
   {
     type: ThemeAnimationType.RECTANGLE,
@@ -262,21 +266,29 @@ const ANIMATION_TYPES: Array<{
     label: 'HEXAGON',
     hint: '六边形 · 尖顶朝上',
     initialReverse: false,
-    Icon: IcoShape('12,2.8 19.8,7.4 19.8,16.6 12,21.2 4.2,16.6 4.2,7.4'),
+    Icon: (props) => (
+      <ShapeIcon
+        points="12,2.8 19.8,7.4 19.8,16.6 12,21.2 4.2,16.6 4.2,7.4"
+        {...props}
+      />
+    ),
   },
   {
     type: ThemeAnimationType.TRIANGLE,
     label: 'TRIANGLE',
     hint: '三角形 · 顶点朝上',
     initialReverse: false,
-    Icon: IcoShape('12,4 20,19 4,19'),
+    Icon: (props) => <ShapeIcon points="12,4 20,19 4,19" {...props} />,
   },
   {
     type: ThemeAnimationType.STAR,
     label: 'STAR',
     hint: '五角星 · 顶点朝上',
-    Icon: IcoShape(
-      '12,2.8 14.7,9 21.5,9.6 16.3,14 17.9,20.7 12,17 6.1,20.7 7.7,14 2.5,9.6 9.3,9',
+    Icon: (props) => (
+      <ShapeIcon
+        points="12,2.8 14.7,9 21.5,9.6 16.3,14 17.9,20.7 12,17 6.1,20.7 7.7,14 2.5,9.6 9.3,9"
+        {...props}
+      />
     ),
   },
   {
