@@ -13,7 +13,7 @@ const INSTALL_CMD = 'npm install theme-switch-animation'
 
 const STATS = [
   { label: '动画类型', value: 15 },
-  { label: 'reverse 反向', value: 10 },
+  { label: 'reverse 反向', value: 11 },
   { label: '框架适配', value: 4 },
   { label: '框架无关代码', value: 95, suffix: '%' },
 ] as const

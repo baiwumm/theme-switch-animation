@@ -218,7 +218,7 @@ const ANIMATION_TYPES: Array<{
   initialWaveWidth?: number
   /** 仅 FAN：卡片内渲染扇叶数选择器（初始扇叶数） */
   initialBladeCount?: number
-  /** 仅 reverse 已接通的 10 个类型：卡片内渲染反向三档选择器（初始值） */
+  /** 仅 reverse 已接通的 11 个类型：卡片内渲染反向三档选择器（初始值） */
   initialReverse?: boolean | 'auto'
   Icon: (props: SVGProps<SVGSVGElement>) => JSX.Element
 }> = [
@@ -261,6 +261,7 @@ const ANIMATION_TYPES: Array<{
     type: ThemeAnimationType.HEXAGON,
     label: 'HEXAGON',
     hint: '六边形 · 尖顶朝上',
+    initialReverse: false,
     Icon: IcoShape('12,2.8 19.8,7.4 19.8,16.6 12,21.2 4.2,16.6 4.2,7.4'),
   },
   {
@@ -358,8 +359,8 @@ const DIRECTION_OPTIONS: ReadonlyArray<{
 ]
 
 /**
- * reverse 三档：仅已接通的 10 个类型展示（CIRCLE / FAN / RIPPLE / CLOCK_SWEEP / CURTAIN /
- * SQUARE / RECTANGLE / CIRCLE_BLUR / DIAMOND / TRIANGLE）。
+ * reverse 三档：仅已接通的 11 个类型展示（CIRCLE / FAN / RIPPLE / CLOCK_SWEEP / CURTAIN /
+ * SQUARE / RECTANGLE / CIRCLE_BLUR / DIAMOND / TRIANGLE / HEXAGON）。
  * 与 Direction 正交——Direction 定推进轴，Reverse 定从内还是从外揭开；
  * `auto` 是"切暗正向、切亮收起"，即跟随本次切换方向。
  */

@@ -19,7 +19,7 @@ const props = defineProps<{
   /** 仅 FAN：卡片下方的扇叶数按钮初始值 */
   initialBladeCount?: number
   /**
-   * 仅 reverse 已接通的 10 个类型：卡片下方反向三档按钮的初始值。
+   * 仅 reverse 已接通的 11 个类型：卡片下方反向三档按钮的初始值。
    * 注意合法值含 `false`，模板里判存在必须用 `!== undefined`，不能写 v-if="initialReverse"。
    */
   initialReverse?: boolean | 'auto'

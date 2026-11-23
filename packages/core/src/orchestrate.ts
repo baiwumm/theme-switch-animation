@@ -2,6 +2,7 @@ import {
   getBlurCircleReverseRevealSpec,
   getCircleRevertHoleGeometry,
   getDiamondReverseRevealSpec,
+  getHexagonReverseRevealSpec,
   getMaskGeometry,
   getPanelReverseMaskSpec,
   getQrGridDotRevealSpec,
@@ -174,11 +175,10 @@ export function runThemeTransition(params: RunThemeTransitionParams): RunThemeTr
   // toggle 后必为取反。
   const toDark = nextIsDark ?? !hasThemeClass(doc, resolved.darkClassName)
   // 本次转场是否走反向形态。只有已接入的类型才算数：CIRCLE / FAN / RIPPLE / CLOCK_SWEEP /
-  // CURTAIN / SQUARE / RECTANGLE / CIRCLE_BLUR / DIAMOND / TRIANGLE。其余传 reverse 静默忽略：
-  // 形状族真正的分界是凸 vs 凹（P3-11 预检修正了 roadmap §4 原来那句「非轴对齐所以不做」）——
-  // HEXAGON 同为凸多边形、构造与 TRIANGLE 同类可接，只是与 CIRCLE 观感区分度不足没接
-  // （roadmap §3 P3-11）；STAR 真凹、半平面/条带构造不可行；BLINDS / SCAN / QR_GRID
-  // 由 direction 占那根轴（见 roadmap §4）。
+  // CURTAIN / SQUARE / RECTANGLE / CIRCLE_BLUR / DIAMOND / TRIANGLE / HEXAGON。其余传 reverse
+  // 静默忽略：形状族真正的分界是凸 vs 凹（P3-11 预检修正了 roadmap §4 原来那句「非轴对齐
+  // 所以不做」）——STAR 是唯一真凹、半平面/条带/扇形层构造都表达不了凹轮廓（还撞 FAN@5，
+  // 见 roadmap §4）；BLINDS / SCAN / QR_GRID 由 direction 占那根轴（见 roadmap §4）。
   const reverseCapable = resolved.animationType === ThemeAnimationType.CIRCLE
     || resolved.animationType === ThemeAnimationType.FAN
     || resolved.animationType === ThemeAnimationType.RIPPLE
@@ -188,6 +188,7 @@ export function runThemeTransition(params: RunThemeTransitionParams): RunThemeTr
     || isBlurAnimationType(resolved.animationType)
     || resolved.animationType === ThemeAnimationType.DIAMOND
     || resolved.animationType === ThemeAnimationType.TRIANGLE
+    || resolved.animationType === ThemeAnimationType.HEXAGON
   const collapse = reverseCapable
     && (resolved.reverse === true || (resolved.reverse === 'auto' && !toDark))
   // CIRCLE 的反向用洞式蒙版：挂新截图层、掏一个从全屏收缩到 0 的洞（层序与 CIRCLE 一致、
@@ -220,7 +221,9 @@ export function runThemeTransition(params: RunThemeTransitionParams): RunThemeTr
                 ? getDiamondReverseRevealSpec(center, viewport)
                 : collapse && resolved.animationType === ThemeAnimationType.TRIANGLE
                   ? getTriangleReverseRevealSpec(center, viewport)
-                  : undefined)
+                  : collapse && resolved.animationType === ThemeAnimationType.HEXAGON
+                    ? getHexagonReverseRevealSpec(center, viewport)
+                    : undefined)
   // QR_GRID：新层"列 ∩ 行"方块格子双层蒙版，同样无触发点；圆点格已在上面走 reveal。
   const qrGrid = isQrGridAnimationType(resolved.animationType) && !qrGridDot
     ? getQrGridMaskSpec(resolved.direction, resolved.cellSize)

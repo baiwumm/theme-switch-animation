@@ -22,7 +22,7 @@ const ANIMATION_TYPES: Array<{
   initialWaveWidth?: number
   /** 仅 FAN：卡片下方渲染扇叶数选择按钮 */
   initialBladeCount?: number
-  /** 仅 reverse 已接通的 10 个类型：卡片下方渲染反向三档按钮 */
+  /** 仅 reverse 已接通的 11 个类型：卡片下方渲染反向三档按钮 */
   initialReverse?: boolean | 'auto'
 }> = [
   { type: ThemeAnimationType.CIRCLE, label: 'CIRCLE', hint: '圆形扩散 · 圆心 = 点击位置', initialReverse: false },
@@ -30,7 +30,7 @@ const ANIMATION_TYPES: Array<{
   { type: ThemeAnimationType.SQUARE, label: 'SQUARE', hint: '正方形扩散 · reverse 方洞收拢', initialReverse: false },
   { type: ThemeAnimationType.DIAMOND, label: 'DIAMOND', hint: '菱形扩散 · reverse 菱形洞收拢', initialReverse: false },
   { type: ThemeAnimationType.RECTANGLE, label: 'RECTANGLE', hint: '矩形扩散 · 贴合视口比例，reverse 矩形洞收拢', initialReverse: false },
-  { type: ThemeAnimationType.HEXAGON, label: 'HEXAGON', hint: '六边形扩散 · 尖顶朝上' },
+  { type: ThemeAnimationType.HEXAGON, label: 'HEXAGON', hint: '六边形扩散 · 尖顶朝上，reverse 六边形洞收拢', initialReverse: false },
   { type: ThemeAnimationType.TRIANGLE, label: 'TRIANGLE', hint: '三角形扩散 · 顶点朝上，reverse 三角形洞收拢', initialReverse: false },
   { type: ThemeAnimationType.STAR, label: 'STAR', hint: '五角星扩散 · 顶点朝上' },
   { type: ThemeAnimationType.BLINDS, label: 'BLINDS', hint: '百叶窗 · 叶片逐条揭开，direction 控方向', initialDirection: ThemeAnimationDirection.LTR, initialSlatWidth: 72 },
@@ -91,8 +91,8 @@ const CELL_SHAPE_OPTIONS: ReadonlyArray<{ value: ThemeAnimationCellShape; label:
 ]
 
 /**
- * reverse 三档：仅已接通的 10 个类型展示（CIRCLE / FAN / RIPPLE / CLOCK_SWEEP / CURTAIN /
- * SQUARE / RECTANGLE / CIRCLE_BLUR / DIAMOND / TRIANGLE）。
+ * reverse 三档：仅已接通的 11 个类型展示（CIRCLE / FAN / RIPPLE / CLOCK_SWEEP / CURTAIN /
+ * SQUARE / RECTANGLE / CIRCLE_BLUR / DIAMOND / TRIANGLE / HEXAGON）。
  * 与 direction 正交——direction 定推进轴，reverse 定从内还是从外揭开；
  * auto = 切暗正向、切亮收起，即跟随本次切换方向。
  */
@@ -286,7 +286,7 @@ export default function App() {
         BLINDS / SCAN / QR_GRID / CURTAIN 不读触发元素几何，ref 只用于点击。卡片下方各有独立的
         direction 选择（QR_GRID 圆点格除外——单层无推进轴，direction 静默；CURTAIN 的 direction
         是开合轴，只有水平 / 垂直两种形态），RIPPLE 另有 waveWidth 档位、FAN 另有 bladeCount 档位、
-        QR_GRID 另有格子形状与格距档位，10 个类型各有 reverse 三档，都只影响本卡片。
+        QR_GRID 另有格子形状与格距档位，11 个类型各有 reverse 三档，都只影响本卡片。
       </p>
       <div className="presets" role="group" aria-label="duration 预设">
         <span>duration</span>

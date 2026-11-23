@@ -11,6 +11,8 @@ import {
   DIAMOND_REVERSE_COVERAGE_FACTOR,
   FULL_CIRCLE_DEG,
   HEXAGON_COVERAGE_FACTOR,
+  HEXAGON_REVERSE_APOTHEM_FACTOR,
+  HEXAGON_REVERSE_COVERAGE_FACTOR,
   RECTANGLE_COVERAGE_MARGIN,
   QR_GRID_CELL_PX,
   RIPPLE_CREST_ALPHA,
@@ -41,6 +43,7 @@ import {
   getDiamondMaskGeometry,
   getDiamondReverseRevealSpec,
   getHexagonMaskGeometry,
+  getHexagonReverseRevealSpec,
   getFanBladeStepDeg,
   getFanRevealSpec,
   getFanReverseRevealSpec,
@@ -1225,6 +1228,87 @@ describe('TRIANGLE 反向（三个半平面 add，P3-11）', () => {
     // 结构保证：每层「边界外 #000、边界内 transparent」，v=0 时三条边都过触发点，
     // 交集收缩为空（仅触发点交叉处留亚像素半透明斜坡，预检 18 帧 × 两档 dsf 末帧旧主题像素 = 0）
     expect(spec.maskImage.match(/#000 /g)).toHaveLength(3)
+  })
+})
+
+describe('HEXAGON 反向（三条透明芯条带 add，P3-11 补全）', () => {
+  const center = { x: 400, y: 300 }
+  const v = `var(${REVEAL_VAR})`
+  const K = '0.8661'
+  /** 与 masks.ts 的条带串同构（S 烘进 px，芯边界 = S ± v×k，±0.5px 抗锯齿斜坡） */
+  const strip = (angle: number, s: number): string =>
+    `linear-gradient(${angle}deg, #000 0 calc(${s}px - ${v} * ${K} - 0.5px),` +
+    ` transparent calc(${s}px - ${v} * ${K} + 0.5px) calc(${s}px + ${v} * ${K} - 0.5px),` +
+    ` #000 calc(${s}px + ${v} * ${K} + 0.5px))`
+
+  it('常量口径：覆盖余量 1.05、边心距系数 ceil4(cos30°) = 0.8661（round2 的 0.87 会欠覆盖 0.4%）', () => {
+    expect(HEXAGON_REVERSE_COVERAGE_FACTOR).toBe(1.05)
+    expect(HEXAGON_REVERSE_COVERAGE_FACTOR).toBe(SQUARE_COVERAGE_MARGIN)
+    expect(HEXAGON_REVERSE_APOTHEM_FACTOR).toBe(0.8661)
+    // ceil 方向自证：向上取整必须 ≥ 真值
+    expect(HEXAGON_REVERSE_APOTHEM_FACTOR).toBeGreaterThanOrEqual(Math.cos(Math.PI / 6))
+  })
+
+  it('串结构：三条透明芯条带（90/150/210deg）透明区取交集 = 尖顶朝上的六边形洞', () => {
+    const spec = getHexagonReverseRevealSpec(center, viewport)
+    // 中心触发：S = 400 / 459.81 / 459.81（L = |W·sinA| + |H·cosA|，150°/210° 同长）
+    expect(spec.maskImage).toBe(
+      [strip(90, 400), strip(150, 459.81), strip(210, 459.81)].join(', '),
+    )
+    expect(spec.maskImage.match(/linear-gradient\(/g)).toHaveLength(3)
+    expect(spec.maskSize).toBe('100% 100%, 100% 100%, 100% 100%')
+    expect(spec.maskRepeat).toBe('no-repeat, no-repeat, no-repeat')
+    // 朝向锚点（预检坑 #2）：A=90 法向水平 ⇒ 左右两条竖直边、上下出顶点 = 尖顶，与正向蒙版一致
+    expect(spec.maskImage).toContain('linear-gradient(90deg')
+  })
+
+  it('几何常量烘进 px：S = L/2 + (触发点 − 视口中心)·u，随触发点偏移', () => {
+    // 偏心 (100,200)：S_A90 = 400 − 300 = 100；S_A150 = 459.81 − 150 − 86.6 = 223.21；S_A210 = 523.21
+    const off = getHexagonReverseRevealSpec({ x: 100, y: 200 }, viewport)
+    expect(off.maskImage).toContain('linear-gradient(90deg, #000 0 calc(100px - ')
+    expect(off.maskImage).toContain('linear-gradient(150deg, #000 0 calc(223.21px - ')
+    expect(off.maskImage).toContain('linear-gradient(210deg, #000 0 calc(523.21px - ')
+  })
+
+  it('from = 1.05 × needed / 0.8661（条带双侧约束，needed 取 |(p−c)·u| 最大）、to = 0：不照抄正向 √2×1.05', () => {
+    const spec = getHexagonReverseRevealSpec(center, viewport)
+    // needed = max(400, 459.81, 459.81) = 459.81 → ×1.05/0.8661 = 557.44
+    expect(spec.from).toBe(557.44)
+    expect(spec.to).toBe(0)
+    // 角落触发 (0,0)：needed = max(800, 919.62, 519.62) = 919.62 → from = 1114.88
+    expect(getHexagonReverseRevealSpec({ x: 0, y: 0 }, viewport).from).toBe(1114.88)
+    // 正向 HEXAGON_COVERAGE_FACTOR（√2×1.05 外接圆边长）是 mask-size 的覆盖余量，照抄只会空转
+    expect(spec.from).toBeLessThan(getMaxRadiusToCorners(center, viewport) * HEXAGON_COVERAGE_FACTOR)
+  })
+
+  it('首帧全隐不等式：任意触发点下四角都在三条透明芯内（双侧越过 ±0.5px 斜坡内沿）', () => {
+    for (const c of [
+      { x: 400, y: 300 },
+      { x: 100, y: 200 },
+      { x: 0, y: 0 },
+      { x: 800, y: 600 },
+    ]) {
+      const spec = getHexagonReverseRevealSpec(c, viewport)
+      for (const angle of [90, 150, 210]) {
+        const rad = (angle * Math.PI) / 180
+        const ux = Math.sin(rad)
+        const uy = -Math.cos(rad)
+        for (const [x, y] of [[0, 0], [800, 0], [0, 600], [800, 600]]) {
+          // 角在透明芯内 ⇔ |(p−c)·u| < from×k − 0.5（1.05 余量提供这 5% 的松弛）
+          expect(Math.abs((x - c.x) * ux + (y - c.y) * uy)).toBeLessThan(
+            spec.from * HEXAGON_REVERSE_APOTHEM_FACTOR - 0.5,
+          )
+        }
+      }
+    }
+  })
+
+  it('末帧零残留：to = 0，三条透明芯各自塌成过触发点的线（交集收缩为交叉点）', () => {
+    const spec = getHexagonReverseRevealSpec(center, viewport)
+    expect(spec.to).toBe(0)
+    // 结构保证：每条条带两端都是 #000（v=0 时芯塌线、两端实心相接；
+    // 触发点交叉处亚像素斜坡与 DIAMOND 同类容忍，预检末帧旧主题像素 = 0）
+    expect(spec.maskImage.match(/#000 /g)).toHaveLength(6)
   })
 })
 
