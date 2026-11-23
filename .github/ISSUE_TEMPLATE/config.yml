@@ -1,11 +1,17 @@
 # 空白 issue 关掉：走表单能保证拿到引擎、animationType、reverse 这几个判定必需的字段。
-# contact_links 只放真实存在的入口——Discussions 目前没开，等开了再加 Q&A 那一项。
+# contact_links 只放真实存在的入口；使用问题与新想法走 Discussions（Q&A / Ideas 已配表单模板）。
 blank_issues_enabled: false
 
 contact_links:
   - name: 📚 文档站 / Documentation
     url: https://theme-switch-animation.baiwumm.com
     about: 安装、API、15 种动画类型的逐个观感与参数说明先在这里查。
+  - name: 🙏 使用问题 / Q&A
+    url: https://github.com/baiwumm/theme-switch-animation/discussions/categories/q-a
+    about: 安装、接入、参数怎么用——先查文档站，没答案再来提问（有表单模板）。
+  - name: 💡 想法 / Ideas
+    url: https://github.com/baiwumm/theme-switch-animation/discussions/categories/ideas
+    about: 新类型 / 参数化 / DX 建议，发想法前请过一遍 roadmap §4 的不做清单（有表单模板）。
   - name: 🤖 开发规范 / AGENTS.md
     url: https://github.com/baiwumm/theme-switch-animation/blob/main/AGENTS.md
     about: 目录结构、门禁四件套、发布流程与提交风格。

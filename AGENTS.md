@@ -5,8 +5,8 @@
 ## 项目是什么
 
 `theme-switch-animation`：基于浏览器 View Transitions API 的主题切换动画库——15 种 mask 揭示动画
-+ `reverse`（`boolean | 'auto'`，接入 9 类：CIRCLE / FAN / RIPPLE / CLOCK_SWEEP / CURTAIN /
-SQUARE / RECTANGLE / CIRCLE_BLUR / DIAMOND，逐类观感见 README「🎬 动画类型」表）。
++ `reverse`（`boolean | 'auto'`，接入 11 类：CIRCLE / FAN / RIPPLE / CLOCK_SWEEP / CURTAIN /
+SQUARE / RECTANGLE / CIRCLE_BLUR / DIAMOND / TRIANGLE / HEXAGON，逐类观感见 README「🎬 动画类型」表）。
 
 - **发布包就是仓库根**的 `package.json`（exports `.` / `./react` / `./vue` / `./nuxt` 四个子路径，ESM-only）。
 - `packages/{core,react,vue,nuxt}` 是**私有内部包**（`@theme-switch-animation/*`）：core 框架无关实现
@@ -36,7 +36,7 @@ SQUARE / RECTANGLE / CIRCLE_BLUR / DIAMOND，逐类观感见 README「🎬 动�
 | 单文件测试 / lint | `pnpm vitest run packages/core/src/masks.test.ts`（测试与源码同目录，共 12 个）；`pnpm eslint <file>` |
 | 产物校验 | `pnpm verify:package`（build 之后跑；**必须用 `pnpm build`**——postbuild 要拷 nuxt runtime，`npx tsup` 会绕过它） |
 | 实机验收 | `pnpm test:acceptance`（7 个 CDP 脚本，需本机 Chrome） |
-| 发版 | `pnpm changeset` → `pnpm changeset version` → commit → 推 `v*` tag |
+| 发版 | `pnpm changeset` → `pnpm changeset version` → commit → 经 PR 合进 main → 推 `v*` tag |
 
 ### 文档站部署（腾讯云 EdgeOne）
 
@@ -73,6 +73,12 @@ SQUARE / RECTANGLE / CIRCLE_BLUR / DIAMOND，逐类观感见 README「🎬 动�
   npm Trusted Publishing（OIDC 免密，仓库无任何 secret），**无 GitHub Environment、无人工审批**。
 - workflow 取 **tag 指向 commit** 里的那份文件——`release.yml` 的改动必须**先进 main 再打 tag**，
   否则 tag 跑的还是旧版。
+- **main 已开分支保护**（2026-11-23）：必须走 PR、必过 CI 双矩阵 + CodeQL、禁止 force push 与删除；
+  审批数 0（单维护者自合）、管理员可越权应急（enforce_admins=false）、不要求线性历史（保留聚合
+  PR 的 merge commit）。**发版 commit（`changeset version` 产物）同样走 PR**，合并后再打
+  `v*` tag（轻量 tag，打在合并后的 main 顶端）。
+- **发版 commit 放进聚合分支、与内容批同一次合并**：`package.json` 在 `deploy-docs.yml` 的路径
+  过滤里，单独为发版开 PR 再合一次 = 多镜像一次 `docs-release`、多一次文档站构建。
 - workflow 会校验：tag 在 origin/main 上、`package.json` version 与 tag 一致、`.changeset/` 无未消费条目。
 - 发版后 npm 侧有约 2.5 分钟 packument 延迟，干净安装验版本要加 `--prefer-online`。
 
@@ -88,11 +94,12 @@ SQUARE / RECTANGLE / CIRCLE_BLUR / DIAMOND，逐类观感见 README「🎬 动�
 - 决策记录（为什么做 / 为什么不做 / 为什么撤回）写进活文档（requirements §10 或对应文档），
   不只留在 commit message 里；历史报告是事实记录，**绝不改写**。
 - **README 双语**：`README.md` 是英文精简版（GitHub 与 npm 默认展示，npm 只渲染这一份），
-  `docs/README.zh-CN.md` 是中文全文——0.1.x / 0.2.0 / 0.3.x 迁移历史只维护在中文版，英文版只留
-  链接与稳定骨架（安装 / 最小示例 / 类型表 / options 表 / 契约）。改行为时两份都要改，各自顶部
-  带语言切换（绝对链接：npm 不解析相对路径）。中文版刻意放在 `docs/` 而不是仓库根——
-  根目录同时出现 `README.zh-CN.md` 时，npm registry 会把它当成包页 readme（0.6.1 实测线上
-  显示 228 行中文版）；挪进 `docs/` 后 `npm pack` 不再收录它，包页才是英文 `README.md`。
+  `docs/README.zh-CN.md` 是中文全文——英文版只留链接与稳定骨架（安装 / 最小示例 / 类型表 /
+  options 表 / 契约），改行为时两份都要改，各自顶部带语言切换（绝对链接：npm 不解析相对路径）。
+  0.1.x / 0.2.0 / 0.3.x 迁移章节曾维护在中文版，2026-11-23 按需求方决定整体移除（旧版破坏性变更
+  的迁移记录在 CHANGELOG.md 与 git 历史，README 不再承载版本史）。中文版刻意放在 `docs/` 而不是
+  仓库根——根目录同时出现 `README.zh-CN.md` 时，npm registry 会把它当成包页 readme（0.6.1 实测
+  线上显示 228 行中文版）；挪进 `docs/` 后 `npm pack` 不再收录它，包页才是英文 `README.md`。
   `docs/` 根目录因此多一个常驻文件，属刻意例外。
 
 ## 代码与提交风格

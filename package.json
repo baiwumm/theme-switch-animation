@@ -1,6 +1,6 @@
 {
   "name": "theme-switch-animation",
-  "version": "0.6.2",
+  "version": "0.7.0",
   "description": "Theme switch animation library built on the View Transitions API. Works with React 18+, Vue 3+, Next.js and Nuxt 3+.",
   "type": "module",
   "packageManager": "pnpm@11.24.0",
@@ -94,15 +94,15 @@
     "url": "https://github.com/baiwumm/theme-switch-animation/issues"
   },
   "devDependencies": {
-    "@changesets/cli": "^3.0.2",
+    "@changesets/cli": "^3.0.3",
     "@eslint/js": "^10.0.1",
-    "eslint": "^10.10.0",
-    "jsdom": "^30.0.1",
+    "eslint": "^10.15.0",
+    "jsdom": "^31.0.1",
     "react": "19.3.1",
     "react-dom": "19.3.1",
     "tsup": "^9.0.0",
     "typescript": "^5.9.3",
-    "typescript-eslint": "^8.70.0",
+    "typescript-eslint": "^8.73.0",
     "vitest": "^5.1.1"
   }
 }

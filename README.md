@@ -12,7 +12,7 @@
 Theme switching, but as an animation: the new theme is revealed over the old one by a mask — a
 circle, a polygon, blinds, a ripple, a clock sweep, a curtain — instead of a hard flip. Built on the
 browser's [View Transitions API](https://developer.mozilla.org/en-US/docs/Web/API/View_Transition_API).
-15 animation types, 9 of them support `reverse`. React 18+, Vue 3+, Next.js (App Router), Nuxt 3+.
+15 animation types, 11 of them support `reverse`. React 18+, Vue 3+, Next.js (App Router), Nuxt 3+.
 
 <p align="center">
   <a href="https://v.douyin.com/Wz6_MZOcwOE/">
@@ -23,7 +23,6 @@ browser's [View Transitions API](https://developer.mozilla.org/en-US/docs/Web/AP
 
 > 📚 **Full documentation** — https://theme-switch-animation.baiwumm.com (install guide, a gallery you
 > can play with, every parameter and the FAQ; the site is currently Chinese-only).
-> Migration notes for 0.1.x / 0.2.0 / 0.3.x live in the [Chinese README](https://github.com/baiwumm/theme-switch-animation/blob/main/docs/README.zh-CN.md).
 
 ## ✨ Features
 
@@ -108,8 +107,8 @@ export default defineNuxtConfig({
 | Types | What it looks like | Options |
 | --- | --- | --- |
 | `CIRCLE` / `CIRCLE_BLUR` | Circle expanding from the trigger element (optionally with a blurred edge) | `reverse`, `blurAmount` |
-| `SQUARE` / `DIAMOND` / `RECTANGLE` | Polygon expanding from the trigger element | `reverse` |
-| `HEXAGON` / `TRIANGLE` / `STAR` | Polygon expanding from the trigger element | — |
+| `SQUARE` / `DIAMOND` / `RECTANGLE` / `TRIANGLE` / `HEXAGON` | Polygon expanding from the trigger element | `reverse` |
+| `STAR` | Polygon expanding from the trigger element | — |
 | `BLINDS` / `SCAN` / `QR_GRID` | Slats opening, hard-edge scan with a light beam, cell grid | `direction`, `slatWidth`, `cellSize`, `cellShape` |
 | `RIPPLE` | Water surface with a wave band and two decaying rings | `waveWidth`, `reverse` |
 | `CLOCK_SWEEP` | Conic sweep from 12 o'clock; `reverse` sweeps counter-clockwise | `reverse` |
@@ -117,7 +116,7 @@ export default defineNuxtConfig({
 | `CURTAIN` | Both halves push out from the center; `reverse` closes them | `direction` (axis), `reverse` |
 
 `reverse` is `boolean | 'auto'`: `'auto'` expands when darkening and collapses when lightening. It is
-orthogonal to `direction` (which decides the axis) and applies to the 9 types marked above.
+orthogonal to `direction` (which decides the axis) and applies to the 11 types marked above.
 
 ## 🧩 API
 
@@ -128,7 +127,7 @@ orthogonal to `direction` (which decides the axis) and applies to the 9 types ma
 | `animationType` | `ThemeAnimationType` | `CIRCLE` | one of the 15 types |
 | `duration` | `number` | `750` | milliseconds |
 | `easing` | `string` | `'ease-in-out'` | any CSS timing function, `linear()` included |
-| `reverse` | `boolean \| 'auto'` | `false` | 9 types; ignored by the rest |
+| `reverse` | `boolean \| 'auto'` | `false` | 11 types; ignored by the rest |
 | `direction` | `'ltr' \| 'rtl' \| 'ttb' \| 'btt'` | `'ltr'` | `BLINDS` / `SCAN` / `QR_GRID`, plus the axis of `CURTAIN` |
 | `darkClassName` | `string` | `'dark'` | matches the next-themes / color-mode default |
 | `isDark` + `onChange` | — | — | both present → controlled mode |

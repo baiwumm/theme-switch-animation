@@ -104,6 +104,15 @@ function roundTo(value: number, digits: number): number {
   return Math.round(value * factor) / factor
 }
 
+/**
+ * 因子向上舍入（ceil 到 4 位）：四舍五入可能向下舍，k 偏小会让洞半径/首帧覆盖
+ * 短缺零点几个像素（实测 round4(324/724) 漏 0.01px、round2(cos30°) = 0.87 让六边形
+ * 内切半径小 0.4%）；k 偏大只会让洞边界更保守，比例偏差 ≤ 1e-4 观感无差。
+ */
+function ceil4(k: number): number {
+  return Math.ceil(k * 10000 - 1e-6) / 10000
+}
+
 /** 触发点到视口四角的最大距离（`Math.hypot`） */
 export function getMaxRadiusToCorners(center: Point, viewport: Size): number {
   const { x, y } = center
@@ -516,12 +525,6 @@ function panelReverseRevealSpec(
   const { halfW, halfH } = maxHalfExtent(center, viewport)
   const f = SHAPE_REVERSE_FEATHER_PX
   const v = `var(${REVEAL_VAR})`
-  /**
-   * 因子向上舍入（ceil 到 4 位）：四舍五入可能向下舍，k 偏小会让首帧斜坡外端
-   * 溢出视口沿零点几个像素（实测 round4(324/724) 漏 0.01px）；k 偏大只会让首帧
-   * 洞边界更负，覆盖只会更保守，比例偏差 ≤ 1e-4 观感无差。
-   */
-  const ceil4 = (k: number): number => Math.ceil(k * 10000 - 1e-6) / 10000
   /** 洞边界（触发点偏移烘进 px 常量，k = 1 时省略归一因子） */
   const term = (extent: number, k: number): string =>
     k === 1 ? `${roundTo(extent, 2)}px - ${v}` : `${roundTo(extent, 2)}px - ${v} * ${ceil4(k)}`
@@ -629,6 +632,150 @@ export function getDiamondReverseRevealSpec(center: Point, viewport: Size): Reve
     maskImage: `${strip(135)}, ${strip(45)}`,
     maskSize: '100% 100%, 100% 100%',
     maskRepeat: 'no-repeat, no-repeat',
+  }
+}
+
+/**
+ * TRIANGLE 反向（P3-11）：顶点朝上的等边三角形洞从视口三边向触发点收拢。
+ * 与 DIAMOND reverse 同一构造类——洞是凸多边形 = 若干半平面的交集：每层
+ * `linear-gradient(<A>deg)` 沿一条边的**内法向**（CSS 角度，0deg 朝上）铺「边界靠视口外
+ * 一侧 #000、靠洞内一侧 transparent」的半平面，默认 `add` 合成下透明区取交集即三角形
+ * （免 `@supports` / `mask-composite`，同 DIAMOND / CURTAIN 反向的路数）。
+ *
+ * 轴取 0° / 120° / 240°：三条内法向正好对应顶点朝上等边三角形的三条边（顶点极角
+ * −90 / 30 / 150，与正向 `TRIANGLE_MASK_IMAGE` 朝向一致），且三者之和为零向量——
+ * v→0 时三条透明半平面的交集因此为空，末帧零残留（仅在触发点交叉处留亚像素半透明点，
+ * 与 DIAMOND / CIRCLE reverse 的中心像素同类容忍；预检 18 帧 × 两档 dsf 末帧旧主题像素 = 0）。
+ *
+ * 几何常量（烘进 stop 的 px）：渐变线过视口中心、长 L = |W·sinA| + |H·cosA|，点 p 的渐变
+ * 位置 = L/2 + (p − 视口中心)·u（u = (sinA, −cosA)）；层边界钉在触发点沿 −u 侧推内切半径
+ * a = v/2 处（等边三角形内切半径 = 外接圆的一半，与正向 `TRIANGLE_CIRCUMRADIUS_FACTOR`
+ * 的 2 倍关系同源）。±0.5px 斜坡是洞边抗锯齿，同 DIAMOND——不用 `SHAPE_REVERSE_FEATHER_PX`
+ * （24px 软边在 120° 顶点处会互相吃掉，且与 DIAMOND 观感不一致）。
+ *
+ * from 推导（最容易写错的地方，预检踩过）：洞盖满视口的充要条件是每条边的法向偏移
+ * 都超过该边最靠外的视口角——
+ *
+ * ```
+ * needed = max over (视口角 p, 内法向 u_i) of  −(p − c)·u_i
+ * from   = 1.05 × needed / k      （k = 内切半径系数 0.5）
+ * ```
+ *
+ * **不是** max +(p−c)·u_i（符号反了：算出的是「角在多远之外」不是「洞要多大」，from 放大
+ * 10% 以上、起手空转 125ms → 240ms），**也不是**正向的 `getMaxRadiusToCorners` ×
+ * `TRIANGLE_CIRCUMRADIUS_FACTOR`——欧氏外接圆判据对三角形多留 12%，代价是 32% 的时长
+ * 画面完全静止（RIPPLE 反向同款教训）。1.05 余量带来约 125ms 起手空转，是 CIRCLE /
+ * DIAMOND 反向的既有基线，不是新增缺陷。
+ */
+export const TRIANGLE_REVERSE_COVERAGE_FACTOR = SQUARE_COVERAGE_MARGIN
+
+/** 等边三角形的内切半径系数：a = v × 0.5（外接圆半径 = 2a） */
+export const TRIANGLE_REVERSE_INRADIUS_FACTOR = 0.5
+
+/** 顶点朝上等边三角形三条边的内法向（CSS 角度，0deg 朝上） */
+const TRIANGLE_REVERSE_EDGE_NORMALS = [0, 120, 240]
+
+export function getTriangleReverseRevealSpec(center: Point, viewport: Size): RevealMaskSpec {
+  const { width, height } = viewport
+  const k = TRIANGLE_REVERSE_INRADIUS_FACTOR
+  const corners: Array<[number, number]> = [[0, 0], [width, 0], [0, height], [width, height]]
+  const normals = TRIANGLE_REVERSE_EDGE_NORMALS.map((angle) => {
+    const rad = (angle * Math.PI) / 180
+    return { angle, ux: Math.sin(rad), uy: -Math.cos(rad) }
+  })
+  // from = 1.05 × needed / k：needed 是「盖住视口所需的最小法向偏移」（推导见函数注释）
+  const needed = Math.max(
+    ...normals.map(({ ux, uy }) =>
+      Math.max(...corners.map(([x, y]) => -(x - center.x) * ux - (y - center.y) * uy)),
+    ),
+  )
+  const from = roundTo((needed * TRIANGLE_REVERSE_COVERAGE_FACTOR) / k, 2)
+  const v = `var(${REVEAL_VAR})`
+  // 半平面层：S = L/2 + (触发点 − 视口中心)·u 烘进 px 常量；边界 = S − v×k，±0.5px 斜坡
+  const halfPlane = ({ angle, ux, uy }: { angle: number; ux: number; uy: number }): string => {
+    const lineHalf = (Math.abs(width * ux) + Math.abs(height * uy)) / 2
+    const s = roundTo(lineHalf + (center.x - width / 2) * ux + (center.y - height / 2) * uy, 2)
+    return (
+      `linear-gradient(${angle}deg, #000 0 calc(${s}px - ${v} * 0.5 - 0.5px),` +
+      ` transparent calc(${s}px - ${v} * 0.5 + 0.5px))`
+    )
+  }
+  return {
+    from,
+    to: 0,
+    maskImage: normals.map(halfPlane).join(', '),
+    maskSize: '100% 100%, 100% 100%, 100% 100%',
+    maskRepeat: 'no-repeat, no-repeat, no-repeat',
+  }
+}
+
+/**
+ * HEXAGON 反向（P3-11 补全）：尖顶朝上六边形洞从视口六边向触发点收拢。
+ * 与 DIAMOND 同为「透明芯条带」构造——六边形 = 三条轴（每轴成一对平行边，共 6 条边）
+ * 的条带**交集**（默认 `add`，免 `@supports`）。轴取 90° / 150° / 210°：A=90 的法向是
+ * 水平向量 → 左右两条竖直边，六边形上下出顶点 = 尖顶朝上，与正向 `HEXAGON_MASK_IMAGE`
+ * 的顶点极角 −90 + 60k 朝向一致；**改 0/60/120 会得到平顶六边形**，且逐像素判据是自洽的
+ * （预测跟着轴走、抓不到这个错），只能对照正向蒙版顶点（预检踩过的坑）。
+ *
+ * 几何常量（烘进 stop 的 px）：与 TRIANGLE 反向同式，`S = L/2 + (触发点 − 视口中心)·u`、
+ * `L = |W·sinA| + |H·cosA|`；条带半宽 = 内切半径 a = cos30° × v，**k 用 `ceil4` 向上取**
+ * （0.8661）：round2 的 0.87 会让内切半径小 0.4%（v=1048 时 4.2px），吃掉覆盖余量。
+ * ±0.5px 斜坡同 DIAMOND；v→0 时三条透明芯各自塌成过触发点的一条线，交集收缩为
+ * 触发点交叉处的亚像素点——与 DIAMOND 的 dip 线同类容忍（预检 18 帧 × 两档 dsf 末帧
+ * 旧主题像素 = 0）。
+ *
+ * from 推导：条带是**双侧**约束（透明 ⇔ |(p−c)·u| < v·k），与 TRIANGLE 半平面的单侧
+ * `−(p−c)·u` 不同，needed 必须取**绝对值**的最大值——
+ *
+ * ```
+ * needed = max over (视口角 p, 轴法向 u_i) of |(p − c)·u_i|
+ * from   = 1.05 × needed / k
+ * ```
+ *
+ * （预检样本 1280×800 / 触发点 (853.59, 294)：needed = 865.01px、from = 1048.76px；
+ * 欧氏外接圆判据会多留 14.7%，起手空转 125ms → 240ms，与 TRIANGLE 反向同一教训。）
+ * 1.05 余量 ≈ 125ms 起手空转 = CIRCLE / DIAMOND / TRIANGLE 反向的既有基线。
+ */
+export const HEXAGON_REVERSE_COVERAGE_FACTOR = SQUARE_COVERAGE_MARGIN
+
+/** 六边形内切半径（边心距）系数：a = v × ceil4(cos30°) = v × 0.8661，向上取整防欠覆盖 */
+export const HEXAGON_REVERSE_APOTHEM_FACTOR = ceil4(Math.cos(Math.PI / 6))
+
+/** 尖顶朝上六边形三条条带轴的轴法向（CSS 角度，0deg 朝上） */
+const HEXAGON_REVERSE_STRIP_AXES = [90, 150, 210]
+
+export function getHexagonReverseRevealSpec(center: Point, viewport: Size): RevealMaskSpec {
+  const { width, height } = viewport
+  const k = HEXAGON_REVERSE_APOTHEM_FACTOR
+  const corners: Array<[number, number]> = [[0, 0], [width, 0], [0, height], [width, height]]
+  const normals = HEXAGON_REVERSE_STRIP_AXES.map((angle) => {
+    const rad = (angle * Math.PI) / 180
+    return { angle, ux: Math.sin(rad), uy: -Math.cos(rad) }
+  })
+  // from = 1.05 × needed / k：条带双侧约束，needed 是「盖住视口所需的最小条带半宽」（推导见函数注释）
+  const needed = Math.max(
+    ...normals.map(({ ux, uy }) =>
+      Math.max(...corners.map(([x, y]) => Math.abs((x - center.x) * ux + (y - center.y) * uy))),
+    ),
+  )
+  const from = roundTo((needed * HEXAGON_REVERSE_COVERAGE_FACTOR) / k, 2)
+  const v = `var(${REVEAL_VAR})`
+  // 透明芯条带层：S = L/2 + (触发点 − 视口中心)·u 烘进 px 常量；芯边界 = S ± v×k，±0.5px 斜坡
+  const strip = ({ angle, ux, uy }: { angle: number; ux: number; uy: number }): string => {
+    const lineHalf = (Math.abs(width * ux) + Math.abs(height * uy)) / 2
+    const s = roundTo(lineHalf + (center.x - width / 2) * ux + (center.y - height / 2) * uy, 2)
+    return (
+      `linear-gradient(${angle}deg, #000 0 calc(${s}px - ${v} * ${k} - 0.5px),` +
+      ` transparent calc(${s}px - ${v} * ${k} + 0.5px) calc(${s}px + ${v} * ${k} - 0.5px),` +
+      ` #000 calc(${s}px + ${v} * ${k} + 0.5px))`
+    )
+  }
+  return {
+    from,
+    to: 0,
+    maskImage: normals.map(strip).join(', '),
+    maskSize: '100% 100%, 100% 100%, 100% 100%',
+    maskRepeat: 'no-repeat, no-repeat, no-repeat',
   }
 }
 
