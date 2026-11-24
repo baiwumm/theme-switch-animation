@@ -29,6 +29,12 @@ export const metadata: Metadata = {
   },
   twitter: { card: 'summary' },
   icons: { icon: '/favicon.png' },
+  // 搜索引擎站长平台归属校验：Next 会渲染成 <meta name="google-site-verification"> /
+  // <meta name="msvalidate.01">，两者都是长期有效的站点所有权凭证，勿随手删除
+  verification: {
+    google: '4YBtBTmg5H9MGoyvCmvEeJx8viyBPjLnK4INCHT9SQs',
+    other: { 'msvalidate.01': '6DEA985B20CA4A215DAC4EA659011A8A' },
+  },
 }
 
 export const viewport: Viewport = {
